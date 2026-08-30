@@ -7,6 +7,21 @@
   border-radius: 0.5rem;
 }
 
+.search {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.5rem;
+  background-color: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.noMatch {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
 .group {
   display: flex;
   flex-direction: column;

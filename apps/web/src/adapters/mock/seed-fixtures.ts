@@ -150,6 +150,11 @@ export function buildSeedFixtures(): SeedFixtures {
   const table1 = createTable({ id: "table-1", label: "Table 1" });
   const table2 = createTable({ id: "table-2", label: "Table 2" });
   const table3 = createTable({ id: "table-3", label: "Table 3" });
+  // Free tables with no open order — the "New order" flow occupies one of
+  // these (mirrors the future POST /orders { tableId } -> 201 Order).
+  const table4 = createTable({ id: "table-4", label: "Table 4" });
+  const table5 = createTable({ id: "table-5", label: "Table 5" });
+  const table6 = createTable({ id: "table-6", label: "Table 6" });
 
   let order1: Order = createOrder({ id: "order-open-1", tableId: table1.id });
   order1 = addLineItem(order1, {
@@ -214,6 +219,9 @@ export function buildSeedFixtures(): SeedFixtures {
     occupyTable(table1, order1.id),
     occupyTable(table2, order2.id),
     occupyTable(table3, order3.id),
+    table4,
+    table5,
+    table6,
   ];
 
   return { categories, stockItems, products, tables, openOrders: [order1, order2, order3] };

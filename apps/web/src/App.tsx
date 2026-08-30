@@ -6,7 +6,9 @@ import { screenTitle, type ScreenId } from "./app-shell/screens.js";
 import { Panel } from "./design-system/molecules/Panel.js";
 import { ProductFormContainer } from "./features/catalog/containers/ProductFormContainer.js";
 import { InventoryListContainer } from "./features/inventory/containers/InventoryListContainer.js";
+import { OrdersWorkspace } from "./features/ordering/components/OrdersWorkspace.js";
 import { AddItemContainer } from "./features/ordering/containers/AddItemContainer.js";
+import { NewOrderContainer } from "./features/ordering/containers/NewOrderContainer.js";
 import { OrderTicketPanelContainer } from "./features/ordering/containers/OrderTicketPanelContainer.js";
 import { OrdersOverviewContainer } from "./features/ordering/containers/OrdersOverviewContainer.js";
 import { RegisterPaymentContainer } from "./features/register/containers/RegisterPaymentContainer.js";
@@ -23,6 +25,7 @@ export function App(): JSX.Element {
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [registerMode, setRegisterMode] = useState<"pay" | "split">("pay");
+  const [ordersReloadKey, setOrdersReloadKey] = useState(0);
 
   const navigate = (next: ScreenId): void => {
     if (next === "register") {
@@ -54,18 +57,32 @@ export function App(): JSX.Element {
       ) : null}
 
       {screen === "orders" ? (
-        <div>
-          <OrdersOverviewContainer
-            selectedTableId={selectedTableId}
-            onSelectTable={setSelectedTableId}
-          />
-          {selectedTableId ? (
-            <div>
-              <OrderTicketPanelContainer tableId={selectedTableId} />
-              <AddItemContainer tableId={selectedTableId} />
-            </div>
-          ) : null}
-        </div>
+        <OrdersWorkspace
+          list={
+            <>
+              <NewOrderContainer
+                onCreated={(tableId) => {
+                  setSelectedTableId(tableId);
+                  setOrdersReloadKey((key) => key + 1);
+                }}
+              />
+              <OrdersOverviewContainer
+                selectedTableId={selectedTableId}
+                onSelectTable={setSelectedTableId}
+                reloadKey={ordersReloadKey}
+              />
+            </>
+          }
+          detail={
+            selectedTableId ? (
+              <>
+                <OrderTicketPanelContainer tableId={selectedTableId} />
+                <AddItemContainer tableId={selectedTableId} />
+              </>
+            ) : null
+          }
+          emptyDetail="Select an order to see its items."
+        />
       ) : null}
 
       {screen === "register" ? (

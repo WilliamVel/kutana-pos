@@ -48,7 +48,14 @@ describe("buildMockPorts", () => {
     expect(seededProduct).not.toBeNull();
 
     const seededTables = await ports.tables.listAll();
-    expect(seededTables.map((table) => table.id).sort()).toEqual(["table-1", "table-2", "table-3"]);
+    expect(seededTables.map((table) => table.id).sort()).toEqual([
+      "table-1",
+      "table-2",
+      "table-3",
+      "table-4",
+      "table-5",
+      "table-6",
+    ]);
 
     const seededCategories = await ports.categories.listAll();
     expect(seededCategories.map((category) => category.name)).toContain("Draft Beer");

@@ -36,6 +36,25 @@ describe("AddItemPanel", () => {
     expect(onAdd).toHaveBeenCalledWith("product-nachos", 3);
   });
 
+  it("narrows the visible product rows as the search input is typed", () => {
+    render(<AddItemPanel products={PRODUCTS} onAdd={vi.fn()} />);
+
+    expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
+    expect(screen.getByText("Loaded Nachos")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Search products"), {
+      target: { value: "nach" },
+    });
+
+    expect(screen.queryByText("KUTANA Pilsener 500ml")).not.toBeInTheDocument();
+    expect(screen.getByText("Loaded Nachos")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Search products"), {
+      target: { value: "zzz" },
+    });
+    expect(screen.getByText("No products match.")).toBeInTheDocument();
+  });
+
   it("disables the Add buttons when disabled", () => {
     render(<AddItemPanel products={PRODUCTS} onAdd={vi.fn()} disabled />);
 

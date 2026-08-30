@@ -37,8 +37,16 @@ export function AddItemPanel({
   const setQuantity = (id: string, value: number): void =>
     setQuantities((current) => ({ ...current, [id]: Math.max(1, value) }));
 
+  // Client-side filter only. Real server-side search (`GET /products?q=`)
+  // is a Milestone-2 concern; the container keeps passing the full list.
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  const filtered = needle
+    ? products.filter((product) => product.name.toLowerCase().includes(needle))
+    : products;
+
   const groups = new Map<string, AddItemPanelProduct[]>();
-  for (const product of products) {
+  for (const product of filtered) {
     const list = groups.get(product.categoryName) ?? [];
     list.push(product);
     groups.set(product.categoryName, list);
@@ -47,6 +55,15 @@ export function AddItemPanel({
   return (
     <section className={styles.panel} aria-label="Add items to order">
       <h2>Add items</h2>
+
+      <input
+        type="search"
+        className={styles.search}
+        aria-label="Search products"
+        placeholder="Search products"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+      />
 
       {conflictMessage ? (
         <div className={styles.conflict} role="alert">
@@ -58,6 +75,8 @@ export function AddItemPanel({
           ) : null}
         </div>
       ) : null}
+
+      {groups.size === 0 ? <p className={styles.noMatch}>No products match.</p> : null}
 
       {[...groups.entries()].map(([categoryName, items]) => (
         <div key={categoryName} className={styles.group}>

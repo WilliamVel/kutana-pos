@@ -34,16 +34,21 @@ describe("buildSeedFixtures", () => {
     expect(stout?.stockKind).toBe("unit");
   });
 
-  it("seeds three tables, each occupied by its own open order", () => {
+  it("seeds six tables: three occupied by an open order and three left free", () => {
     const { tables, openOrders } = buildSeedFixtures();
 
     expect(openOrders).toHaveLength(3);
-    expect(tables).toHaveLength(3);
+    expect(tables).toHaveLength(6);
     for (const order of openOrders) {
       const occupied = tables.find((table) => table.currentOrderId === order.id);
       expect(occupied?.status).toBe("active");
     }
-    expect(tables.filter((table) => table.status === "free")).toHaveLength(0);
+
+    const freeTables = tables.filter((table) => table.status === "free");
+    expect(freeTables).toHaveLength(3);
+    for (const table of freeTables) {
+      expect(table.currentOrderId).toBeNull();
+    }
   });
 
   it("seeds three open orders with line items and the expected statuses", () => {
