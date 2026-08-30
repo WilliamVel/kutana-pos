@@ -76,14 +76,14 @@ required to run the demo.**
 - [x] 6.5 Define remaining ports: `ProductRepository`, `CategoryRepository`, `StockRepository`, `TicketRepository`, `SaleRepository`, `OrderEvents` in each context's `ports/` dir - interfaces only, no implementation.
 
 ### Phase 7: Port Conformance Test Suite (built now, not retrofitted) - PR4
-- [ ] 7.1 Write one exported `describe`-block contract suite per port under `packages/shared/*/ports/__contract__/` (orders, tickets, payments, products, stock) - asserts port semantics (e.g. version-conflict throws `ConflictError`, `findByTable` returns null when absent) independent of implementation.
-- [ ] 7.2 RED: run each contract suite against a not-yet-written mock adapter (fails - adapter doesn't exist) to prove the suite is implementation-agnostic before Phase 8.
+- [x] 7.1 Write one exported `describe`-block contract suite per port under `packages/shared/*/ports/__contract__/` (orders, tickets, payments, products, stock) - asserts port semantics (e.g. version-conflict throws `ConflictError`, `findByTable` returns null when absent) independent of implementation.
+- [x] 7.2 RED: run each contract suite against a not-yet-written mock adapter (fails - adapter doesn't exist) to prove the suite is implementation-agnostic before Phase 8.
 
 ### Phase 8: Mock Adapters (GREEN against Phase 7 contracts) - PR4
-- [ ] 8.1 Implement in-memory `MockOrderRepository`, `MockTicketRepository`, `MockPaymentRepository`, `MockProductRepository`, `MockStockRepository` in `apps/web/src/adapters/mock/`, each passing its Phase 7 contract suite.
-- [ ] 8.2 Implement `MockOrderEvents` as an in-process `EventEmitter` implementing the `OrderEvents` port.
-- [ ] 8.3 Add ~120ms simulated latency to all mock methods; add a test-only trigger to force `ConflictError` on demand (powers the demo's 409 UI).
-- [ ] 8.4 Write seed fixtures (products, categories, tables, one open order) importing only `@kutana/shared` types - no ad-hoc shapes.
+- [x] 8.1 Implement in-memory `MockOrderRepository`, `MockTicketRepository`, `MockPaymentRepository`, `MockProductRepository`, `MockStockRepository` in `apps/web/src/adapters/mock/`, each passing its Phase 7 contract suite.
+- [x] 8.2 Implement `MockOrderEvents` as an in-process `EventEmitter` implementing the `OrderEvents` port.
+- [x] 8.3 Add ~120ms simulated latency to all mock methods; add a test-only trigger to force `ConflictError` on demand (powers the demo's 409 UI).
+- [x] 8.4 Write seed fixtures (products, categories, tables, one open order) importing only `@kutana/shared` types - no ad-hoc shapes.
 
 ### Phase 9: Composition Root & Design System - PR5
 - [ ] 9.1 Define `Ports` type and `apps/web/src/composition/ports.ts`; implement `PortsProvider.tsx` (React context) + typed hooks (`useOrders`, `useTickets`, etc.).
