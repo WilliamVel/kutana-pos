@@ -1,0 +1,38 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.inStock {
+  background-color: var(--status-in-stock-bg);
+  color: var(--status-in-stock-fg);
+}
+
+.lowStock {
+  background-color: var(--status-low-stock-bg);
+  color: var(--status-low-stock-fg);
+}
+
+.outOfStock {
+  background-color: var(--status-out-of-stock-bg);
+  color: var(--status-out-of-stock-fg);
+}
+
+.active {
+  background-color: var(--order-active-bg);
+  color: var(--order-active-fg);
+}
+
+.needsCheck {
+  background-color: var(--order-needs-check-bg);
+  color: var(--order-needs-check-fg);
+}
+
+.paid {
+  background-color: var(--order-paid-bg);
+  color: var(--order-paid-fg);
+}

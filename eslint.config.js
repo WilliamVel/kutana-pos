@@ -3,6 +3,8 @@ import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import importPlugin from "eslint-plugin-import";
 import prettierConfig from "eslint-config-prettier";
+import css from "@eslint/css";
+import noRawHexCss from "./eslint-rules/no-raw-hex-css.js";
 
 /**
  * Root flat ESLint config, monorepo-wide.
@@ -87,8 +89,33 @@ export default [
     },
   },
   {
+    // Composition-root guard: features/** may only consume ports through the
+    // composition hooks (useOrders, useTickets, ...) — never by importing a
+    // concrete adapter directly. This is the mechanical enforcement of the
+    // frontend-first swap point described in design.md: if a feature ever
+    // imported an adapter directly, swapping mock for HTTP at milestone 2
+    // would require touching every such feature file instead of one line
+    // in main.tsx.
+    files: ["apps/web/src/features/**/*.ts", "apps/web/src/features/**/*.tsx"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["*/adapters/*", "*/adapters/**", "**/adapters/*", "**/adapters/**"],
+              message:
+                "features/** must consume ports via the composition hooks (useOrders, useTickets, ...) — never import an adapter directly.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Design-system guard: raw hex colors only allowed inside tokens/.
-    files: ["apps/web/src/**/*.ts", "apps/web/src/**/*.tsx", "apps/web/src/**/*.css"],
+    // Covers .ts/.tsx via the standard ESTree `no-restricted-syntax` rule.
+    files: ["apps/web/src/**/*.ts", "apps/web/src/**/*.tsx"],
     ignores: ["apps/web/src/design-system/tokens/**"],
     rules: {
       "no-restricted-syntax": [
@@ -99,6 +126,20 @@ export default [
             "Raw hex colors are only allowed in design-system/tokens/. Use a role-named token instead.",
         },
       ],
+    },
+  },
+  {
+    // Design-system guard, CSS half: core ESLint rules (like
+    // no-restricted-syntax above) do not run against the `css/css`
+    // language, so raw-hex-in-CSS is enforced by a small custom rule
+    // (eslint-rules/no-raw-hex-css.js) operating on the CSS AST's `Hash`
+    // nodes instead.
+    files: ["apps/web/src/**/*.css"],
+    ignores: ["apps/web/src/design-system/tokens/**"],
+    language: "css/css",
+    plugins: { css, "no-raw-hex-css": { rules: { "no-raw-hex": noRawHexCss } } },
+    rules: {
+      "no-raw-hex-css/no-raw-hex": "error",
     },
   },
   prettierConfig,

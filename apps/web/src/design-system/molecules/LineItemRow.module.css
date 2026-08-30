@@ -1,0 +1,33 @@
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.details {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.name {
+  color: var(--text-primary);
+}
+
+.quantity {
+  color: var(--text-secondary);
+}
+
+.pourSize {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+.adjustmentLabel {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-style: italic;
+}

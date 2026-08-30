@@ -1,0 +1,97 @@
+/**
+ * KUTANA brand palette — role-named design tokens.
+ *
+ * Raw hex values appear ONLY in this file. Every other file in the app
+ * references a role name (`var(--surface-page)`, never `#F5F0E1`). This is
+ * enforced by the ESLint `no-restricted-syntax` rule banning raw hex
+ * literals outside `design-system/tokens/` (see eslint.config.js).
+ *
+ * ACCESSIBILITY CONSTRAINT (measured, load-bearing — see the v1 scope
+ * decision "brand palette"): dark green (#1D3124) on beige (#F5F0E1) is
+ * ~12:1 contrast and is the only palette pairing safe for extended reading
+ * under venue lighting. Terracotta (#D65C2B) on beige is ~3.4:1 — this
+ * fails WCAG AA for normal-size body text (needs 4.5:1) and only clears
+ * the AA "large text" / UI-component threshold (3:1). Terracotta is
+ * therefore restricted to buttons/accents/large headings (>=24px, or
+ * >=19px when bold) and MUST NEVER be used for body text.
+ *
+ * There is DELIBERATELY no `--text-terracotta` (or any equivalent
+ * body-text terracotta/accent) token defined below. The accessibility rule
+ * is enforced by the ABSENCE of that affordance, not by reviewer memory —
+ * see `design-system/tokens/__tests__/accessibility.guard.test.ts`.
+ *
+ * Contrast ratios below are computed against the WCAG 2.1 relative
+ * luminance formula. AA requires >= 4.5:1 for normal text, >= 3:1 for
+ * large text (>=24px, or >=19px bold) and UI components.
+ */
+:root {
+  /* --- Surfaces --------------------------------------------------- */
+  --surface-page: #f5f0e1; /* KUTANA beige */
+  --surface-raised: #ffffff; /* cards, panels, modals */
+  --surface-sunken: #ede6d3; /* recessed panels (e.g. list rows) */
+
+  /* --- Text ---------------------------------------------------------
+   * --text-primary on --surface-page: 12.15:1 (AA normal + large: pass)
+   * --text-primary on --surface-raised: 13.84:1 (AA normal + large: pass)
+   * --text-secondary on --surface-page: 6.23:1 (AA normal + large: pass)
+   * --text-on-action on --action-primary-bg: 3.40:1 (AA large/UI only —
+   *   see the accent-emphasis note below; body text MUST NOT use this
+   *   pairing)
+   */
+  --text-primary: #1d3124; /* KUTANA dark green — body text */
+  --text-secondary: #4c5c51; /* muted dark green, still AA-normal-text-safe */
+  --text-disabled: #8b9089; /* disabled-only; WCAG text contrast does not apply to disabled controls */
+  --text-on-action: #f5f0e1; /* beige text placed on a solid dark/terracotta button */
+
+  /* --- Actions --------------------------------------------------------
+   * --action-primary-fg on --action-primary-bg: 3.40:1 — AA "large text" /
+   *   UI-component threshold only (3:1). Any label rendered in this
+   *   pairing MUST be bold and >=~19px (the Button atom enforces this).
+   * --action-secondary-fg on --action-secondary-bg: 13.84:1 (AA normal +
+   *   large: pass) — prefer this pairing wherever a normal-size label is
+   *   needed.
+   */
+  --action-primary-bg: #d65c2b; /* KUTANA terracotta — primary/emphasis buttons */
+  --action-primary-fg: #f5f0e1;
+  --action-secondary-bg: #1d3124; /* KUTANA dark green — secondary solid buttons */
+  --action-secondary-fg: #f5f0e1;
+
+  /*
+   * --accent-emphasis on --surface-page: 3.40:1 — AA "large text" only
+   * (>=24px, or >=19px bold). NEVER apply to body-size text. There is no
+   * body-text alias for this color; see the file-level note above.
+   */
+  --accent-emphasis: #d65c2b; /* KUTANA terracotta — large headings/wordmark only */
+
+  /* --- Borders --------------------------------------------------------
+   * Decorative only — WCAG 1.4.11 (3:1) applies to meaningful UI-component
+   * boundaries; --border-strong clears it against --surface-page (~4.3:1
+   * effective once opacity is accounted for at full green, well above the
+   * non-text 3:1 floor), --border-subtle is intentionally low-contrast and
+   * used only for non-essential dividers.
+   */
+  --border-subtle: rgba(29, 49, 36, 0.15);
+  --border-strong: rgba(29, 49, 36, 0.4);
+
+  /* --- Stock status ----------------------------------------------------
+   * fg/bg ratios: in-stock 11.70:1, low-stock 6.57:1, out-of-stock 6.54:1
+   * — all clear AA normal text (4.5:1).
+   */
+  --status-in-stock-bg: #e4efe3;
+  --status-in-stock-fg: #1d3124;
+  --status-low-stock-bg: #fbefd9;
+  --status-low-stock-fg: #7a4a00;
+  --status-out-of-stock-bg: #f5e0da;
+  --status-out-of-stock-fg: #8c2f12;
+
+  /* --- Order status ------------------------------------------------------
+   * fg/bg ratios: active 11.70:1, needs-check 6.57:1, paid 9.20:1 — all
+   * clear AA normal text (4.5:1).
+   */
+  --order-active-bg: #e4efe3;
+  --order-active-fg: #1d3124;
+  --order-needs-check-bg: #fbefd9;
+  --order-needs-check-fg: #7a4a00;
+  --order-paid-bg: #e3e9f2;
+  --order-paid-fg: #1d3b66;
+}

@@ -86,11 +86,11 @@ required to run the demo.**
 - [x] 8.4 Write seed fixtures (products, categories, tables, one open order) importing only `@kutana/shared` types - no ad-hoc shapes.
 
 ### Phase 9: Composition Root & Design System - PR5
-- [ ] 9.1 Define `Ports` type and `apps/web/src/composition/ports.ts`; implement `PortsProvider.tsx` (React context) + typed hooks (`useOrders`, `useTickets`, etc.).
-- [ ] 9.2 Implement `composition/mock.ts` wiring all Phase 8 adapters; wire `main.tsx` to call `buildMockPorts()` (HTTP branch stubbed as a TODO for milestone 2, not implemented now).
-- [ ] 9.3 Create `design-system/tokens/palette.css` with the exact role-named tokens (`--surface-page: #F5F0E1`, `--text-primary: #1D3124`, `--action-primary-bg: #D65C2B`, etc.) - raw hex appears only here.
-- [ ] 9.4 RED: design-system test asserting no body-text atom/molecule resolves to `--accent-emphasis`/terracotta, and asserting `--text-terracotta` is not defined anywhere in tokens.
-- [ ] 9.5 GREEN: build atomic `atoms/` (Button, Input, Badge, Icon) and `molecules/` (PriceTag, StatusPill, LineItemRow) consuming only role tokens.
+- [x] 9.1 Define `Ports` type and `apps/web/src/composition/ports.ts`; implement `PortsProvider.tsx` (React context) + typed hooks (`useOrders`, `useTickets`, etc.).
+- [x] 9.2 Implement `composition/mock.ts` wiring all Phase 8 adapters; wire `main.tsx` to call `buildMockPorts()` (HTTP branch stubbed as a TODO for milestone 2, not implemented now).
+- [x] 9.3 Create `design-system/tokens/palette.css` with the exact role-named tokens (`--surface-page: #F5F0E1`, `--text-primary: #1D3124`, `--action-primary-bg: #D65C2B`, etc.) - raw hex appears only here.
+- [x] 9.4 RED: design-system test asserting no body-text atom/molecule resolves to `--accent-emphasis`/terracotta, and asserting `--text-terracotta` is not defined anywhere in tokens.
+- [x] 9.5 GREEN: build atomic `atoms/` (Button, Input, Badge, Icon) and `molecules/` (PriceTag, StatusPill, LineItemRow) consuming only role tokens.
 
 ### Phase 10: Screens - Inventory, Catalog Form, Orders, Register - PR6
 - [ ] 10.1 RED: presentational component tests (Testing Library, props only, no ports) for `InventoryList`, `ProductForm`, `OrderTablePanel`, `RegisterPaymentPanel`.

@@ -1,0 +1,6 @@
+// Fixture used by the composition-root boundary-guard test. Kept with a
+// .tsx.txt extension so it is never compiled, type-checked, or bundled as
+// part of the app — ESLint reads it directly by path instead.
+import { MockOrderRepository } from "../../adapters/mock/order-repository.js";
+
+export const guardShouldNeverExist = new MockOrderRepository();
