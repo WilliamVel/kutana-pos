@@ -13,9 +13,10 @@ test("splits Table 1's bill into two tickets and pays each independently", async
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "KUTANA POS" })).toBeVisible();
 
-  // --- Navigate to the split-bill screen and pick Table 1 ---
-  await page.getByRole("button", { name: "Split Bill" }).click();
+  // --- Navigate to the Register screen, pick Table 1, enter split-bill mode ---
+  await page.getByRole("button", { name: "Register" }).click();
   await page.getByRole("button", { name: /Table 1/ }).click();
+  await page.getByRole("button", { name: "Manage splits" }).click();
 
   const originalBill = page.getByRole("region", { name: "Original Bill" });
   const newBill = page.getByRole("region", { name: "New Bill" });
@@ -42,9 +43,10 @@ test("splits Table 1's bill into two tickets and pays each independently", async
   await page.getByRole("button", { name: "Confirm payment" }).click();
   await expect(page.getByText("$0.00").first()).toBeVisible();
 
-  // --- Go back to Split Bill and pay the Original Bill (Nachos ticket) independently ---
-  await page.getByRole("button", { name: "Split Bill" }).click();
+  // --- Go back to split-bill mode and pay the Original Bill (Nachos ticket) independently ---
+  await page.getByRole("button", { name: "Register" }).click();
   await page.getByRole("button", { name: /Table 1/ }).click();
+  await page.getByRole("button", { name: "Manage splits" }).click();
   await expect(page.getByRole("region", { name: "Original Bill" })).toContainText("$7.28");
 
   await page.getByRole("button", { name: "Pay Original Bill" }).click();
@@ -61,8 +63,9 @@ test("shows a non-technical conflict banner on a forced conflict and lets the se
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Split Bill" }).click();
+  await page.getByRole("button", { name: "Register" }).click();
   await page.getByRole("button", { name: /Table 1/ }).click();
+  await page.getByRole("button", { name: "Manage splits" }).click();
 
   await expect(page.getByRole("region", { name: "Original Bill" })).toContainText("$15.12");
 

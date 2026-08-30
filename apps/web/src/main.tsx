@@ -1,6 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./design-system/tokens/palette.css";
+import "./design-system/tokens/elevation.css";
+import "./styles/global.css";
 import { App } from "./App.js";
 import { PortsProvider } from "./composition/PortsProvider.js";
 import { buildHttpPorts } from "./composition/http.js";

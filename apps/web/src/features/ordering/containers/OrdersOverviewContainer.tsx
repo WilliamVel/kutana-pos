@@ -29,6 +29,14 @@ function toRow(table: Table, order: Order | null): OrdersOverviewRow | null {
 export interface OrdersOverviewContainerProps {
   readonly selectedTableId: string | null;
   readonly onSelectTable: (tableId: string) => void;
+  /**
+   * Bump this to force a full table-list + rows reload. The `OrderEvents`
+   * subscription is keyed by each table's `currentOrderId` captured at load
+   * time, so a table that becomes occupied AFTER mount (the "New order"
+   * flow) is invisible until the list is re-fetched. App increments this
+   * when a new order is created.
+   */
+  readonly reloadKey?: number;
 }
 
 /**
@@ -40,6 +48,7 @@ export interface OrdersOverviewContainerProps {
 export function OrdersOverviewContainer({
   selectedTableId,
   onSelectTable,
+  reloadKey = 0,
 }: OrdersOverviewContainerProps): JSX.Element {
   const tables = useTables();
   const orders = useOrders();
@@ -75,7 +84,7 @@ export function OrdersOverviewContainer({
     return () => {
       cancelled = true;
     };
-  }, [tables, refreshTable]);
+  }, [tables, refreshTable, reloadKey]);
 
   useEffect(() => {
     const unsubscribes = tableList.map((table) => {

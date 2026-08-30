@@ -1,0 +1,37 @@
+.shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "topbar"
+    "content"
+    "actionbar";
+  min-height: 100vh;
+}
+
+.topbar {
+  grid-area: topbar;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.content {
+  grid-area: content;
+  min-width: 0;
+  padding: var(--space-5) var(--space-6);
+  overflow-y: auto;
+}
+
+.actionbar {
+  grid-area: actionbar;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+@media (max-width: 48rem) {
+  .content {
+    padding: var(--space-4);
+  }
+}

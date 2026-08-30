@@ -1,0 +1,35 @@
+/**
+ * KUTANA elevation, spacing and radius tokens.
+ *
+ * Like palette.css, this file lives in design-system/tokens/ and is the
+ * ONLY place besides palette.css where raw values (shadow offsets, radii,
+ * spacing steps) may appear. Every other file references the role names
+ * below (var(--space-4), var(--radius-lg), var(--shadow-md)).
+ *
+ * The shadow tokens are deliberately built as low-alpha rgba() of the
+ * KUTANA dark green (29, 49, 36) so elevation reads as a soft green-tinted
+ * ambient shadow on the beige page rather than a neutral grey drop shadow.
+ * The palette is unchanged — no new colours are introduced here.
+ */
+:root {
+  /* --- Spacing scale (4px base) --------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 2.5rem;
+  --space-8: 3rem;
+
+  /* --- Corner radii -------------------------------------------- */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+  --radius-pill: 999px;
+
+  /* --- Soft green-tinted elevation ---------------------------- */
+  --shadow-sm: 0 1px 2px rgba(29, 49, 36, 0.06);
+  --shadow-md: 0 2px 8px rgba(29, 49, 36, 0.08), 0 1px 2px rgba(29, 49, 36, 0.06);
+  --shadow-lg: 0 10px 28px rgba(29, 49, 36, 0.1), 0 2px 6px rgba(29, 49, 36, 0.06);
+}

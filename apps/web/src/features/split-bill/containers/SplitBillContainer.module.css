@@ -1,10 +1,10 @@
 .screen {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-5);
 }
 
 .payButtons {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
