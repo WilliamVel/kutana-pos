@@ -1,7 +1,7 @@
 import { createCategory, type Category } from "@kutana/shared/catalog/model/category.js";
 import { createProduct, type Product } from "@kutana/shared/catalog/model/product.js";
 import { createStockItem, type StockItem } from "@kutana/shared/inventory/model/stock-item.js";
-import { createOrder, type Order } from "@kutana/shared/ordering/model/order.js";
+import { createOrder, requestCheck, type Order } from "@kutana/shared/ordering/model/order.js";
 import { addLineItem } from "@kutana/shared/ordering/services/line-item-service.js";
 import { createTable, occupyTable, type Table } from "@kutana/shared/ordering/model/table.js";
 
@@ -18,7 +18,7 @@ export interface SeedFixtures {
   readonly stockItems: readonly StockItem[];
   readonly products: readonly Product[];
   readonly tables: readonly Table[];
-  readonly openOrder: Order;
+  readonly openOrders: readonly Order[];
 }
 
 export function buildSeedFixtures(): SeedFixtures {
@@ -151,8 +151,8 @@ export function buildSeedFixtures(): SeedFixtures {
   const table2 = createTable({ id: "table-2", label: "Table 2" });
   const table3 = createTable({ id: "table-3", label: "Table 3" });
 
-  let openOrder: Order = createOrder({ id: "order-open-1", tableId: table1.id });
-  openOrder = addLineItem(openOrder, {
+  let order1: Order = createOrder({ id: "order-open-1", tableId: table1.id });
+  order1 = addLineItem(order1, {
     productId: "product-pilsener-500",
     nameSnapshot: "KUTANA Pilsener 500ml",
     unitPriceCents: 350,
@@ -160,7 +160,7 @@ export function buildSeedFixtures(): SeedFixtures {
     taxRateBp: 1200,
     pourSizeMl: 500,
   });
-  openOrder = addLineItem(openOrder, {
+  order1 = addLineItem(order1, {
     productId: "product-nachos",
     nameSnapshot: "Loaded Nachos",
     unitPriceCents: 650,
@@ -168,7 +168,53 @@ export function buildSeedFixtures(): SeedFixtures {
     taxRateBp: 1200,
   });
 
-  const tables: Table[] = [occupyTable(table1, openOrder.id), table2, table3];
+  let order2: Order = createOrder({ id: "order-open-2", tableId: table2.id });
+  order2 = addLineItem(order2, {
+    productId: "product-session-ipa-500",
+    nameSnapshot: "KUTANA Session IPA 500ml",
+    unitPriceCents: 400,
+    quantity: 3,
+    taxRateBp: 1200,
+    pourSizeMl: 500,
+  });
+  order2 = addLineItem(order2, {
+    productId: "product-empanadas",
+    nameSnapshot: "Beef Empanadas (3pc)",
+    unitPriceCents: 550,
+    quantity: 1,
+    taxRateBp: 1200,
+  });
 
-  return { categories, stockItems, products, tables, openOrder };
+  let order3: Order = createOrder({ id: "order-open-3", tableId: table3.id });
+  order3 = addLineItem(order3, {
+    productId: "product-pilsener-1000",
+    nameSnapshot: "KUTANA Pilsener 1L",
+    unitPriceCents: 620,
+    quantity: 1,
+    taxRateBp: 1200,
+    pourSizeMl: 1000,
+  });
+  order3 = addLineItem(order3, {
+    productId: "product-stout-bottle",
+    nameSnapshot: "KUTANA Stout 330ml Bottle",
+    unitPriceCents: 380,
+    quantity: 2,
+    taxRateBp: 1200,
+  });
+  order3 = addLineItem(order3, {
+    productId: "product-nachos",
+    nameSnapshot: "Loaded Nachos",
+    unitPriceCents: 650,
+    quantity: 2,
+    taxRateBp: 1200,
+  });
+  order3 = requestCheck(order3);
+
+  const tables: Table[] = [
+    occupyTable(table1, order1.id),
+    occupyTable(table2, order2.id),
+    occupyTable(table3, order3.id),
+  ];
+
+  return { categories, stockItems, products, tables, openOrders: [order1, order2, order3] };
 }

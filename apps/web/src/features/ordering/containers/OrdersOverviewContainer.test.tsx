@@ -5,7 +5,7 @@ import { buildMockPorts } from "../../../composition/mock.js";
 import { OrdersOverviewContainer } from "./OrdersOverviewContainer.js";
 
 describe("OrdersOverviewContainer", () => {
-  it("lists only tables with an open order — table-1 from seed data, not the free tables", async () => {
+  it("lists every table that has an open order from the seed data", async () => {
     const ports = buildMockPorts();
     render(
       <PortsProvider value={ports}>
@@ -14,7 +14,8 @@ describe("OrdersOverviewContainer", () => {
     );
 
     await waitFor(() => expect(screen.getByText("Table 1")).toBeInTheDocument());
-    expect(screen.queryByText("Table 2")).not.toBeInTheDocument();
+    expect(screen.getByText("Table 2")).toBeInTheDocument();
+    expect(screen.getByText("Table 3")).toBeInTheDocument();
   });
 
   it("calls onSelectTable with the real table id when a row is clicked", async () => {

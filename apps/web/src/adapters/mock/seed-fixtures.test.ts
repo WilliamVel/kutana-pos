@@ -34,18 +34,29 @@ describe("buildSeedFixtures", () => {
     expect(stout?.stockKind).toBe("unit");
   });
 
-  it("seeds three tables and marks the one with an open order as active", () => {
-    const { tables, openOrder } = buildSeedFixtures();
-    const occupied = tables.find((table) => table.currentOrderId === openOrder.id);
+  it("seeds three tables, each occupied by its own open order", () => {
+    const { tables, openOrders } = buildSeedFixtures();
 
+    expect(openOrders).toHaveLength(3);
     expect(tables).toHaveLength(3);
-    expect(occupied?.status).toBe("active");
-    expect(tables.filter((table) => table.status === "free")).toHaveLength(2);
+    for (const order of openOrders) {
+      const occupied = tables.find((table) => table.currentOrderId === order.id);
+      expect(occupied?.status).toBe("active");
+    }
+    expect(tables.filter((table) => table.status === "free")).toHaveLength(0);
   });
 
-  it("seeds one open order with line items already added", () => {
-    const { openOrder } = buildSeedFixtures();
-    expect(openOrder.status).toBe("active");
-    expect(openOrder.lineItems.length).toBeGreaterThan(0);
+  it("seeds three open orders with line items and the expected statuses", () => {
+    const { openOrders } = buildSeedFixtures();
+    const byId = new Map(openOrders.map((order) => [order.id, order]));
+
+    for (const order of openOrders) {
+      expect(order.lineItems.length).toBeGreaterThan(0);
+    }
+    expect(byId.get("order-open-1")?.status).toBe("active");
+    expect(byId.get("order-open-2")?.status).toBe("active");
+    expect(byId.get("order-open-2")?.lineItems).toHaveLength(2);
+    expect(byId.get("order-open-3")?.status).toBe("needs_check");
+    expect(byId.get("order-open-3")?.lineItems).toHaveLength(3);
   });
 });

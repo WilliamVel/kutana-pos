@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ProductFormContainer } from "./features/catalog/containers/ProductFormContainer.js";
 import { InventoryListContainer } from "./features/inventory/containers/InventoryListContainer.js";
+import { AddItemContainer } from "./features/ordering/containers/AddItemContainer.js";
 import { OrderTicketPanelContainer } from "./features/ordering/containers/OrderTicketPanelContainer.js";
 import { OrdersOverviewContainer } from "./features/ordering/containers/OrdersOverviewContainer.js";
 import { RegisterPaymentContainer } from "./features/register/containers/RegisterPaymentContainer.js";
@@ -61,7 +62,12 @@ export function App(): JSX.Element {
             selectedTableId={selectedTableId}
             onSelectTable={setSelectedTableId}
           />
-          {selectedTableId ? <OrderTicketPanelContainer tableId={selectedTableId} /> : null}
+          {selectedTableId ? (
+            <div>
+              <OrderTicketPanelContainer tableId={selectedTableId} />
+              <AddItemContainer tableId={selectedTableId} />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
