@@ -1,0 +1,7 @@
+// Fixture used by the boundary-guard test. Kept with a .ts.txt extension so
+// it is never compiled or type-checked as part of the package — ESLint reads
+// it directly by path instead.
+import { Injectable } from "@nestjs/common";
+
+@Injectable()
+export class ShouldNeverExistInShared {}
