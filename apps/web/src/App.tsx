@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AppShell } from "./app-shell/components/AppShell.js";
 import { TopBar } from "./app-shell/components/TopBar.js";
 import type { ScreenId } from "./app-shell/screens.js";
+import { Button } from "./design-system/atoms/Button.js";
 import { Panel } from "./design-system/molecules/Panel.js";
 import { ProductFormContainer } from "./features/catalog/containers/ProductFormContainer.js";
 import { InventoryListContainer } from "./features/inventory/containers/InventoryListContainer.js";
@@ -53,9 +54,9 @@ export function App(): JSX.Element {
             tableId={selectedTableId}
             ticketId={selectedTicketId ?? undefined}
           />
-          <button type="button" onClick={resetCenter}>
+          <Button variant="secondary" onClick={resetCenter}>
             Back to order
-          </button>
+          </Button>
         </>
       );
     } else if (centerView === "split") {
@@ -68,9 +69,9 @@ export function App(): JSX.Element {
               setCenterView("payment");
             }}
           />
-          <button type="button" onClick={resetCenter}>
+          <Button variant="secondary" onClick={resetCenter}>
             Back to order
-          </button>
+          </Button>
         </>
       );
     } else {
@@ -78,18 +79,17 @@ export function App(): JSX.Element {
         <>
           <OrderTicketPanelContainer tableId={selectedTableId} />
           <div style={{ display: "flex", gap: "var(--space-3)" }}>
-            <button type="button" onClick={() => setCenterView("split")}>
+            <Button variant="secondary" onClick={() => setCenterView("split")}>
               Manage splits
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               onClick={() => {
                 setSelectedTicketId(null);
                 setCenterView("payment");
               }}
             >
               Proceed to payment
-            </button>
+            </Button>
           </div>
         </>
       );
