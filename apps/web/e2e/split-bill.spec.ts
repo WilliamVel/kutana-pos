@@ -16,7 +16,7 @@ test("splits Table 1's bill into two tickets and pays each independently", async
   // --- Navigate to the Register screen, pick Table 1, enter split-bill mode ---
   await page.getByRole("button", { name: "Register" }).click();
   await page.getByRole("button", { name: /Table 1/ }).click();
-  await page.getByRole("button", { name: "Split bill" }).click();
+  await page.getByRole("button", { name: "Manage splits" }).click();
 
   const originalBill = page.getByRole("region", { name: "Original Bill" });
   const newBill = page.getByRole("region", { name: "New Bill" });
@@ -46,7 +46,7 @@ test("splits Table 1's bill into two tickets and pays each independently", async
   // --- Go back to split-bill mode and pay the Original Bill (Nachos ticket) independently ---
   await page.getByRole("button", { name: "Register" }).click();
   await page.getByRole("button", { name: /Table 1/ }).click();
-  await page.getByRole("button", { name: "Split bill" }).click();
+  await page.getByRole("button", { name: "Manage splits" }).click();
   await expect(page.getByRole("region", { name: "Original Bill" })).toContainText("$7.28");
 
   await page.getByRole("button", { name: "Pay Original Bill" }).click();
@@ -65,7 +65,7 @@ test("shows a non-technical conflict banner on a forced conflict and lets the se
   await page.goto("/");
   await page.getByRole("button", { name: "Register" }).click();
   await page.getByRole("button", { name: /Table 1/ }).click();
-  await page.getByRole("button", { name: "Split bill" }).click();
+  await page.getByRole("button", { name: "Manage splits" }).click();
 
   await expect(page.getByRole("region", { name: "Original Bill" })).toContainText("$15.12");
 

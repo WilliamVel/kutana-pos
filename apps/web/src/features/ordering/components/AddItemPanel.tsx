@@ -9,52 +9,58 @@ export interface AddItemPanelProduct {
   /** Integer cents. */
   readonly priceCents: number;
   readonly categoryName: string;
+  /** Catalog image; null falls back to a CSS placeholder tile. */
+  readonly imageUrl?: string | null;
 }
 
 export interface AddItemPanelProps {
   readonly products: readonly AddItemPanelProduct[];
   readonly onAdd: (productId: string, quantity: number) => void;
+  /** Ordered category names for the tab strip; derived from products when omitted. */
+  readonly categories?: readonly string[];
   /** True when the order is paid / can no longer be modified. */
   readonly disabled?: boolean;
   readonly conflictMessage?: string | null;
   readonly onDismissConflict?: () => void;
 }
 
+const ALL_TAB = "All";
+
 /**
- * Purely presentational: props in, markup out, no port access. Lists the
- * catalog grouped by category so a server can add products to an open
- * order; each row has a small quantity stepper and an "Add" action.
+ * Purely presentational: props in, markup out, no port access. The
+ * "Quick add items" rail — a search box, a category tab strip, and a grid
+ * of product tiles. Each tile shows the catalog image (or a tinted
+ * placeholder with the product's first letter), the name, its price, and a
+ * `+` button that adds one unit.
  */
 export function AddItemPanel({
   products,
   onAdd,
+  categories,
   disabled = false,
   conflictMessage,
   onDismissConflict,
 }: AddItemPanelProps): JSX.Element {
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const quantityFor = (id: string): number => quantities[id] ?? 1;
-  const setQuantity = (id: string, value: number): void =>
-    setQuantities((current) => ({ ...current, [id]: Math.max(1, value) }));
+  const [query, setQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string>(ALL_TAB);
+
+  const categoryNames =
+    categories ?? [...new Set(products.map((product) => product.categoryName))];
+  const tabs = [ALL_TAB, ...categoryNames];
 
   // Client-side filter only. Real server-side search (`GET /products?q=`)
   // is a Milestone-2 concern; the container keeps passing the full list.
-  const [query, setQuery] = useState("");
   const needle = query.trim().toLowerCase();
-  const filtered = needle
-    ? products.filter((product) => product.name.toLowerCase().includes(needle))
-    : products;
-
-  const groups = new Map<string, AddItemPanelProduct[]>();
-  for (const product of filtered) {
-    const list = groups.get(product.categoryName) ?? [];
-    list.push(product);
-    groups.set(product.categoryName, list);
-  }
+  const visible = products.filter((product) => {
+    const matchesQuery = needle ? product.name.toLowerCase().includes(needle) : true;
+    const matchesCategory =
+      activeCategory === ALL_TAB ? true : product.categoryName === activeCategory;
+    return matchesQuery && matchesCategory;
+  });
 
   return (
     <section className={styles.panel} aria-label="Add items to order">
-      <h2>Add items</h2>
+      <h2>Quick add items</h2>
 
       <input
         type="search"
@@ -64,6 +70,21 @@ export function AddItemPanel({
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
+
+      <div className={styles.tabs} role="tablist" aria-label="Product categories">
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            className={styles.tab}
+            aria-selected={tab === activeCategory}
+            onClick={() => setActiveCategory(tab)}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
 
       {conflictMessage ? (
         <div className={styles.conflict} role="alert">
@@ -76,50 +97,39 @@ export function AddItemPanel({
         </div>
       ) : null}
 
-      {groups.size === 0 ? <p className={styles.noMatch}>No products match.</p> : null}
-
-      {[...groups.entries()].map(([categoryName, items]) => (
-        <div key={categoryName} className={styles.group}>
-          <h3 className={styles.groupHeading}>{categoryName}</h3>
-          <ul className={styles.rows}>
-            {items.map((product) => (
-              <li key={product.id} className={styles.row}>
-                <span className={styles.name}>{product.name}</span>
-                <PriceTag cents={product.priceCents} />
-                <div className={styles.stepper}>
-                  <button
-                    type="button"
-                    className={styles.stepperButton}
-                    aria-label={`Decrease quantity of ${product.name}`}
-                    disabled={disabled || quantityFor(product.id) <= 1}
-                    onClick={() => setQuantity(product.id, quantityFor(product.id) - 1)}
-                  >
-                    −
-                  </button>
-                  <span className={styles.quantity} aria-label={`Quantity of ${product.name}`}>
-                    {quantityFor(product.id)}
-                  </span>
-                  <button
-                    type="button"
-                    className={styles.stepperButton}
-                    aria-label={`Increase quantity of ${product.name}`}
-                    disabled={disabled}
-                    onClick={() => setQuantity(product.id, quantityFor(product.id) + 1)}
-                  >
-                    +
-                  </button>
+      {visible.length === 0 ? (
+        <p className={styles.noMatch}>No products match.</p>
+      ) : (
+        <ul className={styles.grid}>
+          {visible.map((product) => (
+            <li key={product.id} className={styles.tile}>
+              {product.imageUrl ? (
+                <img
+                  className={styles.thumb}
+                  src={product.imageUrl}
+                  alt={product.name}
+                  loading="lazy"
+                />
+              ) : (
+                <div className={styles.placeholder} aria-hidden="true">
+                  {product.name.charAt(0)}
                 </div>
-                <Button
-                  onClick={() => onAdd(product.id, quantityFor(product.id))}
-                  disabled={disabled}
-                >
-                  Add
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+              )}
+              <span className={styles.name}>{product.name}</span>
+              <PriceTag cents={product.priceCents} />
+              <button
+                type="button"
+                className={styles.add}
+                aria-label={`Add ${product.name}`}
+                disabled={disabled}
+                onClick={() => onAdd(product.id, 1)}
+              >
+                +
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

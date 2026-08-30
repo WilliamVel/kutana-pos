@@ -29,6 +29,7 @@ export function AddItemContainer({ tableId }: AddItemContainerProps): JSX.Elemen
   const events = useOrderEvents();
 
   const [catalog, setCatalog] = useState<AddItemPanelProduct[]>([]);
+  const [categoryNames, setCategoryNames] = useState<string[]>([]);
   const [order, setOrder] = useState<Order | null>(null);
   const [conflict, setConflict] = useState<string | null>(null);
 
@@ -41,6 +42,7 @@ export function AddItemContainer({ tableId }: AddItemContainerProps): JSX.Elemen
         cats.map((category) => products.listByCategory(category.id)),
       );
       if (cancelled) return;
+      setCategoryNames(cats.map((category) => category.name));
       setCatalog(
         cats.flatMap((category, index) =>
           (perCat[index] ?? []).map((product) => ({
@@ -48,6 +50,7 @@ export function AddItemContainer({ tableId }: AddItemContainerProps): JSX.Elemen
             name: product.name,
             priceCents: product.priceCents,
             categoryName: category.name,
+            imageUrl: product.imageUrl,
           })),
         ),
       );
@@ -107,6 +110,7 @@ export function AddItemContainer({ tableId }: AddItemContainerProps): JSX.Elemen
   return (
     <AddItemPanel
       products={catalog}
+      categories={categoryNames}
       onAdd={(id, quantity) => void handleAdd(id, quantity)}
       disabled={disabled}
       conflictMessage={conflict}

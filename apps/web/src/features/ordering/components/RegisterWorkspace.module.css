@@ -1,6 +1,6 @@
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr) minmax(0, 22rem);
   gap: var(--space-5);
   align-items: start;
 }
@@ -11,7 +11,7 @@
   gap: var(--space-4);
 }
 
-.detail {
+.center {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -22,6 +22,12 @@
   box-shadow: var(--shadow-md);
 }
 
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 .empty {
   margin: 0;
   padding: var(--space-6);
@@ -29,9 +35,9 @@
   color: var(--text-secondary);
 }
 
-/* Stack the two columns on narrow viewports, matching the app-shell
+/* Stack the columns on narrow viewports, matching the app-shell
    breakpoint in AppShell.module.css. */
-@media (max-width: 48rem) {
+@media (max-width: 64rem) {
   .workspace {
     grid-template-columns: 1fr;
   }

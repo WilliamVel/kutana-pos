@@ -21,7 +21,7 @@ describe("AddItemContainer", () => {
 
     const row = screen.getByText("KUTANA Pilsener 1L").closest("li");
     if (!row) throw new Error("expected a catalog row for KUTANA Pilsener 1L");
-    fireEvent.click(within(row).getByRole("button", { name: "Add" }));
+    fireEvent.click(within(row).getByRole("button", { name: /^Add / }));
 
     await waitFor(async () => {
       const after = await ports.orders.findByTable("table-2");
@@ -48,9 +48,9 @@ describe("AddItemContainer", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getAllByRole("button", { name: "Add" }).length).toBeGreaterThan(0),
+      expect(screen.getAllByRole("button", { name: /^Add / }).length).toBeGreaterThan(0),
     );
-    for (const button of screen.getAllByRole("button", { name: "Add" })) {
+    for (const button of screen.getAllByRole("button", { name: /^Add / })) {
       expect(button).toBeDisabled();
     }
   });

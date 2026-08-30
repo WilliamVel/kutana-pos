@@ -7,15 +7,15 @@ describe("TopBar", () => {
     render(<TopBar currentScreen="inventory" onNavigate={vi.fn()} />);
 
     expect(screen.getByRole("heading", { name: "KUTANA POS" })).toBeInTheDocument();
-    for (const label of ["Inventory", "Add product", "Orders", "Register"]) {
+    for (const label of ["Inventory", "Add product", "Register"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
   });
 
   it("marks the current screen's tab as the active page", () => {
-    render(<TopBar currentScreen="orders" onNavigate={vi.fn()} />);
+    render(<TopBar currentScreen="register" onNavigate={vi.fn()} />);
 
-    expect(screen.getByRole("button", { name: "Orders" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Register" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("button", { name: "Inventory" })).not.toHaveAttribute("aria-current");
   });
 
@@ -23,8 +23,8 @@ describe("TopBar", () => {
     const onNavigate = vi.fn();
     render(<TopBar currentScreen="inventory" onNavigate={onNavigate} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Orders" }));
+    fireEvent.click(screen.getByRole("button", { name: "Register" }));
 
-    expect(onNavigate).toHaveBeenCalledWith("orders");
+    expect(onNavigate).toHaveBeenCalledWith("register");
   });
 });

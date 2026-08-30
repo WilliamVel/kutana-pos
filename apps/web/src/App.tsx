@@ -6,13 +6,16 @@ import { screenTitle, type ScreenId } from "./app-shell/screens.js";
 import { Panel } from "./design-system/molecules/Panel.js";
 import { ProductFormContainer } from "./features/catalog/containers/ProductFormContainer.js";
 import { InventoryListContainer } from "./features/inventory/containers/InventoryListContainer.js";
-import { OrdersWorkspace } from "./features/ordering/components/OrdersWorkspace.js";
+import { RegisterWorkspace } from "./features/ordering/components/RegisterWorkspace.js";
 import { AddItemContainer } from "./features/ordering/containers/AddItemContainer.js";
 import { NewOrderContainer } from "./features/ordering/containers/NewOrderContainer.js";
 import { OrderTicketPanelContainer } from "./features/ordering/containers/OrderTicketPanelContainer.js";
 import { OrdersOverviewContainer } from "./features/ordering/containers/OrdersOverviewContainer.js";
 import { RegisterPaymentContainer } from "./features/register/containers/RegisterPaymentContainer.js";
 import { SplitBillContainer } from "./features/split-bill/containers/SplitBillContainer.js";
+
+/** Center-column sub-state of the unified Register workspace. */
+type CenterView = "ticket" | "payment" | "split";
 
 /**
  * Root screen shell for the milestone-1 demo. Navigation state lives here;
@@ -24,26 +27,80 @@ export function App(): JSX.Element {
   const [screen, setScreen] = useState<ScreenId>("inventory");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
-  const [registerMode, setRegisterMode] = useState<"pay" | "split">("pay");
+  const [centerView, setCenterView] = useState<CenterView>("ticket");
   const [ordersReloadKey, setOrdersReloadKey] = useState(0);
 
+  const resetCenter = (): void => {
+    setCenterView("ticket");
+    setSelectedTicketId(null);
+  };
+
   const navigate = (next: ScreenId): void => {
-    if (next === "register") {
-      setSelectedTicketId(null);
-      setRegisterMode("pay");
-    }
+    if (next === "register") resetCenter();
     setScreen(next);
   };
 
-  const sidebarTitle =
-    screen === "register" && registerMode === "split"
-      ? "Register — Split bill"
-      : screenTitle(screen);
+  const selectTable = (tableId: string): void => {
+    setSelectedTableId(tableId);
+    resetCenter();
+  };
+
+  let center: JSX.Element | null = null;
+  if (selectedTableId) {
+    if (centerView === "payment") {
+      center = (
+        <>
+          <RegisterPaymentContainer
+            tableId={selectedTableId}
+            ticketId={selectedTicketId ?? undefined}
+          />
+          <button type="button" onClick={resetCenter}>
+            Back to order
+          </button>
+        </>
+      );
+    } else if (centerView === "split") {
+      center = (
+        <>
+          <SplitBillContainer
+            tableId={selectedTableId}
+            onPayTicket={(ticketId) => {
+              setSelectedTicketId(ticketId);
+              setCenterView("payment");
+            }}
+          />
+          <button type="button" onClick={resetCenter}>
+            Back to order
+          </button>
+        </>
+      );
+    } else {
+      center = (
+        <>
+          <OrderTicketPanelContainer tableId={selectedTableId} />
+          <div style={{ display: "flex", gap: "var(--space-3)" }}>
+            <button type="button" onClick={() => setCenterView("split")}>
+              Manage splits
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedTicketId(null);
+                setCenterView("payment");
+              }}
+            >
+              Proceed to payment
+            </button>
+          </div>
+        </>
+      );
+    }
+  }
 
   return (
     <AppShell
       topBar={<TopBar currentScreen={screen} onNavigate={navigate} />}
-      sidebar={<SideBar screenTitle={sidebarTitle} />}
+      sidebar={<SideBar screenTitle={screenTitle(screen)} />}
     >
       {screen === "inventory" ? <InventoryListContainer /> : null}
 
@@ -56,81 +113,37 @@ export function App(): JSX.Element {
         </Panel>
       ) : null}
 
-      {screen === "orders" ? (
-        <OrdersWorkspace
+      {screen === "register" ? (
+        <RegisterWorkspace
           list={
             <>
               <NewOrderContainer
                 onCreated={(tableId) => {
-                  setSelectedTableId(tableId);
+                  selectTable(tableId);
                   setOrdersReloadKey((key) => key + 1);
                 }}
               />
               <OrdersOverviewContainer
                 selectedTableId={selectedTableId}
-                onSelectTable={setSelectedTableId}
+                onSelectTable={selectTable}
                 reloadKey={ordersReloadKey}
               />
             </>
           }
-          detail={
-            selectedTableId ? (
-              <>
-                <OrderTicketPanelContainer tableId={selectedTableId} />
-                <AddItemContainer tableId={selectedTableId} />
-              </>
-            ) : null
+          center={center}
+          emptyCenter="Select an order to see its ticket."
+          rail={
+            selectedTableId && centerView === "ticket" ? (
+              <AddItemContainer tableId={selectedTableId} />
+            ) : (
+              <p>
+                {selectedTableId
+                  ? "Finish or leave payment to add more items."
+                  : "Select an order to add items."}
+              </p>
+            )
           }
-          emptyDetail="Select an order to see its items."
         />
-      ) : null}
-
-      {screen === "register" ? (
-        <div>
-          <OrdersOverviewContainer
-            selectedTableId={selectedTableId}
-            onSelectTable={(tableId) => {
-              setRegisterMode("pay");
-              setSelectedTicketId(null);
-              setSelectedTableId(tableId);
-            }}
-          />
-          {selectedTableId ? (
-            <div>
-              <div style={{ marginBottom: "var(--space-3)" }}>
-                {registerMode === "pay" ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedTicketId(null);
-                      setRegisterMode("split");
-                    }}
-                  >
-                    Split bill
-                  </button>
-                ) : (
-                  <button type="button" onClick={() => setRegisterMode("pay")}>
-                    Back to payment
-                  </button>
-                )}
-              </div>
-              {registerMode === "pay" ? (
-                <RegisterPaymentContainer
-                  tableId={selectedTableId}
-                  ticketId={selectedTicketId ?? undefined}
-                />
-              ) : (
-                <SplitBillContainer
-                  tableId={selectedTableId}
-                  onPayTicket={(ticketId) => {
-                    setSelectedTicketId(ticketId);
-                    setRegisterMode("pay");
-                  }}
-                />
-              )}
-            </div>
-          ) : null}
-        </div>
       ) : null}
     </AppShell>
   );

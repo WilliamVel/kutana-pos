@@ -55,6 +55,10 @@ export function buildSeedFixtures(): SeedFixtures {
 
   const stockItems: StockItem[] = [kegPilsener, kegSessionIpa, bottledStout];
 
+  // `imageUrl` is intentionally left null on every seed product so the demo
+  // stays hermetic (no network fetches in jsdom / Playwright). The "Quick
+  // add items" rail renders a placeholder tile in that case; real images
+  // arrive from the catalog once products are managed there.
   const products: Product[] = [
     createProduct({
       id: "product-pilsener-500",
