@@ -14,10 +14,12 @@
    * Font size/weight are load-bearing for accessibility: the primary
    * variant's fg/bg pairing (--action-primary-fg on --action-primary-bg)
    * measures ~3.4:1, which only clears WCAG AA at the "large text"
-   * threshold (>=~19px bold). Never shrink this below that without also
-   * switching to the secondary variant's pairing (~13.8:1, safe at any size).
+   * threshold. WCAG defines that threshold as 14pt bold = 18.66px, so
+   * 18px bold would NOT qualify — this is set to 20px to clear it with
+   * margin. Never shrink this below 18.66px without also switching to
+   * the secondary variant's pairing (~13.8:1, safe at any size).
    */
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 700;
   padding: 0.75rem 1.5rem;
 }

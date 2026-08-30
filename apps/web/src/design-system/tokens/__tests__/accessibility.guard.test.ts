@@ -77,3 +77,33 @@ describe("design-system accessibility guard: terracotta is never body text", () 
     expect(violations).toEqual([]);
   });
 });
+
+/**
+ * The primary Button paints --action-primary-fg on --action-primary-bg
+ * (terracotta), measured at ~3.4:1. That clears WCAG AA only at the
+ * "large text" threshold, which WCAG defines as 14pt bold — 18.66px.
+ * 18px bold does NOT qualify, so the size is not a styling preference:
+ * shrinking it silently drops the primary action below AA. A comment
+ * cannot enforce that, so this test does.
+ */
+describe("design-system accessibility guard: primary button stays large enough for its contrast", () => {
+  const WCAG_LARGE_BOLD_PX = 18.66;
+  const ROOT_FONT_PX = 16;
+
+  it("keeps the primary button at or above the WCAG large-bold threshold", () => {
+    const buttonCssPath = path.join(designSystemDir, "atoms/Button.module.css");
+    const source = fs.readFileSync(buttonCssPath, "utf-8");
+
+    const fontSizeMatch = source.match(/font-size:\s*([\d.]+)rem/);
+    const fontWeightMatch = source.match(/font-weight:\s*(\d+)/);
+
+    expect(fontSizeMatch, "Button.module.css must declare a rem font-size").not.toBeNull();
+    expect(fontWeightMatch, "Button.module.css must declare a font-weight").not.toBeNull();
+
+    const fontSizePx = Number(fontSizeMatch?.[1]) * ROOT_FONT_PX;
+    const fontWeight = Number(fontWeightMatch?.[1]);
+
+    expect(fontWeight).toBeGreaterThanOrEqual(700);
+    expect(fontSizePx).toBeGreaterThanOrEqual(WCAG_LARGE_BOLD_PX);
+  });
+});
