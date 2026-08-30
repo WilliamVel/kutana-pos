@@ -41,17 +41,17 @@ required to run the demo.**
 - [x] 1.5 RED: add a lint-rule test/fixture proving the guard fires on a violating fixture file. NOTE: implemented as a general import-boundary guard (`architecture-boundary.test.ts`); the `'CASH'`-literal-specific guard is task 4.5 and remains open.
 
 ### Phase 2: Money & Rounding (TDD) - PR2
-- [ ] 2.1 RED: `packages/shared/money/money.test.ts` - cents-only arithmetic, rejects floats.
-- [ ] 2.2 GREEN: implement `Money` value object in `money/money.ts`.
-- [ ] 2.3 RED: `largest-remainder.test.ts` - property test (fast-check) `sum(largestRemainderSplit(total, weights)) === total` over random inputs; explicit 3-way and 7-way indivisible cases from spec.
-- [ ] 2.4 GREEN: implement `largestRemainderSplit` in `money/largest-remainder.ts`.
+- [x] 2.1 RED: `packages/shared/money/money.test.ts` - cents-only arithmetic, rejects floats.
+- [x] 2.2 GREEN: implement `Money` value object in `money/money.ts`.
+- [x] 2.3 RED: `largest-remainder.test.ts` - property test (fast-check) `sum(largestRemainderSplit(total, weights)) === total` over random inputs; explicit 3-way and 7-way indivisible cases from spec.
+- [x] 2.4 GREEN: implement `largestRemainderSplit` in `money/largest-remainder.ts`.
 
 ### Phase 3: Billing Domain - Allocation & Tickets (TDD) - PR2
-- [ ] 3.1 RED: `billing/model/allocation.test.ts` - one 100%-share Allocation per LineItem invariant; rejecting a second allocation without removing the first (spec scenario).
-- [ ] 3.2 GREEN: implement `Allocation`, `Ticket`, `Sale` models in `billing/model/`.
-- [ ] 3.3 RED: `billing/services/split-allocation.test.ts` - covers: split partially-paid ticket, moving last item empties ticket (and rejects payment while empty), re-merge tickets, new item after split must be allocated, reject modifying a paid ticket.
-- [ ] 3.4 GREEN: implement `splitAllocation`, `mergeTickets`, `ticketTotals` in `billing/services/`.
-- [ ] 3.5 Guard task: add a regression test asserting `line_items` model/ports never expose a `ticket_id` field - Allocation is the only path from LineItem to Ticket (encodes risk #1 from proposal).
+- [x] 3.1 RED: `billing/model/allocation.test.ts` - one 100%-share Allocation per LineItem invariant; rejecting a second allocation without removing the first (spec scenario).
+- [x] 3.2 GREEN: implement `Allocation`, `Ticket`, `Sale` models in `billing/model/`.
+- [x] 3.3 RED: `billing/services/split-allocation.test.ts` - covers: split partially-paid ticket, moving last item empties ticket (and rejects payment while empty), re-merge tickets, new item after split must be allocated, reject modifying a paid ticket.
+- [x] 3.4 GREEN: implement `splitAllocation`, `mergeTickets`, `ticketTotals` in `billing/services/`.
+- [x] 3.5 Guard task: add a regression test asserting `line_items` model/ports never expose a `ticket_id` field - Allocation is the only path from LineItem to Ticket (encodes risk #1 from proposal).
 
 ### Phase 4: Payments Domain (TDD) - PR3
 - [ ] 4.1 RED: `payments/model/payment-method-registry.test.ts` - registry-driven behavior (requires_tendered), CASH computes change, BANK_TRANSFER/QR_PAYMENT do not.
