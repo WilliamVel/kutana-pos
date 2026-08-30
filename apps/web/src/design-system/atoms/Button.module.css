@@ -8,8 +8,12 @@
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   cursor: pointer;
+  transition:
+    filter 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
   /*
    * Font size/weight are load-bearing for accessibility: the primary
    * variant's fg/bg pairing (--action-primary-fg on --action-primary-bg)
@@ -22,6 +26,22 @@
   font-size: 1.25rem;
   font-weight: 700;
   padding: 0.75rem 1.5rem;
+}
+
+.button:hover:not(:disabled) {
+  filter: brightness(0.94);
+  box-shadow: var(--shadow-sm);
+}
+
+.button:active:not(:disabled) {
+  filter: brightness(0.88);
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--accent-emphasis);
+  outline-offset: 2px;
 }
 
 .button:disabled {

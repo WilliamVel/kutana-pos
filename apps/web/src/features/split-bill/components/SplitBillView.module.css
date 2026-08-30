@@ -1,6 +1,6 @@
 .grid {
   display: flex;
   flex-direction: row;
-  gap: 1rem;
+  gap: var(--space-5);
   flex-wrap: wrap;
 }

@@ -1,8 +1,8 @@
 .filters {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-3);
   align-items: flex-end;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-5);
 }
 
 .field {
@@ -19,16 +19,29 @@
 .select,
 .search {
   border: 1px solid var(--border-subtle);
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
   background-color: var(--surface-raised);
   color: var(--text-primary);
 }
 
 .table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.table th:first-child {
+  border-top-left-radius: var(--radius-lg);
+}
+
+.table th:last-child {
+  border-top-right-radius: var(--radius-lg);
 }
 
 .table th {
