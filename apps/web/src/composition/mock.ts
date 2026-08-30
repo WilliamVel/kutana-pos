@@ -37,7 +37,7 @@ export function buildMockPorts(): Ports {
   seedProducts(products, fixtures.products);
   seedCategories(categories, fixtures);
   seedStock(stock, fixtures.stockItems);
-  seedOrder(orders, fixtures);
+  seedOrders(orders, fixtures);
   seedTables(tables, fixtures);
 
   return {
@@ -100,9 +100,11 @@ function seedStock(
   }
 }
 
-function seedOrder(
+function seedOrders(
   repository: MockOrderRepository,
   fixtures: ReturnType<typeof buildSeedFixtures>,
 ): void {
-  void repository.save(fixtures.openOrder, 0);
+  for (const order of fixtures.openOrders) {
+    void repository.save(order, 0);
+  }
 }
