@@ -51,4 +51,76 @@ describe("RegisterPaymentContainer", () => {
     expect(finalPayments).toHaveLength(2);
     expect(finalPayments.reduce((sum, payment) => sum + payment.amountCents, 0)).toBe(1512);
   });
+
+  it("pays a SPECIFIC ticket by id, only charging the line items actually allocated to it (a split-bill scenario)", async () => {
+    const ports = buildMockPorts();
+    const order = (await ports.orders.findByTable("table-1"))!;
+
+    // Simulate what the split-bill screen produces: two tickets, item split
+    // between them via a real Allocation repoint (not fabricated).
+    const [firstLine, secondLine] = order.lineItems;
+    const originalTicket = {
+      ...(await ports.tickets.save(
+        {
+          id: "ticket-original",
+          orderId: order.id,
+          label: "Original Bill",
+          status: "open" as const,
+          version: 1,
+        },
+        [
+          {
+            id: "alloc-1",
+            lineItemId: firstLine!.id,
+            ticketId: "ticket-original",
+            shareBp: 10_000,
+          },
+        ],
+        0,
+      )),
+    };
+    const newTicket = await ports.tickets.save(
+      {
+        id: "ticket-new",
+        orderId: order.id,
+        label: "New Bill",
+        status: "open" as const,
+        version: 1,
+      },
+      [
+        { id: "alloc-1", lineItemId: firstLine!.id, ticketId: "ticket-original", shareBp: 10_000 },
+        { id: "alloc-2", lineItemId: secondLine!.id, ticketId: "ticket-new", shareBp: 10_000 },
+      ],
+      0,
+    );
+
+    render(
+      <PortsProvider value={ports}>
+        <RegisterPaymentContainer tableId="table-1" ticketId={newTicket.id} />
+      </PortsProvider>,
+    );
+
+    // Only the second line item's total should show, not the full order total.
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(`$${(secondLine!.totalCents / 100).toFixed(2)}`).length,
+      ).toBeGreaterThan(0),
+    );
+    expect(screen.queryByText("KUTANA Pilsener 500ml")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: "QR Payment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm payment" }));
+
+    await waitFor(async () => {
+      const payments = await ports.payments.listByTicket(newTicket.id);
+      expect(payments).toHaveLength(1);
+      expect(payments[0]!.amountCents).toBe(secondLine!.totalCents);
+    });
+
+    // The Original Bill's allocation must remain untouched by the New Bill's payment.
+    const finalAllocations = await ports.tickets.listAllocationsByOrder(order.id);
+    expect(finalAllocations.find((a) => a.lineItemId === firstLine!.id)?.ticketId).toBe(
+      originalTicket.id,
+    );
+  });
 });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createAllocation } from "@kutana/shared/billing/model/allocation.js";
+import { createAllocation, type Allocation } from "@kutana/shared/billing/model/allocation.js";
 import { createTicket, withStatus, type Ticket } from "@kutana/shared/billing/model/ticket.js";
 import { ticketTotals } from "@kutana/shared/billing/services/split-allocation.js";
 import type { Order } from "@kutana/shared/ordering/model/order.js";
@@ -24,19 +24,29 @@ import {
 
 export interface RegisterPaymentContainerProps {
   readonly tableId: string;
+  /**
+   * Pays a SPECIFIC ticket (e.g. one of two tickets produced by the
+   * split-bill screen). When omitted, falls back to the table's single
+   * default ticket (auto-created the first time this screen opens for a
+   * table with no ticket yet) — the pre-split-bill v1 behavior.
+   */
+  readonly ticketId?: string;
 }
 
 /**
- * Wires the register/payment screen to the domain: finds (or opens) the
- * table's single default ticket — bill splitting into multiple tickets is
- * PR7's split-bill screen, out of this PR's scope — and drives payment
- * method selection entirely from `usePaymentMethods()` (the registry),
- * never a hardcoded list. Multiple partial payments accumulate against the
- * same ticket until its balance reaches zero (spec: "Payments N:1 with
- * Ticket").
+ * Wires the register/payment screen to the domain. Totals and lines are
+ * always derived from the REAL `Allocation` set read via
+ * `TicketRepository.listAllocationsByOrder` — never fabricated as "every
+ * line item belongs to this ticket" — so paying one ticket after a
+ * split-bill move never corrupts the other ticket's allocations. Payment
+ * method selection is driven entirely from `usePaymentMethods()` (the
+ * registry), never a hardcoded list. Multiple partial payments accumulate
+ * against the same ticket until its balance reaches zero (spec: "Payments
+ * N:1 with Ticket").
  */
 export function RegisterPaymentContainer({
   tableId,
+  ticketId,
 }: RegisterPaymentContainerProps): JSX.Element | null {
   const tables = useTables();
   const orders = useOrders();
@@ -46,6 +56,7 @@ export function RegisterPaymentContainer({
 
   const [order, setOrder] = useState<Order | null>(null);
   const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [selectedMethodCode, setSelectedMethodCode] = useState<string>(
     methodRegistry[0]?.code ?? "",
@@ -64,17 +75,22 @@ export function RegisterPaymentContainer({
       setOrder(foundOrder);
 
       const existingTickets = await tickets.listByOrder(foundOrder.id);
-      let activeTicket = existingTickets.find((candidate) => candidate.status !== "paid") ?? null;
+      let orderAllocations = await tickets.listAllocationsByOrder(foundOrder.id);
+      let activeTicket = ticketId
+        ? (existingTickets.find((candidate) => candidate.id === ticketId) ?? null)
+        : (existingTickets.find((candidate) => candidate.status !== "paid") ?? null);
 
-      if (!activeTicket) {
+      if (!activeTicket && !ticketId) {
         const newTicket = createTicket({ orderId: foundOrder.id, label: table.label });
-        const allocations = foundOrder.lineItems.map((line) =>
+        const newAllocations = foundOrder.lineItems.map((line) =>
           createAllocation({ lineItemId: line.id, ticketId: newTicket.id }),
         );
-        activeTicket = await tickets.save(newTicket, allocations, 0);
+        activeTicket = await tickets.save(newTicket, newAllocations, 0);
+        orderAllocations = newAllocations;
       }
-      if (cancelled) return;
+      if (cancelled || !activeTicket) return;
       setTicket(activeTicket);
+      setAllocations(orderAllocations);
 
       const ticketPayments = await paymentsPort.listByTicket(activeTicket.id);
       if (!cancelled) setPayments(ticketPayments);
@@ -84,11 +100,16 @@ export function RegisterPaymentContainer({
     return () => {
       cancelled = true;
     };
-  }, [tableId, tables, orders, tickets, paymentsPort]);
+  }, [tableId, ticketId, tables, orders, tickets, paymentsPort]);
 
   if (!order || !ticket) return null;
 
-  const lines: RegisterPaymentPanelLine[] = order.lineItems.map((line) => ({
+  const allocatedLineItemIds = new Set(
+    allocations.filter((allocation) => allocation.ticketId === ticket.id).map((a) => a.lineItemId),
+  );
+  const ticketLineItems = order.lineItems.filter((line) => allocatedLineItemIds.has(line.id));
+
+  const lines: RegisterPaymentPanelLine[] = ticketLineItems.map((line) => ({
     id: line.id,
     name: line.nameSnapshot,
     quantity: line.quantity,
@@ -97,14 +118,11 @@ export function RegisterPaymentContainer({
     pourSizeMl: line.pourSizeMl as RegisterPaymentPanelLine["pourSizeMl"],
     isAdjustment: line.isAdjustment,
   }));
-  const subtotalCents = order.lineItems.reduce(
+  const subtotalCents = ticketLineItems.reduce(
     (sum, line) => sum + line.unitPriceCents * line.quantity,
     0,
   );
-  const taxCents = order.lineItems.reduce((sum, line) => sum + line.taxCents, 0);
-  const allocations = order.lineItems.map((line) =>
-    createAllocation({ lineItemId: line.id, ticketId: ticket.id }),
-  );
+  const taxCents = ticketLineItems.reduce((sum, line) => sum + line.taxCents, 0);
   const totalCents = ticketTotals(ticket.id, order.lineItems, allocations).cents;
   const alreadyPaidCents = paymentsTotal(payments);
   const remainingBalanceCents = Math.max(0, totalCents - alreadyPaidCents);

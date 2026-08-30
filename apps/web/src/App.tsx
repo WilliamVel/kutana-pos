@@ -4,8 +4,9 @@ import { InventoryListContainer } from "./features/inventory/containers/Inventor
 import { OrderTicketPanelContainer } from "./features/ordering/containers/OrderTicketPanelContainer.js";
 import { OrdersOverviewContainer } from "./features/ordering/containers/OrdersOverviewContainer.js";
 import { RegisterPaymentContainer } from "./features/register/containers/RegisterPaymentContainer.js";
+import { SplitBillContainer } from "./features/split-bill/containers/SplitBillContainer.js";
 
-type Screen = "inventory" | "new-product" | "orders" | "register";
+type Screen = "inventory" | "new-product" | "orders" | "register" | "split-bill";
 
 /**
  * Root screen shell for the milestone-1 demo: a plain screen switcher, no
@@ -16,6 +17,7 @@ type Screen = "inventory" | "new-product" | "orders" | "register";
 export function App(): JSX.Element {
   const [screen, setScreen] = useState<Screen>("inventory");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
   return (
     <main>
@@ -30,8 +32,17 @@ export function App(): JSX.Element {
         <button type="button" onClick={() => setScreen("orders")}>
           Orders
         </button>
-        <button type="button" onClick={() => setScreen("register")}>
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedTicketId(null);
+            setScreen("register");
+          }}
+        >
           Register
+        </button>
+        <button type="button" onClick={() => setScreen("split-bill")}>
+          Split Bill
         </button>
       </nav>
 
@@ -60,7 +71,33 @@ export function App(): JSX.Element {
             selectedTableId={selectedTableId}
             onSelectTable={setSelectedTableId}
           />
-          {selectedTableId ? <RegisterPaymentContainer tableId={selectedTableId} /> : null}
+          {selectedTableId ? (
+            <RegisterPaymentContainer
+              tableId={selectedTableId}
+              ticketId={selectedTicketId ?? undefined}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
+      {screen === "split-bill" ? (
+        <div>
+          <OrdersOverviewContainer
+            selectedTableId={selectedTableId}
+            onSelectTable={(tableId) => {
+              setSelectedTicketId(null);
+              setSelectedTableId(tableId);
+            }}
+          />
+          {selectedTableId ? (
+            <SplitBillContainer
+              tableId={selectedTableId}
+              onPayTicket={(ticketId) => {
+                setSelectedTicketId(ticketId);
+                setScreen("register");
+              }}
+            />
+          ) : null}
         </div>
       ) : null}
     </main>

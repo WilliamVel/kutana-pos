@@ -100,12 +100,12 @@ required to run the demo.**
 - [x] 10.5 Implement register/payment screen: amount tendered input, computed change due via `computeChange`, method selection from `PaymentMethodRegistry` (registry-driven, no hardcoded list).
 
 ### Phase 11: Split-Bill Screen (demo centerpiece) + Conflict UI - PR7
-- [ ] 11.1 RED: component tests for two-panel `OriginalBillPanel`/`NewBillPanel` - moving a line item updates both panels' totals correctly using `ticketTotals`.
-- [ ] 11.2 GREEN: implement split-bill presentational components in `features/split-bill/components/`.
-- [ ] 11.3 Implement split-bill container calling `splitAllocation`/`mergeTickets` through `TicketRepository`, driven by drag/tap-to-move interaction.
-- [ ] 11.4 RED: component test for the conflict banner - on `ConflictError`, shows non-technical message + refreshed order, re-enables the action.
-- [ ] 11.5 GREEN: implement conflict banner component; wire mock adapter's on-demand `ConflictError` trigger to a demo control (e.g. a debug button) so the 409 path is demoable live.
-- [ ] 11.6 Playwright E2E (against mock build): split a table's bill into 2 tickets and pay each independently - the milestone 1 exit scenario.
+- [x] 11.1 RED: component tests for two-panel `OriginalBillPanel`/`NewBillPanel` - moving a line item updates both panels' totals correctly using `ticketTotals`.
+- [x] 11.2 GREEN: implement split-bill presentational components in `features/split-bill/components/`.
+- [x] 11.3 Implement split-bill container calling `splitAllocation`/`mergeTickets` through `TicketRepository`, driven by drag/tap-to-move interaction.
+- [x] 11.4 RED: component test for the conflict banner - on `ConflictError`, shows non-technical message + refreshed order, re-enables the action.
+- [x] 11.5 GREEN: implement conflict banner component; wire mock adapter's on-demand `ConflictError` trigger to a demo control (e.g. a debug button) so the 409 path is demoable live.
+- [x] 11.6 Playwright E2E (against mock build): split a table's bill into 2 tickets and pay each independently - the milestone 1 exit scenario.
 
 ## Milestone 2 - Backend for the core path (coarse; re-planned closer to start)
 

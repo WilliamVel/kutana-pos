@@ -1,0 +1,11 @@
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--action-primary-bg);
+  border-radius: 0.5rem;
+  color: var(--text-primary);
+}
