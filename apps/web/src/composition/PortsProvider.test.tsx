@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Ports } from "./ports.js";
 import {
   PortsProvider,
+  useCategories,
   useOrderEvents,
   useOrders,
   usePaymentMethods,
@@ -10,12 +11,18 @@ import {
   usePorts,
   useProducts,
   useStock,
+  useTables,
   useTickets,
 } from "./PortsProvider.js";
 
 function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
   return {
     orders: { findByTable: async () => null, save: async (order) => order } as Ports["orders"],
+    tables: {
+      listAll: async () => [],
+      findById: async () => null,
+      save: async (table) => table,
+    } as Ports["tables"],
     tickets: {
       findById: async () => null,
       listByOrder: async () => [],
@@ -33,6 +40,11 @@ function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
       listByCategory: async () => [],
       save: async (product) => product,
     } as Ports["products"],
+    categories: {
+      findById: async () => null,
+      listAll: async () => [],
+      save: async (category) => category,
+    } as Ports["categories"],
     stock: {
       findById: async () => null,
       listLowStock: async () => [],
@@ -76,9 +88,11 @@ describe("PortsProvider", () => {
       return (
         <>
           <span data-testid="orders">{String(useOrders() === ports.orders)}</span>
+          <span data-testid="tables">{String(useTables() === ports.tables)}</span>
           <span data-testid="tickets">{String(useTickets() === ports.tickets)}</span>
           <span data-testid="payments">{String(usePayments() === ports.payments)}</span>
           <span data-testid="products">{String(useProducts() === ports.products)}</span>
+          <span data-testid="categories">{String(useCategories() === ports.categories)}</span>
           <span data-testid="stock">{String(useStock() === ports.stock)}</span>
           <span data-testid="methods">{String(usePaymentMethods() === ports.methods)}</span>
           <span data-testid="events">{String(useOrderEvents() === ports.events)}</span>
@@ -92,7 +106,17 @@ describe("PortsProvider", () => {
       </PortsProvider>,
     );
 
-    for (const id of ["orders", "tickets", "payments", "products", "stock", "methods", "events"]) {
+    for (const id of [
+      "orders",
+      "tables",
+      "tickets",
+      "payments",
+      "products",
+      "categories",
+      "stock",
+      "methods",
+      "events",
+    ]) {
       expect(screen.getByTestId(id).textContent).toBe("true");
     }
   });

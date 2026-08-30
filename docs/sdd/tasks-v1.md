@@ -93,11 +93,11 @@ required to run the demo.**
 - [x] 9.5 GREEN: build atomic `atoms/` (Button, Input, Badge, Icon) and `molecules/` (PriceTag, StatusPill, LineItemRow) consuming only role tokens.
 
 ### Phase 10: Screens - Inventory, Catalog Form, Orders, Register - PR6
-- [ ] 10.1 RED: presentational component tests (Testing Library, props only, no ports) for `InventoryList`, `ProductForm`, `OrderTablePanel`, `RegisterPaymentPanel`.
-- [ ] 10.2 GREEN: implement presentational components in `features/{inventory,catalog,register,ordering}/components/`.
-- [ ] 10.3 Implement containers in `features/{inventory,catalog,register,ordering}/containers/` consuming ports via hooks; wire add/edit product form to `ProductRepository`.
-- [ ] 10.4 Implement all-orders view + per-table ticket panel subscribing to `OrderEvents` for realtime updates (mock EventEmitter).
-- [ ] 10.5 Implement register/payment screen: amount tendered input, computed change due via `computeChange`, method selection from `PaymentMethodRegistry` (registry-driven, no hardcoded list).
+- [x] 10.1 RED: presentational component tests (Testing Library, props only, no ports) for `InventoryList`, `ProductForm`, `OrderTablePanel`, `RegisterPaymentPanel`.
+- [x] 10.2 GREEN: implement presentational components in `features/{inventory,catalog,register,ordering}/components/`.
+- [x] 10.3 Implement containers in `features/{inventory,catalog,register,ordering}/containers/` consuming ports via hooks; wire add/edit product form to `ProductRepository`.
+- [x] 10.4 Implement all-orders view + per-table ticket panel subscribing to `OrderEvents` for realtime updates (mock EventEmitter).
+- [x] 10.5 Implement register/payment screen: amount tendered input, computed change due via `computeChange`, method selection from `PaymentMethodRegistry` (registry-driven, no hardcoded list).
 
 ### Phase 11: Split-Bill Screen (demo centerpiece) + Conflict UI - PR7
 - [ ] 11.1 RED: component tests for two-panel `OriginalBillPanel`/`NewBillPanel` - moving a line item updates both panels' totals correctly using `ticketTotals`.

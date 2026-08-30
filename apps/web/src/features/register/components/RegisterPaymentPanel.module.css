@@ -1,0 +1,53 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--surface-raised);
+  border-radius: 0.5rem;
+  max-width: 24rem;
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.totals {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.5rem;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-primary);
+}
+
+.remaining {
+  font-weight: 700;
+}
+
+.methods {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.methodOption {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-primary);
+}
+
+.change {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  color: var(--text-primary);
+}

@@ -1,0 +1,53 @@
+import { render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { addLineItem } from "@kutana/shared/ordering/services/line-item-service.js";
+import { PortsProvider } from "../../../composition/PortsProvider.js";
+import { buildMockPorts } from "../../../composition/mock.js";
+import { OrderTicketPanelContainer } from "./OrderTicketPanelContainer.js";
+
+describe("OrderTicketPanelContainer", () => {
+  it("renders the seeded order's real line items and totals for table-1", async () => {
+    const ports = buildMockPorts();
+    render(
+      <PortsProvider value={ports}>
+        <OrderTicketPanelContainer tableId="table-1" />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Table 1")).toBeInTheDocument());
+    expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
+    expect(screen.getByText("Loaded Nachos")).toBeInTheDocument();
+  });
+
+  it("updates live when OrderEvents publishes a change from another device (waiter -> register realtime)", async () => {
+    const ports = buildMockPorts();
+    render(
+      <PortsProvider value={ports}>
+        <OrderTicketPanelContainer tableId="table-1" />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Loaded Nachos")).toBeInTheDocument());
+
+    const currentOrder = await ports.orders.findByTable("table-1");
+    if (!currentOrder) throw new Error("expected seeded order");
+    const updatedOrder = addLineItem(currentOrder, {
+      productId: "product-empanadas",
+      nameSnapshot: "Beef Empanadas (3pc)",
+      unitPriceCents: 550,
+      quantity: 1,
+      taxRateBp: 1200,
+    });
+
+    ports.events.publish({
+      type: "order.updated",
+      orderId: updatedOrder.id,
+      tableId: "table-1",
+      version: updatedOrder.version,
+      at: new Date().toISOString(),
+      payload: updatedOrder,
+    });
+
+    await waitFor(() => expect(screen.getByText("Beef Empanadas (3pc)")).toBeInTheDocument());
+  });
+});

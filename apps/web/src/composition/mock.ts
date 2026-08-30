@@ -1,10 +1,12 @@
 import { createStockMovement } from "@kutana/shared/inventory/model/stock-movement.js";
 import { KUTANA_V1_PAYMENT_METHODS } from "@kutana/shared/payments/model/payment-method-registry.seed.js";
+import { MockCategoryRepository } from "../adapters/mock/category-repository.js";
 import { MockOrderEvents } from "../adapters/mock/order-events.js";
 import { MockOrderRepository } from "../adapters/mock/order-repository.js";
 import { MockPaymentRepository } from "../adapters/mock/payment-repository.js";
 import { MockProductRepository } from "../adapters/mock/product-repository.js";
 import { MockStockRepository } from "../adapters/mock/stock-repository.js";
+import { MockTableRepository } from "../adapters/mock/table-repository.js";
 import { MockTicketRepository } from "../adapters/mock/ticket-repository.js";
 import { buildSeedFixtures } from "../adapters/mock/seed-fixtures.js";
 import type { Ports } from "./ports.js";
@@ -24,25 +26,49 @@ export function buildMockPorts(): Ports {
   const fixtures = buildSeedFixtures();
 
   const orders = new MockOrderRepository();
+  const tables = new MockTableRepository();
   const tickets = new MockTicketRepository();
   const payments = new MockPaymentRepository();
   const products = new MockProductRepository();
+  const categories = new MockCategoryRepository();
   const stock = new MockStockRepository();
   const events = new MockOrderEvents();
 
   seedProducts(products, fixtures.products);
+  seedCategories(categories, fixtures);
   seedStock(stock, fixtures.stockItems);
   seedOrder(orders, fixtures);
+  seedTables(tables, fixtures);
 
   return {
     orders,
+    tables,
     tickets,
     payments,
     products,
+    categories,
     stock,
     methods: KUTANA_V1_PAYMENT_METHODS,
     events,
   };
+}
+
+function seedCategories(
+  repository: MockCategoryRepository,
+  fixtures: ReturnType<typeof buildSeedFixtures>,
+): void {
+  for (const category of fixtures.categories) {
+    void repository.save(category);
+  }
+}
+
+function seedTables(
+  repository: MockTableRepository,
+  fixtures: ReturnType<typeof buildSeedFixtures>,
+): void {
+  for (const table of fixtures.tables) {
+    void repository.save(table, 0);
+  }
 }
 
 function seedProducts(

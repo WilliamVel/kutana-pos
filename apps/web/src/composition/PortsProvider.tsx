@@ -45,6 +45,10 @@ export function useOrders(): Ports["orders"] {
   return usePorts().orders;
 }
 
+export function useTables(): Ports["tables"] {
+  return usePorts().tables;
+}
+
 export function useTickets(): Ports["tickets"] {
   return usePorts().tickets;
 }
@@ -55,6 +59,10 @@ export function usePayments(): Ports["payments"] {
 
 export function useProducts(): Ports["products"] {
   return usePorts().products;
+}
+
+export function useCategories(): Ports["categories"] {
+  return usePorts().categories;
 }
 
 export function useStock(): Ports["stock"] {

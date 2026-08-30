@@ -1,0 +1,129 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { RegisterPaymentPanel, type RegisterPaymentMethodOption } from "./RegisterPaymentPanel.js";
+
+const METHODS: RegisterPaymentMethodOption[] = [
+  { code: "CASH", label: "Cash", requiresTendered: true },
+  { code: "BANK_TRANSFER", label: "Bank Transfer", requiresTendered: false },
+  { code: "QR_PAYMENT", label: "QR Payment", requiresTendered: false },
+];
+
+function renderPanel(overrides: Partial<React.ComponentProps<typeof RegisterPaymentPanel>> = {}) {
+  const props: React.ComponentProps<typeof RegisterPaymentPanel> = {
+    lines: [
+      {
+        id: "line-1",
+        name: "KUTANA Pilsener 500ml",
+        quantity: 2,
+        unitPriceCents: 350,
+        totalCents: 784,
+        pourSizeMl: 500,
+        isAdjustment: false,
+      },
+    ],
+    subtotalCents: 700,
+    taxCents: 84,
+    totalCents: 784,
+    remainingBalanceCents: 784,
+    amountToPayCents: 784,
+    onAmountToPayChange: vi.fn(),
+    methods: METHODS,
+    selectedMethodCode: "CASH",
+    onSelectMethod: vi.fn(),
+    tenderedCents: null,
+    onTenderedChange: vi.fn(),
+    changeDueCents: null,
+    onConfirmPayment: vi.fn(),
+    canConfirm: false,
+    ...overrides,
+  };
+  render(<RegisterPaymentPanel {...props} />);
+  return props;
+}
+
+describe("RegisterPaymentPanel", () => {
+  it("lists every method from the registry — CASH, BANK_TRANSFER, QR_PAYMENT — and never a card option", () => {
+    renderPanel();
+
+    expect(screen.getByRole("radio", { name: "Cash" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Bank Transfer" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "QR Payment" })).toBeInTheDocument();
+    expect(screen.queryByText(/card/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the tendered-amount input only for a method whose registry entry requires it", () => {
+    renderPanel({ selectedMethodCode: "CASH" });
+    expect(screen.getByLabelText("Amount tendered")).toBeInTheDocument();
+
+    renderPanel({ selectedMethodCode: "BANK_TRANSFER" });
+    expect(screen.queryAllByLabelText("Amount tendered")).toHaveLength(1); // still just the CASH render above
+  });
+
+  it("does not show tendered input when the selected method does not require it", () => {
+    render(
+      <RegisterPaymentPanel
+        lines={[]}
+        subtotalCents={0}
+        taxCents={0}
+        totalCents={784}
+        remainingBalanceCents={784}
+        amountToPayCents={784}
+        onAmountToPayChange={vi.fn()}
+        methods={METHODS}
+        selectedMethodCode="QR_PAYMENT"
+        onSelectMethod={vi.fn()}
+        tenderedCents={null}
+        onTenderedChange={vi.fn()}
+        changeDueCents={null}
+        onConfirmPayment={vi.fn()}
+        canConfirm
+      />,
+    );
+    expect(screen.queryByLabelText("Amount tendered")).not.toBeInTheDocument();
+  });
+
+  it("displays the computed change due when provided", () => {
+    renderPanel({ tenderedCents: 1000, changeDueCents: 216 });
+    expect(screen.getByText("$2.16")).toBeInTheDocument();
+  });
+
+  it("calls onSelectMethod when a different method is chosen", () => {
+    const onSelectMethod = vi.fn();
+    renderPanel({ onSelectMethod });
+    fireEvent.click(screen.getByRole("radio", { name: "QR Payment" }));
+    expect(onSelectMethod).toHaveBeenCalledWith("QR_PAYMENT");
+  });
+
+  it("calls onTenderedChange as the cashier types the tendered amount", () => {
+    const onTenderedChange = vi.fn();
+    renderPanel({ onTenderedChange });
+    fireEvent.change(screen.getByLabelText("Amount tendered"), { target: { value: "10.00" } });
+    expect(onTenderedChange).toHaveBeenCalledWith(1000);
+  });
+
+  it("disables the confirm-payment button until canConfirm is true", () => {
+    renderPanel({ canConfirm: false });
+    expect(screen.getByRole("button", { name: "Confirm payment" })).toBeDisabled();
+  });
+
+  it("calls onConfirmPayment when confirm is pressed and enabled", () => {
+    const onConfirmPayment = vi.fn();
+    renderPanel({ canConfirm: true, onConfirmPayment });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm payment" }));
+    expect(onConfirmPayment).toHaveBeenCalledOnce();
+  });
+
+  it("lets the cashier enter a partial amount to pay now, distinct from the full remaining balance", () => {
+    const onAmountToPayChange = vi.fn();
+    renderPanel({ remainingBalanceCents: 1500, amountToPayCents: 1500, onAmountToPayChange });
+
+    fireEvent.change(screen.getByLabelText("Amount to pay now"), { target: { value: "10.00" } });
+
+    expect(onAmountToPayChange).toHaveBeenCalledWith(1000);
+  });
+
+  it("shows the remaining balance so partial payments toward one ticket are visible", () => {
+    renderPanel({ remainingBalanceCents: 500 });
+    expect(screen.getByText("$5.00")).toBeInTheDocument();
+  });
+});
