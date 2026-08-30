@@ -7,10 +7,21 @@ export interface InputProps {
   readonly onChange: (value: string) => void;
   readonly error?: string;
   readonly type?: "text" | "number";
+  /** Renders a `<textarea>` instead of an `<input>` for longer free-text content (e.g. a description). */
+  readonly multiline?: boolean;
+  readonly placeholder?: string;
 }
 
 /** Purely presentational atom: props in, markup out. No port access. */
-export function Input({ label, value, onChange, error, type = "text" }: InputProps): JSX.Element {
+export function Input({
+  label,
+  value,
+  onChange,
+  error,
+  type = "text",
+  multiline = false,
+  placeholder,
+}: InputProps): JSX.Element {
   const inputId = useId();
   const errorId = useId();
 
@@ -19,15 +30,28 @@ export function Input({ label, value, onChange, error, type = "text" }: InputPro
       <label className={styles.label} htmlFor={inputId}>
         {label}
       </label>
-      <input
-        id={inputId}
-        className={styles.input}
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-invalid={Boolean(error)}
-        aria-describedby={error ? errorId : undefined}
-      />
+      {multiline ? (
+        <textarea
+          id={inputId}
+          className={styles.input}
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) => onChange(event.target.value)}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? errorId : undefined}
+        />
+      ) : (
+        <input
+          id={inputId}
+          className={styles.input}
+          type={type}
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) => onChange(event.target.value)}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? errorId : undefined}
+        />
+      )}
       {error ? (
         <span id={errorId} className={styles.error} role="alert">
           {error}

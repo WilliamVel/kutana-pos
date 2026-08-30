@@ -12,8 +12,11 @@ export interface Product {
   readonly name: string;
   readonly categoryId: string;
   readonly priceCents: number;
+  /** Integer cents; null when the cost is unknown. Drives margin calculations (Milestone 3 reporting). */
+  readonly costPriceCents: number | null;
   /** Tax rate in basis points, frozen per-LineItem at sale time — see catalog/services/tax-at-sale.ts */
   readonly taxRateBp: number;
+  readonly description: string | null;
   readonly imageUrl: string | null;
   readonly lowStockLevel: number | null;
   readonly stockKind: StockKind;
@@ -33,6 +36,8 @@ export function createProduct(input: {
   taxRateBp: number;
   stockKind: StockKind;
   barcode?: string | null;
+  description?: string | null;
+  costPriceCents?: number | null;
   imageUrl?: string | null;
   lowStockLevel?: number | null;
   pourSizeMl?: PourSize | null;
@@ -42,6 +47,15 @@ export function createProduct(input: {
   if (!Number.isInteger(input.priceCents) || input.priceCents < 0) {
     throw new ValidationError(
       `Product.priceCents must be a non-negative integer, received: ${input.priceCents}`,
+    );
+  }
+  if (
+    input.costPriceCents !== undefined &&
+    input.costPriceCents !== null &&
+    (!Number.isInteger(input.costPriceCents) || input.costPriceCents < 0)
+  ) {
+    throw new ValidationError(
+      `Product.costPriceCents must be a non-negative integer or null, received: ${input.costPriceCents}`,
     );
   }
   if (
@@ -58,7 +72,9 @@ export function createProduct(input: {
     name: input.name,
     categoryId: input.categoryId,
     priceCents: input.priceCents,
+    costPriceCents: input.costPriceCents ?? null,
     taxRateBp: input.taxRateBp,
+    description: input.description ?? null,
     imageUrl: input.imageUrl ?? null,
     lowStockLevel: input.lowStockLevel ?? null,
     stockKind: input.stockKind,

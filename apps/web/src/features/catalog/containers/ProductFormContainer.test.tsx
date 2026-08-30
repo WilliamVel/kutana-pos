@@ -31,6 +31,34 @@ describe("ProductFormContainer", () => {
     expect(stored?.name).toBe("House Lager");
   });
 
+  it("persists description and cost price through ProductRepository", async () => {
+    const ports = buildMockPorts();
+    const onSaved = vi.fn();
+
+    render(
+      <PortsProvider value={ports}>
+        <ProductFormContainer onSaved={onSaved} onCancel={vi.fn()} />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "House Lager" } });
+    fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "SKU-NEW-2" } });
+    fireEvent.change(screen.getByLabelText("Description"), {
+      target: { value: "Smooth and light." },
+    });
+    fireEvent.change(screen.getByLabelText("Retail price (USD)"), { target: { value: "4.25" } });
+    fireEvent.change(screen.getByLabelText("Cost price (USD)"), { target: { value: "1.50" } });
+    fireEvent.submit(screen.getByRole("form"));
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+
+    const stored = await ports.products.findBySku("SKU-NEW-2");
+    expect(stored?.description).toBe("Smooth and light.");
+    expect(stored?.costPriceCents).toBe(150);
+  });
+
   it("rejects a duplicate SKU with a field-level error, without calling onSaved", async () => {
     const ports = buildMockPorts();
     const onSaved = vi.fn();

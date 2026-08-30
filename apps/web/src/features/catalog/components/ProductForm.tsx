@@ -11,8 +11,11 @@ export interface ProductFormValues {
   readonly barcode: string;
   readonly stockKind: StockKind;
   readonly pourSizeMl: PourSize | null;
+  readonly description: string;
   /** Integer cents — the form parses the user's dollars-and-cents input to this integer before submit. */
   readonly retailPriceCents: number;
+  /** Integer cents; null when the cost is unknown (never coerced to 0). */
+  readonly costPriceCents: number | null;
   readonly lowStockLevel: number | null;
   readonly initialStockQuantity: number;
   readonly active: boolean;
@@ -59,12 +62,8 @@ function formatCentsToDollarsInput(cents: number): string {
  * (`ProductFormContainer`) decides what to do with a submitted
  * `ProductFormValues` (create vs. save via `ProductRepository`).
  *
- * NOTE — deviation from the task prompt: the current `Product` domain model
- * (`packages/shared/src/catalog/model/product.ts`) has no `description` or
- * `costPriceCents` field, and no image-upload port exists yet. This form
- * intentionally omits those two fields rather than inventing local-only
- * state that silently does nothing on submit; adding them requires a
- * domain-model change that is out of this PR's scope (screens only).
+ * NOTE — deviation from the task prompt: no image-upload port exists yet,
+ * so this form does not render an image field.
  */
 export function ProductForm({
   categories,
@@ -160,10 +159,29 @@ export function ProductForm({
       ) : null}
 
       <Input
-        label="Retail price (USD)"
-        value={formatCentsToDollarsInput(values.retailPriceCents)}
-        onChange={(value) => update("retailPriceCents", parseDollarsToCents(value))}
+        label="Description"
+        value={values.description}
+        onChange={(value) => update("description", value)}
+        multiline
+        placeholder="Optional details..."
       />
+
+      <div className={styles.row}>
+        <Input
+          label="Retail price (USD)"
+          value={formatCentsToDollarsInput(values.retailPriceCents)}
+          onChange={(value) => update("retailPriceCents", parseDollarsToCents(value))}
+        />
+        <Input
+          label="Cost price (USD)"
+          value={
+            values.costPriceCents === null ? "" : formatCentsToDollarsInput(values.costPriceCents)
+          }
+          onChange={(value) =>
+            update("costPriceCents", value === "" ? null : parseDollarsToCents(value))
+          }
+        />
+      </div>
 
       <div className={styles.row}>
         <Input

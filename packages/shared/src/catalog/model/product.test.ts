@@ -21,6 +21,66 @@ describe("Product", () => {
     expect(product.barcode).toBeNull();
     expect(product.imageUrl).toBeNull();
     expect(product.lowStockLevel).toBeNull();
+    expect(product.description).toBeNull();
+    expect(product.costPriceCents).toBeNull();
+  });
+
+  it("accepts a valid integer cost price", () => {
+    const product = createProduct({
+      sku: "BEER-001",
+      name: "House Lager",
+      categoryId: "cat-1",
+      priceCents: 250,
+      taxRateBp: 1200,
+      stockKind: "unit",
+      costPriceCents: 100,
+      description: "A crisp, refreshing lager.",
+    });
+
+    expect(product.costPriceCents).toBe(100);
+    expect(product.description).toBe("A crisp, refreshing lager.");
+  });
+
+  it("accepts a null cost price", () => {
+    const product = createProduct({
+      sku: "BEER-001",
+      name: "House Lager",
+      categoryId: "cat-1",
+      priceCents: 250,
+      taxRateBp: 1200,
+      stockKind: "unit",
+      costPriceCents: null,
+    });
+
+    expect(product.costPriceCents).toBeNull();
+  });
+
+  it("rejects a negative cost price", () => {
+    expect(() =>
+      createProduct({
+        sku: "BEER-001",
+        name: "House Lager",
+        categoryId: "cat-1",
+        priceCents: 250,
+        taxRateBp: 1200,
+        stockKind: "unit",
+        costPriceCents: -1,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a non-integer cost price", () => {
+    expect(() =>
+      createProduct({
+        sku: "BEER-001",
+        name: "House Lager",
+        categoryId: "cat-1",
+        priceCents: 250,
+        taxRateBp: 1200,
+        stockKind: "unit",
+        costPriceCents: 12.5,
+      }),
+    ).toThrow();
   });
 
   it("rejects a product with a negative price", () => {

@@ -14,7 +14,9 @@ const BLANK_VALUES: ProductFormValues = {
   barcode: "",
   stockKind: "unit",
   pourSizeMl: null,
+  description: "",
   retailPriceCents: 0,
+  costPriceCents: null,
   lowStockLevel: null,
   initialStockQuantity: 0,
   active: true,
@@ -84,6 +86,55 @@ describe("ProductForm", () => {
     fireEvent.submit(screen.getByRole("form"));
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ active: false }));
+  });
+
+  it("renders the description field as a multiline input and round-trips its value", () => {
+    const onSubmit = vi.fn();
+    renderForm({ onSubmit });
+
+    const descriptionField = screen.getByLabelText("Description");
+    expect(descriptionField.tagName).toBe("TEXTAREA");
+
+    fireEvent.change(descriptionField, { target: { value: "Crisp, cold, and local." } });
+    fireEvent.submit(screen.getByRole("form"));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ description: "Crisp, cold, and local." }),
+    );
+  });
+
+  it("submits a cost price entered as dollars-and-cents as integer cents", () => {
+    const onSubmit = vi.fn();
+    renderForm({ onSubmit });
+
+    fireEvent.change(screen.getByLabelText("Cost price (USD)"), { target: { value: "4.25" } });
+    fireEvent.submit(screen.getByRole("form"));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ costPriceCents: 425 }));
+  });
+
+  it("submits an empty cost price as null, never as zero", () => {
+    const onSubmit = vi.fn();
+    renderForm({ onSubmit, initialValues: { ...BLANK_VALUES, costPriceCents: 500 } });
+
+    fireEvent.change(screen.getByLabelText("Cost price (USD)"), { target: { value: "" } });
+    fireEvent.submit(screen.getByRole("form"));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ costPriceCents: null }));
+  });
+
+  it("pre-fills description and cost price from initialValues when editing", () => {
+    renderForm({
+      initialValues: {
+        ...BLANK_VALUES,
+        description: "House-made salsa on the side.",
+        costPriceCents: 275,
+      },
+      submitLabel: "Save changes",
+    });
+
+    expect(screen.getByLabelText("Description")).toHaveValue("House-made salsa on the side.");
+    expect(screen.getByLabelText("Cost price (USD)")).toHaveValue("2.75");
   });
 
   it("shows field-level validation errors passed in via props", () => {
