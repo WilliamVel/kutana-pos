@@ -5,8 +5,10 @@ How to pick this project back up in a new session, and where changes belong.
 ## Current state
 
 Milestone 1 is complete: the frontend runs fully on mock adapters with no
-backend. Branch `pr7-split-bill-e2e`, a chain of 7 feature branches. Nothing is
-pushed — no remote is configured yet.
+backend. Work from `main`, which carries the whole Milestone 1 history and is the
+default branch of the private remote `WilliamVel/kutana-pos`. Milestone 1 was
+built as a chain of seven `pr*` branches; those were deleted once review was
+declined, and every one of their commits is contained in `main`.
 
 ```bash
 pnpm install
@@ -53,7 +55,7 @@ in **scope and behaviour**. Moving a button, adjusting spacing, retuning the
 palette, relabelling a control: that is direct work.
 
 ```bash
-git switch -c design/<short-name> pr7-split-bill-e2e
+git switch -c design/<short-name> main
 # make the change, run the tests, commit
 ```
 
