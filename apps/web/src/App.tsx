@@ -21,18 +21,25 @@ export function App(): JSX.Element {
   const [screen, setScreen] = useState<ScreenId>("inventory");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [registerMode, setRegisterMode] = useState<"pay" | "split">("pay");
 
   const navigate = (next: ScreenId): void => {
     if (next === "register") {
       setSelectedTicketId(null);
+      setRegisterMode("pay");
     }
     setScreen(next);
   };
 
+  const sidebarTitle =
+    screen === "register" && registerMode === "split"
+      ? "Register — Split bill"
+      : screenTitle(screen);
+
   return (
     <AppShell
       topBar={<TopBar currentScreen={screen} onNavigate={navigate} />}
-      sidebar={<SideBar screenTitle={screenTitle(screen)} />}
+      sidebar={<SideBar screenTitle={sidebarTitle} />}
     >
       {screen === "inventory" ? <InventoryListContainer /> : null}
 
@@ -59,34 +66,46 @@ export function App(): JSX.Element {
         <div>
           <OrdersOverviewContainer
             selectedTableId={selectedTableId}
-            onSelectTable={setSelectedTableId}
-          />
-          {selectedTableId ? (
-            <RegisterPaymentContainer
-              tableId={selectedTableId}
-              ticketId={selectedTicketId ?? undefined}
-            />
-          ) : null}
-        </div>
-      ) : null}
-
-      {screen === "split-bill" ? (
-        <div>
-          <OrdersOverviewContainer
-            selectedTableId={selectedTableId}
             onSelectTable={(tableId) => {
+              setRegisterMode("pay");
               setSelectedTicketId(null);
               setSelectedTableId(tableId);
             }}
           />
           {selectedTableId ? (
-            <SplitBillContainer
-              tableId={selectedTableId}
-              onPayTicket={(ticketId) => {
-                setSelectedTicketId(ticketId);
-                setScreen("register");
-              }}
-            />
+            <div>
+              <div style={{ marginBottom: "var(--space-3)" }}>
+                {registerMode === "pay" ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTicketId(null);
+                      setRegisterMode("split");
+                    }}
+                  >
+                    Split bill
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => setRegisterMode("pay")}>
+                    Back to payment
+                  </button>
+                )}
+              </div>
+              {registerMode === "pay" ? (
+                <RegisterPaymentContainer
+                  tableId={selectedTableId}
+                  ticketId={selectedTicketId ?? undefined}
+                />
+              ) : (
+                <SplitBillContainer
+                  tableId={selectedTableId}
+                  onPayTicket={(ticketId) => {
+                    setSelectedTicketId(ticketId);
+                    setRegisterMode("pay");
+                  }}
+                />
+              )}
+            </div>
           ) : null}
         </div>
       ) : null}

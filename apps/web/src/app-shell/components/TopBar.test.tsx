@@ -7,7 +7,7 @@ describe("TopBar", () => {
     render(<TopBar currentScreen="inventory" onNavigate={vi.fn()} />);
 
     expect(screen.getByRole("heading", { name: "KUTANA POS" })).toBeInTheDocument();
-    for (const label of ["Inventory", "Add product", "Orders", "Register", "Split Bill"]) {
+    for (const label of ["Inventory", "Add product", "Orders", "Register"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
   });
@@ -23,8 +23,8 @@ describe("TopBar", () => {
     const onNavigate = vi.fn();
     render(<TopBar currentScreen="inventory" onNavigate={onNavigate} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Split Bill" }));
+    fireEvent.click(screen.getByRole("button", { name: "Orders" }));
 
-    expect(onNavigate).toHaveBeenCalledWith("split-bill");
+    expect(onNavigate).toHaveBeenCalledWith("orders");
   });
 });
