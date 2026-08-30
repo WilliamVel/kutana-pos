@@ -104,6 +104,28 @@ describe("lowStockCheck", () => {
     expect(isLowStock(keg)).toBe(true);
   });
 
+  it("flags a stock item sitting exactly on its low-stock level", () => {
+    const keg = createStockItem({
+      name: "House Lager Keg",
+      kind: "volume",
+      unit: "ml",
+      quantity: 500,
+      lowStockLevel: 500,
+    });
+    expect(isLowStock(keg)).toBe(true);
+  });
+
+  it("does not flag a stock item one unit above its low-stock level", () => {
+    const keg = createStockItem({
+      name: "House Lager Keg",
+      kind: "volume",
+      unit: "ml",
+      quantity: 501,
+      lowStockLevel: 500,
+    });
+    expect(isLowStock(keg)).toBe(false);
+  });
+
   it("does not flag a stock item above its low-stock level", () => {
     const keg = createStockItem({
       name: "House Lager Keg",
