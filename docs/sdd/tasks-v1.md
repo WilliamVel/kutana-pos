@@ -54,26 +54,26 @@ required to run the demo.**
 - [x] 3.5 Guard task: add a regression test asserting `line_items` model/ports never expose a `ticket_id` field - Allocation is the only path from LineItem to Ticket (encodes risk #1 from proposal).
 
 ### Phase 4: Payments Domain (TDD) - PR3
-- [ ] 4.1 RED: `payments/model/payment-method-registry.test.ts` - registry-driven behavior (requires_tendered), CASH computes change, BANK_TRANSFER/QR_PAYMENT do not.
-- [ ] 4.2 GREEN: implement `PaymentMethodCode` (branded string), `PaymentMethodRegistry` port + seed data.
-- [ ] 4.3 RED: `payments/services/apply-payment.test.ts` - partial payments, two-partial-payments-cover-ticket, overpayment/change-due scenarios from spec.
-- [ ] 4.4 GREEN: implement `applyPayment`, `computeChange`.
-- [ ] 4.5 Guard task: static test scanning `packages/shared/**` source (excluding the registry seed file) asserting no file contains the literal `'CASH'`.
+- [x] 4.1 RED: `payments/model/payment-method-registry.test.ts` - registry-driven behavior (requires_tendered), CASH computes change, BANK_TRANSFER/QR_PAYMENT do not.
+- [x] 4.2 GREEN: implement `PaymentMethodCode` (branded string), `PaymentMethodRegistry` port + seed data.
+- [x] 4.3 RED: `payments/services/apply-payment.test.ts` - partial payments, two-partial-payments-cover-ticket, overpayment/change-due scenarios from spec.
+- [x] 4.4 GREEN: implement `applyPayment`, `computeChange`.
+- [x] 4.5 Guard task: static test scanning `packages/shared/**` source (excluding the registry seed file) asserting no file contains the literal `'CASH'`.
 
 ### Phase 5: Catalog & Inventory Domain (TDD) - PR3
-- [ ] 5.1 RED: `catalog/model/product.test.ts` - required fields, active/inactive toggle hides from ordering.
-- [ ] 5.2 GREEN: implement `Product`, `Category`, `TaxRate`, `PourSize` in `catalog/model/`.
-- [ ] 5.3 RED: `inventory/services/apply-movement.test.ts` - volume pour (500/750/1000ml) decrements shared `StockItem(kind:'volume')` via `StockMovement`; unit-kind decrements by count; low-stock check.
-- [ ] 5.4 GREEN: implement `StockItem`, `StockMovement`, `applyMovement`, `lowStockCheck` in `inventory/`.
-- [ ] 5.5 RED: `catalog/services/tax-at-sale.test.ts` - tax computed and persisted per LineItem at sale time; later catalog rate change does not retroactively alter it.
-- [ ] 5.6 GREEN: implement tax-snapshot logic (pure function used at LineItem creation).
+- [x] 5.1 RED: `catalog/model/product.test.ts` - required fields, active/inactive toggle hides from ordering.
+- [x] 5.2 GREEN: implement `Product`, `Category`, `TaxRate`, `PourSize` in `catalog/model/`.
+- [x] 5.3 RED: `inventory/services/apply-movement.test.ts` - volume pour (500/750/1000ml) decrements shared `StockItem(kind:'volume')` via `StockMovement`; unit-kind decrements by count; low-stock check.
+- [x] 5.4 GREEN: implement `StockItem`, `StockMovement`, `applyMovement`, `lowStockCheck` in `inventory/`.
+- [x] 5.5 RED: `catalog/services/tax-at-sale.test.ts` - tax computed and persisted per LineItem at sale time; later catalog rate change does not retroactively alter it.
+- [x] 5.6 GREEN: implement tax-snapshot logic (pure function used at LineItem creation).
 
 ### Phase 6: Ordering Domain (TDD) - PR3
-- [ ] 6.1 RED: `ordering/model/order.test.ts` - LineItem immutability (corrections only as new adjustment lines, never edited in place), Order/Table status transitions (active -> needs check -> paid).
-- [ ] 6.2 GREEN: implement `Table`, `Order`, `LineItem`, `OrderStatus` models, `addLineItem`, `addAdjustmentLine` in `ordering/`.
-- [ ] 6.3 RED: `ordering/services/version-conflict.test.ts` - concurrent write at stale version rejected; caller receives current snapshot (spec: concurrent edit conflict scenario), never a silent overwrite.
-- [ ] 6.4 GREEN: define `OrderRepository.save(order, expectedVersion)` port contract that throws `ConflictError` on stale version (implementation lives in adapters; this task defines the port + `ConflictError` in `errors/`).
-- [ ] 6.5 Define remaining ports: `ProductRepository`, `CategoryRepository`, `StockRepository`, `TicketRepository`, `SaleRepository`, `OrderEvents` in each context's `ports/` dir - interfaces only, no implementation.
+- [x] 6.1 RED: `ordering/model/order.test.ts` - LineItem immutability (corrections only as new adjustment lines, never edited in place), Order/Table status transitions (active -> needs check -> paid).
+- [x] 6.2 GREEN: implement `Table`, `Order`, `LineItem`, `OrderStatus` models, `addLineItem`, `addAdjustmentLine` in `ordering/`.
+- [x] 6.3 RED: `ordering/services/version-conflict.test.ts` - concurrent write at stale version rejected; caller receives current snapshot (spec: concurrent edit conflict scenario), never a silent overwrite.
+- [x] 6.4 GREEN: define `OrderRepository.save(order, expectedVersion)` port contract that throws `ConflictError` on stale version (implementation lives in adapters; this task defines the port + `ConflictError` in `errors/`).
+- [x] 6.5 Define remaining ports: `ProductRepository`, `CategoryRepository`, `StockRepository`, `TicketRepository`, `SaleRepository`, `OrderEvents` in each context's `ports/` dir - interfaces only, no implementation.
 
 ### Phase 7: Port Conformance Test Suite (built now, not retrofitted) - PR4
 - [ ] 7.1 Write one exported `describe`-block contract suite per port under `packages/shared/*/ports/__contract__/` (orders, tickets, payments, products, stock) - asserts port semantics (e.g. version-conflict throws `ConflictError`, `findByTable` returns null when absent) independent of implementation.
