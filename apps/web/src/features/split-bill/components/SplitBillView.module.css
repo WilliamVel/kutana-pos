@@ -3,4 +3,6 @@
   flex-direction: row;
   gap: var(--space-5);
   flex-wrap: wrap;
+  min-width: 0;
+  overflow-x: auto;
 }

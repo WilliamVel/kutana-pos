@@ -3,21 +3,20 @@ import { describe, expect, it } from "vitest";
 import { AppShell } from "./AppShell.js";
 
 describe("AppShell", () => {
-  it("renders the top bar, sidebar and children slots", () => {
+  it("renders the top bar and children slots", () => {
     render(
-      <AppShell topBar={<div>top-slot</div>} sidebar={<div>side-slot</div>}>
+      <AppShell topBar={<div>top-slot</div>}>
         <p>screen content</p>
       </AppShell>,
     );
 
     expect(screen.getByText("top-slot")).toBeInTheDocument();
-    expect(screen.getByText("side-slot")).toBeInTheDocument();
     expect(screen.getByText("screen content")).toBeInTheDocument();
   });
 
   it("omits the action bar slot when no actionBar prop is given", () => {
     render(
-      <AppShell topBar={<div>top</div>} sidebar={<div>side</div>}>
+      <AppShell topBar={<div>top</div>}>
         <p>content</p>
       </AppShell>,
     );
@@ -27,11 +26,7 @@ describe("AppShell", () => {
 
   it("renders the action bar slot when provided", () => {
     render(
-      <AppShell
-        topBar={<div>top</div>}
-        sidebar={<div>side</div>}
-        actionBar={<div>action-slot</div>}
-      >
+      <AppShell topBar={<div>top</div>} actionBar={<div>action-slot</div>}>
         <p>content</p>
       </AppShell>,
     );

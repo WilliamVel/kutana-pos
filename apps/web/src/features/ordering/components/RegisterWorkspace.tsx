@@ -10,6 +10,11 @@ export interface RegisterWorkspaceProps {
   readonly emptyCenter: ReactNode;
   /** Right column: the "Quick add items" rail. */
   readonly rail: ReactNode;
+  /**
+   * When true, the right rail track is dropped entirely so the center
+   * column is not starved by an idle column (payment / split sub-states).
+   */
+  readonly railHidden?: boolean;
 }
 
 /**
@@ -24,16 +29,17 @@ export function RegisterWorkspace({
   center,
   emptyCenter,
   rail,
+  railHidden = false,
 }: RegisterWorkspaceProps): JSX.Element {
   return (
-    <div className={styles.workspace}>
+    <div className={railHidden ? styles.workspaceFocused : styles.workspace}>
       <div className={styles.list}>{list}</div>
       {center ? (
         <div className={styles.center}>{center}</div>
       ) : (
         <div className={styles.empty}>{emptyCenter}</div>
       )}
-      <div className={styles.rail}>{rail}</div>
+      {railHidden ? null : <div className={styles.rail}>{rail}</div>}
     </div>
   );
 }

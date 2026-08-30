@@ -16,6 +16,21 @@ describe("RegisterWorkspace", () => {
     expect(screen.getByText("quick add")).toBeInTheDocument();
   });
 
+  it("hides the rail slot when railHidden is set", () => {
+    render(
+      <RegisterWorkspace
+        list={<p>order list</p>}
+        center={<p>payment view</p>}
+        emptyCenter={<p>pick one</p>}
+        rail={<p>quick add</p>}
+        railHidden
+      />,
+    );
+    expect(screen.getByText("order list")).toBeInTheDocument();
+    expect(screen.getByText("payment view")).toBeInTheDocument();
+    expect(screen.queryByText("quick add")).not.toBeInTheDocument();
+  });
+
   it("renders the empty center when there is no center content", () => {
     render(
       <RegisterWorkspace

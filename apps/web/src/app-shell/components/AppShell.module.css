@@ -1,11 +1,11 @@
 .shell {
   display: grid;
-  grid-template-columns: 16rem 1fr;
+  grid-template-columns: 1fr;
   grid-template-rows: auto 1fr auto;
   grid-template-areas:
-    "topbar topbar"
-    "sidebar content"
-    "actionbar actionbar";
+    "topbar"
+    "content"
+    "actionbar";
   min-height: 100vh;
 }
 
@@ -16,15 +16,9 @@
   z-index: 10;
 }
 
-.sidebar {
-  grid-area: sidebar;
-  padding: var(--space-5) var(--space-4);
-  background: var(--surface-raised);
-  border-right: 1px solid var(--border-subtle);
-}
-
 .content {
   grid-area: content;
+  min-width: 0;
   padding: var(--space-5) var(--space-6);
   overflow-y: auto;
 }
@@ -37,21 +31,6 @@
 }
 
 @media (max-width: 48rem) {
-  .shell {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "topbar"
-      "sidebar"
-      "content"
-      "actionbar";
-  }
-
-  .sidebar {
-    border-right: none;
-    border-bottom: 1px solid var(--border-subtle);
-    padding: var(--space-3) var(--space-4);
-  }
-
   .content {
     padding: var(--space-4);
   }

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { AppShell } from "./app-shell/components/AppShell.js";
-import { SideBar } from "./app-shell/components/SideBar.js";
 import { TopBar } from "./app-shell/components/TopBar.js";
-import { screenTitle, type ScreenId } from "./app-shell/screens.js";
+import type { ScreenId } from "./app-shell/screens.js";
 import { Panel } from "./design-system/molecules/Panel.js";
 import { ProductFormContainer } from "./features/catalog/containers/ProductFormContainer.js";
 import { InventoryListContainer } from "./features/inventory/containers/InventoryListContainer.js";
@@ -19,8 +18,8 @@ type CenterView = "ticket" | "payment" | "split";
 
 /**
  * Root screen shell for the milestone-1 demo. Navigation state lives here;
- * layout chrome (top bar, sidebar, optional bottom action bar) is provided
- * by <AppShell> and the app-shell components. Each screen below is a
+ * layout chrome (top bar, optional bottom action bar) is provided by
+ * <AppShell> and the app-shell components. Each screen below is a
  * container that wires its own ports.
  */
 export function App(): JSX.Element {
@@ -98,10 +97,7 @@ export function App(): JSX.Element {
   }
 
   return (
-    <AppShell
-      topBar={<TopBar currentScreen={screen} onNavigate={navigate} />}
-      sidebar={<SideBar screenTitle={screenTitle(screen)} />}
-    >
+    <AppShell topBar={<TopBar currentScreen={screen} onNavigate={navigate} />}>
       {screen === "inventory" ? <InventoryListContainer /> : null}
 
       {screen === "new-product" ? (
@@ -132,6 +128,7 @@ export function App(): JSX.Element {
           }
           center={center}
           emptyCenter="Select an order to see its ticket."
+          railHidden={centerView !== "ticket"}
           rail={
             selectedTableId && centerView === "ticket" ? (
               <AddItemContainer tableId={selectedTableId} />
