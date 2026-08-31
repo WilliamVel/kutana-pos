@@ -17,6 +17,10 @@ export class MockOrderRepository implements OrderRepository {
     return simulateLatency(() => this.ordersByTable.get(tableId) ?? null);
   }
 
+  async listAll(): Promise<Order[]> {
+    return simulateLatency(() => [...this.ordersByTable.values()]);
+  }
+
   async save(order: Order, expectedVersion: number): Promise<Order> {
     return simulateLatency(() => {
       const stored = this.ordersByTable.get(order.tableId) ?? null;

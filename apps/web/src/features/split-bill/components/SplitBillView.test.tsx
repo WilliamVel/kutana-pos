@@ -1,24 +1,45 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { SplitBillView, type SplitBillLine } from "./SplitBillView.js";
+import { SplitBillView, type AccountAssignmentAccount, type AccountAssignmentLine } from "./SplitBillView.js";
 
-const LINE_A: SplitBillLine = {
+const LINE: AccountAssignmentLine = {
   id: "line-a",
   name: "KUTANA Pilsener 500ml",
   quantity: 2,
-  totalCents: 300,
+  unitPriceCents: 350,
+  totalCents: 784,
+  unassignedQuantity: 1,
 };
-const LINE_B: SplitBillLine = { id: "line-b", name: "Nachos", quantity: 1, totalCents: 700 };
+
+const ACCOUNT: AccountAssignmentAccount = {
+  id: "account-a",
+  ownerLabel: "Juan P.",
+  owner: { kind: "free_name", freeName: "Juan P." },
+  status: "open",
+  totalCents: 392,
+  paidCents: 0,
+  remainingCents: 392,
+};
 
 function renderView(overrides: Partial<React.ComponentProps<typeof SplitBillView>> = {}) {
   const props: React.ComponentProps<typeof SplitBillView> = {
-    originalLines: [LINE_A, LINE_B],
-    newLines: [],
-    originalTotalCents: 1000,
-    newTotalCents: 0,
-    onMoveToNew: vi.fn(),
-    onMoveToOriginal: vi.fn(),
-    disabled: false,
+    tableLabel: "Table 1",
+    customers: [{ id: "customer-1", displayName: "Ada", phone: null, email: null, notes: null, createdAt: "now", updatedAt: "now" }],
+    selectedCustomerId: "",
+    freeName: "",
+    lines: [LINE],
+    accounts: [ACCOUNT],
+    allocationDraft: { accountId: "", lineItemId: "", quantity: "1" },
+    reviewMessage: null,
+    onSelectCustomer: vi.fn(),
+    onFreeNameChange: vi.fn(),
+    onCreateCustomerAccount: vi.fn(),
+    onCreateFreeNameAccount: vi.fn(),
+    onAllocationDraftChange: vi.fn(),
+    onAssignQuantity: vi.fn(),
+    onPayAccount: vi.fn(),
+    onMarkPending: vi.fn(),
+    onAttemptClose: vi.fn(),
     ...overrides,
   };
   render(<SplitBillView {...props} />);
@@ -26,90 +47,43 @@ function renderView(overrides: Partial<React.ComponentProps<typeof SplitBillView
 }
 
 describe("SplitBillView", () => {
-  it("renders both panels with their real item names and correct totals", () => {
+  it("renders account assignment instead of two anonymous bills", () => {
     renderView();
 
-    expect(screen.getByRole("region", { name: "Original Bill" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "New Bill" })).toBeInTheDocument();
-    expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
-    expect(screen.getByText("Nachos")).toBeInTheDocument();
-
-    const originalPanel = screen.getByRole("region", { name: "Original Bill" });
-    expect(
-      Array.from(originalPanel.querySelectorAll("*")).some((el) => el.textContent === "$10.00"),
-    ).toBe(true);
-
-    const newPanel = screen.getByRole("region", { name: "New Bill" });
-    expect(
-      Array.from(newPanel.querySelectorAll("*")).some((el) => el.textContent === "$0.00"),
-    ).toBe(true);
+    expect(screen.getByRole("heading", { name: "Table 1 — Personal accounts" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Unassigned quantities" })).toHaveTextContent("1 unassigned");
+    expect(screen.getByRole("article", { name: "Account for Juan P." })).toHaveTextContent("remaining");
   });
 
-  it("shows the empty-state message on the New Bill panel when it has no items yet", () => {
-    renderView();
-    expect(screen.getByText("No items moved yet.")).toBeInTheDocument();
-  });
-
-  it("calls onMoveToNew with the real line item id when its move button is pressed", () => {
-    const onMoveToNew = vi.fn();
-    renderView({ onMoveToNew });
-
-    fireEvent.click(screen.getAllByRole("button", { name: "Move to New Bill" })[0]!);
-
-    expect(onMoveToNew).toHaveBeenCalledWith("line-a");
-  });
-
-  it("calls onMoveToOriginal with the real line item id when its move button is pressed", () => {
-    const onMoveToOriginal = vi.fn();
-    renderView({
-      originalLines: [LINE_B],
-      newLines: [LINE_A],
-      originalTotalCents: 700,
-      newTotalCents: 300,
-      onMoveToOriginal,
+  it("exposes customer, free-name, quantity assignment, payment, pending, and review actions", () => {
+    const props = renderView({
+      selectedCustomerId: "customer-1",
+      freeName: "Mesa amiga",
+      allocationDraft: { accountId: "account-a", lineItemId: "line-a", quantity: "1" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Move to Original Bill" }));
+    fireEvent.change(screen.getByLabelText("Existing customer"), { target: { value: "customer-1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create customer account" }));
+    fireEvent.change(screen.getByLabelText("Free-name account"), { target: { value: "Mesa amiga 2" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create free-name account" }));
+    fireEvent.click(screen.getByRole("button", { name: "Assign quantity" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pay now" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mark pending" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review table closure" }));
 
-    expect(onMoveToOriginal).toHaveBeenCalledWith("line-a");
+    expect(props.onSelectCustomer).toHaveBeenCalledWith("customer-1");
+    expect(props.onFreeNameChange).toHaveBeenCalledWith("Mesa amiga 2");
+    expect(props.onCreateCustomerAccount).toHaveBeenCalled();
+    expect(props.onCreateFreeNameAccount).toHaveBeenCalled();
+    expect(props.onAssignQuantity).toHaveBeenCalled();
+    expect(props.onPayAccount).toHaveBeenCalledWith("account-a");
+    expect(props.onMarkPending).toHaveBeenCalledWith("account-a");
+    expect(props.onAttemptClose).toHaveBeenCalled();
   });
 
-  it("keeps both panel totals summing to the original order total after an item moves — no cent lost or invented", () => {
-    // Before the move: everything on the Original Bill.
-    const before = renderView({
-      originalLines: [LINE_A, LINE_B],
-      newLines: [],
-      originalTotalCents: 1000,
-      newTotalCents: 0,
-    });
-    const beforeSum = before.originalTotalCents + before.newTotalCents;
+  it("shows review state feedback for unresolved table closure", () => {
+    renderView({ reviewMessage: "Review required: 1 line item has unassigned quantities." });
 
-    // After moving LINE_A to the New Bill (simulating the container's next render).
-    const after = renderView({
-      originalLines: [LINE_B],
-      newLines: [LINE_A],
-      originalTotalCents: 700,
-      newTotalCents: 300,
-    });
-    const afterSum = after.originalTotalCents + after.newTotalCents;
-
-    expect(afterSum).toBe(beforeSum);
-
-    const originalPanel = screen.getAllByRole("region", { name: "Original Bill" }).at(-1)!;
-    const newPanel = screen.getAllByRole("region", { name: "New Bill" }).at(-1)!;
-    expect(
-      Array.from(originalPanel.querySelectorAll("*")).some((el) => el.textContent === "$7.00"),
-    ).toBe(true);
-    expect(
-      Array.from(newPanel.querySelectorAll("*")).some((el) => el.textContent === "$3.00"),
-    ).toBe(true);
-  });
-
-  it("disables every move button when the disabled prop is true (e.g. while a conflict banner is showing)", () => {
-    renderView({ disabled: true, newLines: [LINE_B], newTotalCents: 700 });
-
-    for (const button of screen.getAllByRole("button")) {
-      expect(button).toBeDisabled();
-    }
+    expect(screen.getByRole("alert")).toHaveTextContent(/review required/i);
   });
 });

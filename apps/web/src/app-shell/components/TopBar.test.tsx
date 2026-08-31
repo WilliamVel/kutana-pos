@@ -3,10 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import { TopBar } from "./TopBar.js";
 
 describe("TopBar", () => {
-  it("renders the wordmark heading and every screen tab", () => {
+  it("renders the logo heading and every screen tab", () => {
     render(<TopBar currentScreen="inventory" onNavigate={vi.fn()} />);
 
-    expect(screen.getByRole("heading", { name: "KUTANA POS" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "KUTANA" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute("src", "/LOGOkutana.svg");
     for (const label of ["Inventory", "Add product", "Register"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }

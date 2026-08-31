@@ -27,8 +27,9 @@ describe("apps/web features/** must not import adapters/** directly", () => {
     try {
       let failed = false;
       let output = "";
+      const eslintBin = path.join(repoRoot, "node_modules/eslint/bin/eslint.js");
       try {
-        output = execFileSync("pnpm", ["exec", "eslint", "--no-ignore", tempPath], {
+        output = execFileSync(process.execPath, [eslintBin, "--no-ignore", tempPath], {
           cwd: repoRoot,
           encoding: "utf-8",
         });

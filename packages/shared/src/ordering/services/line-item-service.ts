@@ -30,6 +30,27 @@ export function addLineItem(
 }
 
 /**
+ * Removes an existing LineItem from a still-modifiable (unpaid) order. This
+ * is a genuine deletion and is allowed ONLY before payment — a pre-sale
+ * ticket is a draft, not yet an audit record, so a mistakenly added item
+ * can simply be taken back off. Once the order is paid `isOrderModifiable`
+ * is false and corrections MUST go through `addAdjustmentLine` instead,
+ * which preserves the immutable at-sale-time trail.
+ */
+export function removeLineItem(order: Order, lineItemId: string): Order {
+  assertModifiable(order);
+  const target = order.lineItems.find((item) => item.id === lineItemId);
+  if (!target) {
+    throw new ValidationError(`Cannot remove unknown line item ${lineItemId}`);
+  }
+  return {
+    ...order,
+    lineItems: order.lineItems.filter((item) => item.id !== lineItemId),
+    version: order.version + 1,
+  };
+}
+
+/**
  * The ONLY sanctioned way to correct an existing LineItem: appends a new
  * `isAdjustment: true` line item. The original LineItem referenced by
  * `correctsLineItemId` is never touched — it remains in `lineItems`

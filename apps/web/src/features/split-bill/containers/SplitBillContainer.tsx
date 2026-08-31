@@ -1,156 +1,143 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Allocation } from "@kutana/shared/billing/model/allocation.js";
-import { createAllocation } from "@kutana/shared/billing/model/allocation.js";
-import { createTicket, type Ticket } from "@kutana/shared/billing/model/ticket.js";
-import { splitAllocation, ticketTotals } from "@kutana/shared/billing/services/split-allocation.js";
+import { createCustomerDebtEntry } from "@kutana/shared/billing/model/customer-debt-ledger.js";
+import { closeOrderWithPersonalAccounts } from "@kutana/shared/billing/model/order-closure.js";
+import {
+  accountBalance,
+  addAccountLineAllocation,
+  createAccountLineAllocation,
+  createPersonalAccount,
+  derivePersonalAccountStatus,
+  type AccountLineAllocation,
+  type AccountPaymentAmount,
+  type Customer,
+  type PersonalAccount,
+} from "@kutana/shared/billing/model/personal-account.js";
 import { ConflictError } from "@kutana/shared/errors/conflict-error.js";
+import type { Payment } from "@kutana/shared/payments/model/payment.js";
 import type { Order } from "@kutana/shared/ordering/model/order.js";
 import type { Table } from "@kutana/shared/ordering/model/table.js";
-import { useOrders, useTables, useTickets } from "../../../composition/PortsProvider.js";
-import { Button } from "../../../design-system/atoms/Button.js";
+import {
+  useCustomerDebts,
+  useCustomers,
+  useOrderEvents,
+  useOrders,
+  usePaymentMethods,
+  usePayments,
+  usePersonalAccounts,
+  useTables,
+} from "../../../composition/PortsProvider.js";
 import { ConflictBanner } from "../components/ConflictBanner.js";
-import { SplitBillView, type SplitBillLine } from "../components/SplitBillView.js";
+import {
+  SplitBillView,
+  type AccountAllocationDraft,
+  type AccountAssignmentAccount,
+  type AccountAssignmentLine,
+} from "../components/SplitBillView.js";
 import styles from "./SplitBillContainer.module.css";
 
 export interface SplitBillContainerProps {
   readonly tableId: string;
-  /**
-   * Lets the caller (the app shell) navigate to the register screen for a
-   * SPECIFIC ticket once it has been split off — the milestone-1 exit
-   * scenario is splitting a bill into two tickets and paying each one
-   * independently. Rendered as two "Pay this bill" buttons when provided;
-   * omitted entirely (no buttons) when not, so this container stays usable
-   * standalone (e.g. in tests) without a navigation callback.
-   */
-  readonly onPayTicket?: (ticketId: string) => void;
 }
 
-/**
- * Any mock repository can be armed to throw a `ConflictError` on its next
- * write via its `conflictTrigger` (see `adapters/mock/conflict-trigger.ts`).
- * The `TicketRepository` PORT deliberately does not declare this field — it
- * is a demo/test-only capability of the mock adapter, not part of the real
- * contract an HTTP adapter would implement. `features/**` may not import
- * the adapter to check for it (the adapter-import guard would reject that),
- * so this container duck-types the field on whatever concrete port it was
- * handed instead. Under a real HTTP-backed port at milestone 2, `trigger`
- * below is simply `undefined` and the debug button never renders.
- */
-interface MaybeHasConflictTrigger {
-  readonly conflictTrigger?: { forceNextConflict(): void };
+interface AccountPaymentCache {
+  readonly accountId: string;
+  readonly paidCents: number;
 }
 
-function toLines(
-  order: Order,
-  allocations: readonly Allocation[],
-  ticketId: string,
-): SplitBillLine[] {
-  const allocatedLineItemIds = new Set(
-    allocations.filter((allocation) => allocation.ticketId === ticketId).map((a) => a.lineItemId),
-  );
-  return order.lineItems
-    .filter((line) => allocatedLineItemIds.has(line.id))
-    .map((line) => ({
+function ownerLabel(account: PersonalAccount, customers: readonly Customer[]): string {
+  const { owner } = account;
+  if (owner.kind === "free_name") return owner.freeName;
+  return customers.find((customer) => customer.id === owner.customerId)?.displayName ?? owner.customerId;
+}
+
+function toLines(order: Order, allocations: readonly AccountLineAllocation[]): AccountAssignmentLine[] {
+  return order.lineItems.map((line) => {
+    const assigned = allocations
+      .filter((allocation) => allocation.lineItemId === line.id)
+      .reduce((sum, allocation) => sum + allocation.quantity, 0);
+    return {
       id: line.id,
       name: line.nameSnapshot,
       quantity: line.quantity,
+      unitPriceCents: line.unitPriceCents,
       totalCents: line.totalCents,
-    }));
+      unassignedQuantity: line.quantity - assigned,
+    };
+  });
 }
 
-/**
- * Wires the split-bill screen — the milestone-1 demo centerpiece — to the
- * billing domain. Ensures the order has exactly two tickets ("Original
- * Bill" and "New Bill", the second created empty on first visit) and moves
- * items between them exclusively by repointing Allocations via
- * `splitAllocation` (`packages/shared`) — the LineItem itself, and the
- * Order it belongs to, are never touched. On `ConflictError` from a save,
- * refreshes all state from the ports and shows a non-technical banner;
- * dismissing it re-enables the move buttons.
- */
-export function SplitBillContainer({
-  tableId,
-  onPayTicket,
-}: SplitBillContainerProps): JSX.Element | null {
+function toAccountPayments(payments: readonly AccountPaymentCache[]): AccountPaymentAmount[] {
+  return payments.map((payment) => ({ accountId: payment.accountId, amountCents: payment.paidCents }));
+}
+
+export function SplitBillContainer({ tableId }: SplitBillContainerProps): JSX.Element | null {
   const tables = useTables();
   const orders = useOrders();
-  const ticketsPort = useTickets();
+  const customersPort = useCustomers();
+  const accountsPort = usePersonalAccounts();
+  const paymentsPort = usePayments();
+  const debtsPort = useCustomerDebts();
+  const methods = usePaymentMethods();
+  const events = useOrderEvents();
 
   const [table, setTable] = useState<Table | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
-  const [ticketsState, setTicketsState] = useState<Ticket[]>([]);
-  const [allocations, setAllocations] = useState<Allocation[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [accounts, setAccounts] = useState<PersonalAccount[]>([]);
+  const [allocations, setAllocations] = useState<AccountLineAllocation[]>([]);
+  const [payments, setPayments] = useState<AccountPaymentCache[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [freeName, setFreeName] = useState("");
+  const [allocationDraft, setAllocationDraft] = useState<AccountAllocationDraft>({ accountId: "", lineItemId: "", quantity: "1" });
+  const [reviewMessage, setReviewMessage] = useState<string | null>(null);
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
-    const foundTable = await tables.findById(tableId);
-    if (!foundTable) return;
+    const [foundTable, foundOrder, allCustomers] = await Promise.all([
+      tables.findById(tableId),
+      orders.findByTable(tableId),
+      customersPort.listAll(),
+    ]);
+    if (!foundTable || !foundOrder) return;
+
+    const [orderAccounts, orderAllocations] = await Promise.all([
+      accountsPort.listByOrder(foundOrder.id),
+      accountsPort.listAllocationsByOrder(foundOrder.id),
+    ]);
+    const accountPayments = await Promise.all(
+      orderAccounts.map(async (account) => ({
+        accountId: account.id,
+        paidCents: (await paymentsPort.listByTarget({ kind: "personal_account", accountId: account.id })).reduce(
+          (sum, payment) => sum + payment.amountCents,
+          0,
+        ),
+      })),
+    );
+
     setTable(foundTable);
-
-    const foundOrder = await orders.findByTable(tableId);
-    if (!foundOrder) return;
     setOrder(foundOrder);
-
-    let orderTickets = await ticketsPort.listByOrder(foundOrder.id);
-    let orderAllocations = await ticketsPort.listAllocationsByOrder(foundOrder.id);
-
-    if (orderTickets.length === 0) {
-      const originalTicket = createTicket({ orderId: foundOrder.id, label: "Original Bill" });
-      const initialAllocations = foundOrder.lineItems.map((line) =>
-        createAllocation({ lineItemId: line.id, ticketId: originalTicket.id }),
-      );
-      const saved = await ticketsPort.save(originalTicket, initialAllocations, 0);
-      orderTickets = [saved];
-      orderAllocations = initialAllocations;
-    }
-
-    const originalTicket = orderTickets[0]!;
-    let newTicket = orderTickets.find((ticket) => ticket.id !== originalTicket.id) ?? null;
-
-    if (!newTicket) {
-      const created = createTicket({ orderId: foundOrder.id, label: "New Bill" });
-      newTicket = await ticketsPort.save(created, orderAllocations, 0);
-      orderTickets = [...orderTickets, newTicket];
-    }
-
-    setTicketsState(orderTickets);
+    setCustomers(allCustomers);
+    setAccounts(orderAccounts);
     setAllocations(orderAllocations);
-  }, [tableId, tables, orders, ticketsPort]);
+    setPayments(accountPayments);
+  }, [accountsPort, customersPort, orders, paymentsPort, tableId, tables]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const originalTicket = ticketsState[0] ?? null;
-  const newTicket = ticketsState[1] ?? null;
-
-  const moveItem = useCallback(
-    async (lineItemId: string, toTicketId: string, fromTicketId: string): Promise<void> => {
+  const runMutation = useCallback(
+    async (mutation: () => Promise<void>): Promise<void> => {
       setBusy(true);
       try {
-        const { allocations: nextAllocations } = splitAllocation({
-          allocations,
-          tickets: ticketsState,
-          lineItemId,
-          toTicketId,
-          payments: [],
-        });
-        const fromTicket = ticketsState.find((ticket) => ticket.id === fromTicketId);
-        if (!fromTicket) return;
-
-        const saved = await ticketsPort.save(fromTicket, nextAllocations, fromTicket.version);
-        setAllocations(nextAllocations);
-        setTicketsState((current) =>
-          current.map((ticket) => (ticket.id === saved.id ? saved : ticket)),
-        );
+        await mutation();
         setConflictMessage(null);
+        await load();
       } catch (error) {
         if (error instanceof ConflictError) {
           await load();
-          setConflictMessage(
-            "This bill changed on another device. We've refreshed it below — please check the totals and try your move again.",
-          );
+          setConflictMessage("This account assignment changed on another device. We've refreshed it below — please review and try again.");
         } else {
           throw error;
         }
@@ -158,48 +145,139 @@ export function SplitBillContainer({
         setBusy(false);
       }
     },
-    [allocations, ticketsState, ticketsPort, load],
+    [load],
   );
 
-  if (!table || !order || !originalTicket || !newTicket) return null;
+  if (!table || !order) return null;
 
-  const originalTotalCents = ticketTotals(originalTicket.id, order.lineItems, allocations).cents;
-  const newTotalCents = ticketTotals(newTicket.id, order.lineItems, allocations).cents;
+  const accountRows: AccountAssignmentAccount[] = accounts.map((account) => {
+    const balance = accountBalance({
+      accountId: account.id,
+      lineItems: order.lineItems,
+      allocations,
+      payments: toAccountPayments(payments),
+    });
+    return { ...balance, id: account.id, owner: account.owner, status: account.status, ownerLabel: ownerLabel(account, customers) };
+  });
 
-  const conflictTrigger = (ticketsPort as unknown as MaybeHasConflictTrigger).conflictTrigger;
+  const createCustomerAccount = (): void => {
+    void runMutation(async () => {
+      const account = createPersonalAccount({ orderId: order.id, customerId: selectedCustomerId });
+      await accountsPort.save(account, allocations, 0);
+      setSelectedCustomerId("");
+    });
+  };
+
+  const createFreeNameAccount = (): void => {
+    void runMutation(async () => {
+      const account = createPersonalAccount({ orderId: order.id, freeName });
+      await accountsPort.save(account, allocations, 0);
+      setFreeName("");
+    });
+  };
+
+  const assignQuantity = (): void => {
+    void runMutation(async () => {
+      const quantity = Number(allocationDraft.quantity);
+      const next = createAccountLineAllocation({
+        accountId: allocationDraft.accountId,
+        lineItemId: allocationDraft.lineItemId,
+        quantity,
+      });
+      const result = addAccountLineAllocation({ allocations, lineItems: order.lineItems, next });
+      const account = accounts.find((candidate) => candidate.id === allocationDraft.accountId);
+      if (!account) return;
+      await accountsPort.save(account, result.allocations, account.version);
+      setAllocationDraft({ ...allocationDraft, quantity: "1" });
+    });
+  };
+
+  const payAccount = (accountId: string): void => {
+    void runMutation(async () => {
+      const account = accounts.find((candidate) => candidate.id === accountId);
+      const row = accountRows.find((candidate) => candidate.id === accountId);
+      const method = methods.find((candidate) => candidate.active) ?? methods[0];
+      if (!account || !row || row.remainingCents <= 0 || !method) return;
+      const payment: Payment = {
+        id: crypto.randomUUID(),
+        target: { kind: "personal_account", accountId },
+        methodCode: method.code,
+        amountCents: row.remainingCents,
+        tenderedCents: method.requiresTendered ? row.remainingCents : null,
+        changeCents: method.requiresTendered ? 0 : null,
+        recordedAt: new Date().toISOString(),
+      };
+      await paymentsPort.record(payment);
+      await accountsPort.save({ ...account, status: "paid", closedAt: new Date().toISOString() }, allocations, account.version);
+    });
+  };
+
+  const markPending = (accountId: string): void => {
+    void runMutation(async () => {
+      const account = accounts.find((candidate) => candidate.id === accountId);
+      const row = accountRows.find((candidate) => candidate.id === accountId);
+      if (!account || !row || row.remainingCents <= 0) return;
+      const saved = await accountsPort.save({ ...account, status: "pending", closedAt: new Date().toISOString() }, allocations, account.version);
+      if (saved.owner.kind === "customer") {
+        await debtsPort.record(createCustomerDebtEntry({
+          customerId: saved.owner.customerId,
+          direction: "debit",
+          kind: "pending_account",
+          amountCents: row.remainingCents,
+          accountId: saved.id,
+        }));
+      }
+    });
+  };
+
+  const attemptClose = (): void => {
+    void runMutation(async () => {
+      const effectiveAccounts = accountRows.map((row) => {
+        const account = accounts.find((candidate) => candidate.id === row.id)!;
+        return { ...account, status: derivePersonalAccountStatus({ totalCents: row.totalCents, paidCents: row.paidCents, isPending: account.status === "pending" }) };
+      });
+      const result = closeOrderWithPersonalAccounts({
+        order,
+        accounts: effectiveAccounts,
+        allocations,
+        payments: toAccountPayments(payments),
+      });
+      if (result.kind === "review_required") {
+        setReviewMessage(
+          `Review required: ${result.unresolvedLineItems.length} line item(s) have unassigned or over-assigned quantities, and ${result.blockingAccounts.length} account(s) still need payment or pending resolution.`,
+        );
+        await orders.save(result.order, order.version);
+      } else {
+        setReviewMessage(result.pendingAccountIds.length > 0 ? "Table closed with pending personal debt." : "Table closed fully paid.");
+        const saved = await orders.save(result.order, order.version);
+        events.publish({ type: "order.updated", orderId: saved.id, tableId, version: saved.version, at: new Date().toISOString(), payload: saved });
+      }
+    });
+  };
 
   return (
     <div className={styles.screen}>
-      <h2>{table.label} — Split Bill</h2>
-
-      {conflictMessage ? (
-        <ConflictBanner message={conflictMessage} onDismiss={() => setConflictMessage(null)} />
-      ) : null}
-
+      {conflictMessage ? <ConflictBanner message={conflictMessage} onDismiss={() => setConflictMessage(null)} /> : null}
       <SplitBillView
-        originalLines={toLines(order, allocations, originalTicket.id)}
-        newLines={toLines(order, allocations, newTicket.id)}
-        originalTotalCents={originalTotalCents}
-        newTotalCents={newTotalCents}
-        onMoveToNew={(lineItemId) => void moveItem(lineItemId, newTicket.id, originalTicket.id)}
-        onMoveToOriginal={(lineItemId) =>
-          void moveItem(lineItemId, originalTicket.id, newTicket.id)
-        }
+        tableLabel={table.label}
+        customers={customers}
+        selectedCustomerId={selectedCustomerId}
+        freeName={freeName}
+        lines={toLines(order, allocations)}
+        accounts={accountRows}
+        allocationDraft={allocationDraft}
+        reviewMessage={reviewMessage}
         disabled={busy || conflictMessage !== null}
+        onSelectCustomer={setSelectedCustomerId}
+        onFreeNameChange={setFreeName}
+        onCreateCustomerAccount={createCustomerAccount}
+        onCreateFreeNameAccount={createFreeNameAccount}
+        onAllocationDraftChange={setAllocationDraft}
+        onAssignQuantity={assignQuantity}
+        onPayAccount={payAccount}
+        onMarkPending={markPending}
+        onAttemptClose={attemptClose}
       />
-
-      {onPayTicket ? (
-        <div className={styles.payButtons}>
-          <Button onClick={() => onPayTicket(originalTicket.id)}>Pay Original Bill</Button>
-          <Button onClick={() => onPayTicket(newTicket.id)}>Pay New Bill</Button>
-        </div>
-      ) : null}
-
-      {conflictTrigger ? (
-        <Button variant="secondary" onClick={() => conflictTrigger.forceNextConflict()}>
-          Force conflict (demo)
-        </Button>
-      ) : null}
     </div>
   );
 }

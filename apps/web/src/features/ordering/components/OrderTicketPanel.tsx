@@ -31,12 +31,17 @@ export interface OrderTicketPanelProps {
   readonly taxCents: number;
   /** Integer cents. */
   readonly totalCents: number;
+  /**
+   * When provided, each non-adjustment line gets a remove control. Only
+   * wired for unpaid orders — the container omits it once the order is paid.
+   */
+  readonly onRemoveLine?: (lineId: string) => void;
 }
 
 /**
  * Purely presentational: props in, markup out, no port access. Renders one
- * table's active order as a single ticket (bill splitting into multiple
- * tickets is PR7's split-bill screen — out of this PR's scope).
+ * table's active order summary before the operator assigns line quantities to
+ * personal accounts.
  */
 export function OrderTicketPanel({
   tableLabel,
@@ -45,16 +50,17 @@ export function OrderTicketPanel({
   subtotalCents,
   taxCents,
   totalCents,
+  onRemoveLine,
 }: OrderTicketPanelProps): JSX.Element {
   return (
-    <section className={styles.panel} aria-label={`Ticket for ${tableLabel}`}>
+    <section className={styles.panel} aria-label={`Order account summary for ${tableLabel}`}>
       <div className={styles.header}>
         <h2>{tableLabel}</h2>
         <StatusPill status={status} />
       </div>
 
       {lines.length === 0 ? (
-        <p className={styles.empty}>No items on this ticket yet.</p>
+        <p className={styles.empty}>No items on this order yet.</p>
       ) : (
         <div className={styles.lines}>
           {lines.map((line) => (
@@ -66,6 +72,11 @@ export function OrderTicketPanel({
               totalCents={line.totalCents}
               pourSizeMl={line.pourSizeMl}
               isAdjustment={line.isAdjustment}
+              onRemove={
+                onRemoveLine && !line.isAdjustment
+                  ? () => onRemoveLine(line.id)
+                  : undefined
+              }
             />
           ))}
         </div>

@@ -9,6 +9,7 @@ import type { Order } from "../model/order.js";
  */
 export interface OrderRepository {
   findByTable(tableId: string): Promise<Order | null>;
+  listAll(): Promise<Order[]>;
   /** Throws ConflictError<Order> if the stored version !== expectedVersion. */
   save(order: Order, expectedVersion: number): Promise<Order>;
 }

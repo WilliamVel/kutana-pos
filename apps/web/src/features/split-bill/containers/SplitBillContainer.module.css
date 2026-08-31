@@ -3,8 +3,3 @@
   flex-direction: column;
   gap: var(--space-5);
 }
-
-.payButtons {
-  display: flex;
-  gap: var(--space-3);
-}

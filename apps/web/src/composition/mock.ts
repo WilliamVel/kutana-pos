@@ -1,9 +1,12 @@
 import { createStockMovement } from "@kutana/shared/inventory/model/stock-movement.js";
 import { KUTANA_V1_PAYMENT_METHODS } from "@kutana/shared/payments/model/payment-method-registry.seed.js";
 import { MockCategoryRepository } from "../adapters/mock/category-repository.js";
+import { MockCustomerDebtRepository } from "../adapters/mock/customer-debt-repository.js";
+import { MockCustomerRepository } from "../adapters/mock/customer-repository.js";
 import { MockOrderEvents } from "../adapters/mock/order-events.js";
 import { MockOrderRepository } from "../adapters/mock/order-repository.js";
 import { MockPaymentRepository } from "../adapters/mock/payment-repository.js";
+import { MockPersonalAccountRepository } from "../adapters/mock/personal-account-repository.js";
 import { MockProductRepository } from "../adapters/mock/product-repository.js";
 import { MockStockRepository } from "../adapters/mock/stock-repository.js";
 import { MockTableRepository } from "../adapters/mock/table-repository.js";
@@ -28,6 +31,9 @@ export function buildMockPorts(): Ports {
   const orders = new MockOrderRepository();
   const tables = new MockTableRepository();
   const tickets = new MockTicketRepository();
+  const customers = new MockCustomerRepository();
+  const personalAccounts = new MockPersonalAccountRepository();
+  const customerDebts = new MockCustomerDebtRepository();
   const payments = new MockPaymentRepository();
   const products = new MockProductRepository();
   const categories = new MockCategoryRepository();
@@ -44,6 +50,9 @@ export function buildMockPorts(): Ports {
     orders,
     tables,
     tickets,
+    customers,
+    personalAccounts,
+    customerDebts,
     payments,
     products,
     categories,

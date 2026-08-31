@@ -8,7 +8,7 @@ export interface ConflictBannerProps {
    * responsible for translating the domain `ConflictError` into this copy.
    */
   readonly message: string;
-  /** Re-enables the split-bill action the conflict interrupted. */
+  /** Re-enables the account-assignment action the conflict interrupted. */
   readonly onDismiss: () => void;
 }
 

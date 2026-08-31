@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { ConflictError } from "@kutana/shared/errors/conflict-error.js";
 import type {
   Order,
   OrderStatus as DomainOrderStatus,
 } from "@kutana/shared/ordering/model/order.js";
 import type { Table } from "@kutana/shared/ordering/model/table.js";
+import { removeLineItem } from "@kutana/shared/ordering/services/line-item-service.js";
 import { useOrderEvents, useOrders, useTables } from "../../../composition/PortsProvider.js";
 import { OrderTicketPanel, type OrderTicketPanelLine } from "../components/OrderTicketPanel.js";
 import type { OrderStatus } from "../../../design-system/molecules/StatusPill.js";
@@ -11,7 +13,9 @@ import type { OrderStatus } from "../../../design-system/molecules/StatusPill.js
 const STATUS_MAP: Record<DomainOrderStatus, OrderStatus> = {
   active: "active",
   needs_check: "needs-check",
+  in_review: "in-review",
   paid: "paid",
+  closed_with_pending: "closed-with-pending",
 };
 
 export interface OrderTicketPanelContainerProps {
@@ -19,9 +23,9 @@ export interface OrderTicketPanelContainerProps {
 }
 
 /**
- * Shows one table's order as a single ticket (splitting into multiple
- * tickets is PR7's split-bill screen, out of scope here) and subscribes to
- * `OrderEvents` so it stays live if the order changes on another device
+ * Shows one table's order summary before personal-account assignment and
+ * subscribes to `OrderEvents` so it stays live if the order changes on another
+ * device
  * while this panel is open.
  */
 export function OrderTicketPanelContainer({
@@ -59,6 +63,31 @@ export function OrderTicketPanelContainer({
     });
   }, [order?.id, events]);
 
+  async function handleRemoveLine(lineId: string): Promise<void> {
+    const current = await orders.findByTable(tableId);
+    if (!current) return;
+
+    const next = removeLineItem(current, lineId);
+    try {
+      const saved = await orders.save(next, current.version);
+      setOrder(saved);
+      events.publish({
+        type: "order.updated",
+        orderId: saved.id,
+        tableId,
+        version: saved.version,
+        at: new Date().toISOString(),
+        payload: saved,
+      });
+    } catch (error) {
+      if (error instanceof ConflictError) {
+        setOrder((error.currentSnapshot as Order | null) ?? null);
+      } else {
+        throw error;
+      }
+    }
+  }
+
   if (!table || !order) return null;
 
   const lines: OrderTicketPanelLine[] = order.lineItems.map((line) => ({
@@ -88,6 +117,11 @@ export function OrderTicketPanelContainer({
       subtotalCents={subtotalCents}
       taxCents={taxCents}
       totalCents={totalCents}
+      onRemoveLine={
+        order.status === "paid" || order.status === "closed_with_pending"
+          ? undefined
+          : (lineId) => void handleRemoveLine(lineId)
+      }
     />
   );
 }

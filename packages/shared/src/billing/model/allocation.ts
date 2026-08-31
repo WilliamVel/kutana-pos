@@ -1,6 +1,9 @@
 import { ValidationError } from "../../errors/domain-error.js";
 
 /**
+ * @deprecated Milestone-1 ticket compatibility seam. New payable behavior uses
+ * `AccountLineAllocation` in `personal-account.ts`.
+ *
  * Records payment responsibility for a single LineItem.
  *
  * `shareBp` is the line item's share expressed in basis points. In v1 it is

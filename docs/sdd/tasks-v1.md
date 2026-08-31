@@ -1,8 +1,8 @@
 # Tasks: KUTANA POS v1
 
-Authoritative implementation checklist. Recovered and version-controlled so it
-cannot be lost to a memory-store overwrite. Update the checkboxes here as work
-lands; this file is the source of truth for the remaining PR chain.
+Historical milestone-1 implementation checklist. It records the original ticket
+and split-bill delivery, but current payable behavior is owned by
+`PersonalAccount` account assignment and pending-debt flows.
 
 ## Review Workload Forecast
 
@@ -29,9 +29,9 @@ lands; this file is the source of truth for the remaining PR chain.
 
 ## Milestone 1 - Domain foundations + demo UI on mocks (NO backend)
 
-**Exit criterion: `pnpm --filter web dev` shows inventory, orders, register, and
-split-bill screens fully interactive on mock adapters; no `apps/api` code
-required to run the demo.**
+**Original exit criterion: `pnpm --filter web dev` showed inventory, orders,
+register, and split-bill screens on mock adapters. Current demo terminology uses
+personal accounts and pending debts; no `apps/api` code is required to run it.**
 
 ### Phase 1: Monorepo & Tooling - PR1 (COMPLETE, commit 0ca122d)
 - [x] 1.1 Create `pnpm-workspace.yaml` (apps/*, packages/*), root `tsconfig.base.json` (strict:true, path alias `@kutana/shared`).
@@ -132,5 +132,5 @@ multi-venue, auth/login, receipt/printer format (blocked on open question).
 
 ## Open Dependencies
 
-- Receipt/printer format and whether split tickets print separately - unanswered; blocks milestone 2/3 printing work only.
+- Receipt/printer format and whether personal accounts print separately - unanswered; blocks milestone 2/3 printing work only.
 - IVA uniform vs per-product - seeding decision only; schema (`tax_rate_bp` per product) already correct either way.

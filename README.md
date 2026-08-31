@@ -73,6 +73,9 @@ defense-in-depth check exercised in
 
 - **Hexagonal**: `packages/shared` holds domain and port interfaces; `apps/*`
   are adapter shells depending inward on shared. Shared depends on nothing.
+- **Payable model**: `PersonalAccount` is the current payable unit for account
+  assignment and pending debts. Legacy `Ticket`/`Allocation` code is retained
+  only as milestone-1 compatibility for historical whole-table payment tests.
 - **Frontend-first delivery**: milestone 1 runs the real domain against
   in-memory mock adapters in `apps/web`; milestone 2 swaps them for
   HTTP/Postgres without touching component code (see `apps/web/src/composition`,

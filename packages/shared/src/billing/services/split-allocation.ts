@@ -4,6 +4,7 @@ import { ValidationError } from "../../errors/domain-error.js";
 import { type Allocation, repointAllocation } from "../model/allocation.js";
 import type { Ticket } from "../model/ticket.js";
 
+/** @deprecated Legacy ticket payment shape kept for historical split-bill tests. */
 export interface TicketPayment {
   readonly ticketId: string;
   readonly amountCents: number;
@@ -15,6 +16,7 @@ export interface TicketPayment {
  * this ticket currently owe", used by both the split/merge services and
  * (later) the register UI.
  */
+/** @deprecated Use `accountBalance` for new personal-account payable totals. */
 export function ticketTotals(
   ticketId: string,
   lineItems: readonly LineItem[],
@@ -65,6 +67,7 @@ export function assertCanReceivePayment(
  * itself is never moved, copied, or mutated — only the Allocation entry
  * that maps it to a Ticket changes.
  */
+/** @deprecated Legacy ticket split helper kept for historical tests only. */
 export function splitAllocation(input: {
   allocations: readonly Allocation[];
   tickets: readonly Ticket[];
@@ -94,6 +97,7 @@ export function splitAllocation(input: {
  * pointing at `fromTicketId` is repointed to `intoTicketId`. The source
  * ticket ends with zero allocations (callers may then void/remove it).
  */
+/** @deprecated Legacy ticket merge helper kept for historical tests only. */
 export function mergeTickets(input: {
   allocations: readonly Allocation[];
   tickets: readonly Ticket[];

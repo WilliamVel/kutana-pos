@@ -10,16 +10,15 @@
 
 .wordmark {
   margin: 0;
-  /*
-   * Terracotta wordmark. --accent-emphasis clears WCAG AA only at the
-   * "large text" threshold (>=24px, or >=19px bold); this is 1.5rem / 800,
-   * well above it, so the token is used as intended.
-   */
-  color: var(--accent-emphasis);
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.logo {
+  display: block;
+  width: 8.5rem;
+  height: auto;
 }
 
 .tabs {

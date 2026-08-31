@@ -36,25 +36,25 @@ describe("RegisterWorkspace", () => {
       <RegisterWorkspace
         list={<p>order list</p>}
         center={null}
-        emptyCenter={<p>Select an order to see its ticket.</p>}
+        emptyCenter={<p>Select an order to see its payable accounts.</p>}
         rail={<p>quick add</p>}
       />,
     );
-    expect(screen.getByText("Select an order to see its ticket.")).toBeInTheDocument();
+    expect(screen.getByText("Select an order to see its payable accounts.")).toBeInTheDocument();
   });
 
   it("renders the center content instead of the empty state when provided", () => {
     render(
       <RegisterWorkspace
         list={<p>order list</p>}
-        center={<p>ticket view</p>}
-        emptyCenter={<p>Select an order to see its ticket.</p>}
+        center={<p>account view</p>}
+        emptyCenter={<p>Select an order to see its payable accounts.</p>}
         rail={<p>quick add</p>}
       />,
     );
-    expect(screen.getByText("ticket view")).toBeInTheDocument();
+    expect(screen.getByText("account view")).toBeInTheDocument();
     expect(
-      screen.queryByText("Select an order to see its ticket."),
+      screen.queryByText("Select an order to see its payable accounts."),
     ).not.toBeInTheDocument();
   });
 });

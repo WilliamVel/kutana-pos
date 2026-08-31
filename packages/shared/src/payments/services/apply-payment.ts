@@ -4,7 +4,7 @@ import {
   type PaymentMethodCode,
   type PaymentMethodRegistry,
 } from "../model/payment-method-registry.js";
-import type { Payment } from "../model/payment.js";
+import type { Payment, PaymentTarget } from "../model/payment.js";
 
 /**
  * Records a new payment against a ticket. Whether a tendered amount is
@@ -17,6 +17,7 @@ export function applyPayment(
   existing: readonly Payment[],
   input: {
     ticketId: string;
+    target?: PaymentTarget;
     methodCode: PaymentMethodCode;
     amountCents: number;
     tenderedCents?: number;
@@ -46,6 +47,7 @@ export function applyPayment(
 
   const payment: Payment = {
     id: input.id ?? crypto.randomUUID(),
+    target: input.target ?? { kind: "ticket", ticketId: input.ticketId },
     ticketId: input.ticketId,
     methodCode: input.methodCode,
     amountCents: input.amountCents,

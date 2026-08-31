@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { MockOrderRepository } from "../adapters/mock/order-repository.js";
 import { MockTableRepository } from "../adapters/mock/table-repository.js";
+import { MockCustomerDebtRepository } from "../adapters/mock/customer-debt-repository.js";
+import { MockCustomerRepository } from "../adapters/mock/customer-repository.js";
 import { MockTicketRepository } from "../adapters/mock/ticket-repository.js";
 import { MockPaymentRepository } from "../adapters/mock/payment-repository.js";
+import { MockPersonalAccountRepository } from "../adapters/mock/personal-account-repository.js";
 import { MockCategoryRepository } from "../adapters/mock/category-repository.js";
 import { MockProductRepository } from "../adapters/mock/product-repository.js";
 import { MockStockRepository } from "../adapters/mock/stock-repository.js";
@@ -16,6 +19,9 @@ describe("buildMockPorts", () => {
     expect(ports.orders).toBeInstanceOf(MockOrderRepository);
     expect(ports.tables).toBeInstanceOf(MockTableRepository);
     expect(ports.tickets).toBeInstanceOf(MockTicketRepository);
+    expect(ports.customers).toBeInstanceOf(MockCustomerRepository);
+    expect(ports.personalAccounts).toBeInstanceOf(MockPersonalAccountRepository);
+    expect(ports.customerDebts).toBeInstanceOf(MockCustomerDebtRepository);
     expect(ports.payments).toBeInstanceOf(MockPaymentRepository);
     expect(ports.products).toBeInstanceOf(MockProductRepository);
     expect(ports.categories).toBeInstanceOf(MockCategoryRepository);

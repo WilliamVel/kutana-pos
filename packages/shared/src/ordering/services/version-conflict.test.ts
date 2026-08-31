@@ -24,6 +24,10 @@ class StubOrderRepository implements OrderRepository {
     return null;
   }
 
+  async listAll() {
+    return [...this.stored.values()];
+  }
+
   async save(order: ReturnType<typeof createOrder>, expectedVersion: number) {
     const current = this.stored.get(order.id);
     if (!current || current.version !== expectedVersion) {

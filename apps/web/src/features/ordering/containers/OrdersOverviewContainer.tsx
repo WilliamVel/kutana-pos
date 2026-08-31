@@ -11,7 +11,9 @@ import type { OrderStatus } from "../../../design-system/molecules/StatusPill.js
 const STATUS_MAP: Record<DomainOrderStatus, OrderStatus> = {
   active: "active",
   needs_check: "needs-check",
+  in_review: "in-review",
   paid: "paid",
+  closed_with_pending: "closed-with-pending",
 };
 
 function toRow(table: Table, order: Order | null): OrdersOverviewRow | null {

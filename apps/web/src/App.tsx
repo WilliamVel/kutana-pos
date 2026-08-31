@@ -3,7 +3,9 @@ import { AppShell } from "./app-shell/components/AppShell.js";
 import { TopBar } from "./app-shell/components/TopBar.js";
 import type { ScreenId } from "./app-shell/screens.js";
 import { Button } from "./design-system/atoms/Button.js";
+import { ButtonRow } from "./design-system/molecules/ButtonRow.js";
 import { Panel } from "./design-system/molecules/Panel.js";
+import { LoginPanel } from "./features/auth/components/LoginPanel.js";
 import { ProductFormContainer } from "./features/catalog/containers/ProductFormContainer.js";
 import { InventoryListContainer } from "./features/inventory/containers/InventoryListContainer.js";
 import { RegisterWorkspace } from "./features/ordering/components/RegisterWorkspace.js";
@@ -13,9 +15,10 @@ import { OrderTicketPanelContainer } from "./features/ordering/containers/OrderT
 import { OrdersOverviewContainer } from "./features/ordering/containers/OrdersOverviewContainer.js";
 import { RegisterPaymentContainer } from "./features/register/containers/RegisterPaymentContainer.js";
 import { SplitBillContainer } from "./features/split-bill/containers/SplitBillContainer.js";
+import { PendingDebtsContainer } from "./features/pending-debts/containers/PendingDebtsContainer.js";
 
 /** Center-column sub-state of the unified Register workspace. */
-type CenterView = "ticket" | "payment" | "split";
+type CenterView = "account" | "payment" | "assignment";
 
 /**
  * Root screen shell for the milestone-1 demo. Navigation state lives here;
@@ -24,14 +27,15 @@ type CenterView = "ticket" | "payment" | "split";
  * container that wires its own ports.
  */
 export function App(): JSX.Element {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [screen, setScreen] = useState<ScreenId>("inventory");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
-  const [centerView, setCenterView] = useState<CenterView>("ticket");
+  const [centerView, setCenterView] = useState<CenterView>("account");
   const [ordersReloadKey, setOrdersReloadKey] = useState(0);
 
   const resetCenter = (): void => {
-    setCenterView("ticket");
+    setCenterView("account");
     setSelectedTicketId(null);
   };
 
@@ -59,16 +63,10 @@ export function App(): JSX.Element {
           </Button>
         </>
       );
-    } else if (centerView === "split") {
+    } else if (centerView === "assignment") {
       center = (
         <>
-          <SplitBillContainer
-            tableId={selectedTableId}
-            onPayTicket={(ticketId) => {
-              setSelectedTicketId(ticketId);
-              setCenterView("payment");
-            }}
-          />
+          <SplitBillContainer tableId={selectedTableId} />
           <Button variant="secondary" onClick={resetCenter}>
             Back to order
           </Button>
@@ -78,9 +76,9 @@ export function App(): JSX.Element {
       center = (
         <>
           <OrderTicketPanelContainer tableId={selectedTableId} />
-          <div style={{ display: "flex", gap: "var(--space-3)" }}>
-            <Button variant="secondary" onClick={() => setCenterView("split")}>
-              Manage splits
+          <ButtonRow>
+            <Button variant="secondary" onClick={() => setCenterView("assignment")}>
+              Manage accounts
             </Button>
             <Button
               onClick={() => {
@@ -88,12 +86,16 @@ export function App(): JSX.Element {
                 setCenterView("payment");
               }}
             >
-              Proceed to payment
+              Pay table balance
             </Button>
-          </div>
+          </ButtonRow>
         </>
       );
     }
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPanel onLogin={() => setIsAuthenticated(true)} />;
   }
 
   return (
@@ -108,6 +110,8 @@ export function App(): JSX.Element {
           />
         </Panel>
       ) : null}
+
+      {screen === "pending-debts" ? <PendingDebtsContainer /> : null}
 
       {screen === "register" ? (
         <RegisterWorkspace
@@ -127,10 +131,10 @@ export function App(): JSX.Element {
             </>
           }
           center={center}
-          emptyCenter="Select an order to see its ticket."
-          railHidden={centerView !== "ticket"}
+          emptyCenter="Select an order to see its payable accounts."
+          railHidden={centerView !== "account"}
           rail={
-            selectedTableId && centerView === "ticket" ? (
+            selectedTableId && centerView === "account" ? (
               <AddItemContainer tableId={selectedTableId} />
             ) : (
               <p>

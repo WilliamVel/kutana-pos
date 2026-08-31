@@ -34,14 +34,13 @@ export interface RegisterPaymentPanelProps {
   readonly taxCents: number;
   /** Integer cents. */
   readonly totalCents: number;
-  /** Integer cents — what remains unpaid on this ticket, after any prior partial payments. */
+  /** Integer cents — what remains unpaid on this payable unit, after any prior partial payments. */
   readonly remainingBalanceCents: number;
   /**
    * Integer cents — the amount the cashier is applying THIS payment.
    * Defaults to `remainingBalanceCents` (paying it off in full) but is
-   * editable so multiple partial payments can accumulate against one
-   * ticket (spec: "Payments N:1 with Ticket" — two partial payments
-   * covering a ticket).
+   * editable so multiple partial payments can accumulate against the
+   * current compatibility payment target.
    */
   readonly amountToPayCents: number;
   readonly onAmountToPayChange: (cents: number) => void;

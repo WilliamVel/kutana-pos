@@ -1,7 +1,7 @@
 import { ValidationError } from "../../errors/domain-error.js";
 import type { LineItem } from "./line-item.js";
 
-export type OrderStatus = "active" | "needs_check" | "paid";
+export type OrderStatus = "active" | "needs_check" | "in_review" | "paid" | "closed_with_pending";
 
 /**
  * An Order's `lineItems` array only ever grows — LineItems are immutable
@@ -41,7 +41,9 @@ export function createOrder(input: {
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   active: ["needs_check"],
   needs_check: ["paid"],
+  in_review: ["needs_check"],
   paid: [],
+  closed_with_pending: [],
 };
 
 function transition(order: Order, to: OrderStatus): Order {
@@ -66,5 +68,5 @@ export function markPaid(order: Order): Order {
 }
 
 export function isOrderModifiable(order: Order): boolean {
-  return order.status !== "paid";
+  return order.status !== "paid" && order.status !== "closed_with_pending";
 }

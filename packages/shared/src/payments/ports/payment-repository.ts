@@ -1,17 +1,16 @@
-import type { Payment } from "../model/payment.js";
+import type { Payment, PaymentTarget } from "../model/payment.js";
 
 /**
  * Port contract only — implementations live in adapters (mock/HTTP/Postgres).
  * Payments are append-only: there is no update or delete path, and therefore
  * no optimistic-concurrency version is needed on this port.
- *
- * NOTE: this port was not enumerated in task 6.5's port list (an oversight
- * in the original task breakdown) but is required to build
- * `MockPaymentRepository` in Phase 8 and is added here as a necessary
- * prerequisite, following the same shape as the sibling ports.
+ * Explicit targets let new personal-account and customer-debt flows record
+ * payments without depending on milestone-1 ticket terminology.
  */
 export interface PaymentRepository {
+  listByTarget(target: PaymentTarget): Promise<Payment[]>;
+  /** @deprecated Use `listByTarget({ kind: "ticket", ticketId })` during the migration. */
   listByTicket(ticketId: string): Promise<Payment[]>;
-  /** Records a new append-only Payment against a ticket. */
+  /** Records a new append-only Payment against an explicit payable target. */
   record(payment: Payment): Promise<Payment>;
 }

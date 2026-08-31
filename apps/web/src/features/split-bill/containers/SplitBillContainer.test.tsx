@@ -1,99 +1,95 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { createCustomer } from "@kutana/shared/billing/model/personal-account.js";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../../composition/mock.js";
 import { SplitBillContainer } from "./SplitBillContainer.js";
 
-describe("SplitBillContainer", () => {
-  it("starts with every line item on the Original Bill and an empty New Bill", async () => {
-    const ports = buildMockPorts();
-    render(
-      <PortsProvider value={ports}>
-        <SplitBillContainer tableId="table-1" />
-      </PortsProvider>,
-    );
+async function renderContainer() {
+  const ports = buildMockPorts();
+  await ports.customers.save(createCustomer({ id: "customer-ada", displayName: "Ada Lovelace", now: "2025-01-01T00:00:00.000Z" }));
+  render(
+    <PortsProvider value={ports}>
+      <SplitBillContainer tableId="table-1" />
+    </PortsProvider>,
+  );
+  await waitFor(() => expect(screen.getByRole("heading", { name: "Table 1 — Personal accounts" })).toBeInTheDocument());
+  return ports;
+}
 
-    // Seeded order: 2x Pilsener 500ml (784) + 1 Nachos (728) = 1512 total.
-    await waitFor(() =>
-      expect(screen.getByRole("region", { name: "Original Bill" })).toHaveTextContent("$15.12"),
-    );
-    expect(screen.getByRole("region", { name: "New Bill" })).toHaveTextContent("$0.00");
-    expect(screen.getByText("No items moved yet.")).toBeInTheDocument();
+describe("SplitBillContainer", () => {
+  it("uses personal-account ports to create a customer account and assign quantity", async () => {
+    const ports = await renderContainer();
+
+    fireEvent.change(screen.getByLabelText("Existing customer"), { target: { value: "customer-ada" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create customer account" }));
+
+    await waitFor(() => expect(screen.getByRole("article", { name: /Account for Ada Lovelace/ })).toBeInTheDocument());
+    const order = await ports.orders.findByTable("table-1");
+    const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
+
+    fireEvent.change(screen.getByLabelText("Account"), { target: { value: account.id } });
+    fireEvent.change(screen.getByLabelText("Line item"), { target: { value: order!.lineItems[0]!.id } });
+    fireEvent.change(screen.getByLabelText(/Quantity/), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Assign quantity" }));
+
+    await waitFor(async () => {
+      const allocations = await ports.personalAccounts.listAllocationsByOrder(order!.id);
+      expect(allocations).toHaveLength(1);
+      expect(allocations[0]).toMatchObject({ accountId: account.id, quantity: 1 });
+    });
+    expect(screen.getByRole("region", { name: "Unassigned quantities" })).toHaveTextContent("1 unassigned");
   });
 
-  it("moves an item to the New Bill and conserves every cent across both totals", async () => {
-    const ports = buildMockPorts();
-    render(
-      <PortsProvider value={ports}>
-        <SplitBillContainer tableId="table-1" />
-      </PortsProvider>,
-    );
+  it("records account-level pay-now payments without using concrete adapters", async () => {
+    const ports = await renderContainer();
 
-    await waitFor(() =>
-      expect(screen.getByRole("region", { name: "Original Bill" })).toHaveTextContent("$15.12"),
-    );
-
-    fireEvent.click(screen.getAllByRole("button", { name: "Move to New Bill" })[0]!);
-
-    await waitFor(() =>
-      expect(screen.getByRole("region", { name: "New Bill" })).not.toHaveTextContent(
-        "No items moved yet.",
-      ),
-    );
-
-    const originalPanel = screen.getByRole("region", { name: "Original Bill" });
-    const newPanel = screen.getByRole("region", { name: "New Bill" });
-
-    const originalCentsText = originalPanel.textContent ?? "";
-    const newCentsText = newPanel.textContent ?? "";
-    const originalDollars = Number(originalCentsText.match(/\$(\d+\.\d\d)\s*$/)?.[1] ?? "NaN");
-    const newDollars = Number(newCentsText.match(/\$(\d+\.\d\d)\s*$/)?.[1] ?? "NaN");
-
-    // Cent-conservation: no matter which item moved, both panel totals
-    // must still sum to the exact original order total.
-    expect(Math.round((originalDollars + newDollars) * 100)).toBe(1512);
+    fireEvent.change(screen.getByLabelText("Free-name account"), { target: { value: "Juan P." } });
+    fireEvent.click(screen.getByRole("button", { name: "Create free-name account" }));
+    await waitFor(() => expect(screen.getByRole("article", { name: "Account for Juan P." })).toBeInTheDocument());
 
     const order = await ports.orders.findByTable("table-1");
-    const allTickets = await ports.tickets.listByOrder(order!.id);
-    expect(allTickets).toHaveLength(2);
-    const allAllocations = await ports.tickets.listAllocationsByOrder(order!.id);
-    expect(allAllocations).toHaveLength(order!.lineItems.length);
+    const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
+    fireEvent.change(screen.getByLabelText("Account"), { target: { value: account.id } });
+    fireEvent.change(screen.getByLabelText("Line item"), { target: { value: order!.lineItems[0]!.id } });
+    fireEvent.click(screen.getByRole("button", { name: "Assign quantity" }));
+    await waitFor(() => {
+      expect(within(screen.getByRole("article", { name: "Account for Juan P." })).getAllByText("$3.92").length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(within(screen.getByRole("article", { name: "Account for Juan P." })).getByRole("button", { name: "Pay now" }));
+
+    await waitFor(async () => {
+      const payments = await ports.payments.listByTarget({ kind: "personal_account", accountId: account.id });
+      expect(payments).toHaveLength(1);
+      expect((await ports.personalAccounts.findById(account.id))?.status).toBe("paid");
+    });
   });
 
-  it("shows a non-technical conflict banner on a forced conflict, refreshes data, and re-enables the move action", async () => {
-    const ports = buildMockPorts();
-    render(
-      <PortsProvider value={ports}>
-        <SplitBillContainer tableId="table-1" />
-      </PortsProvider>,
-    );
+  it("marks account-level balances pending", async () => {
+    const ports = await renderContainer();
 
-    await waitFor(() =>
-      expect(screen.getByRole("region", { name: "Original Bill" })).toHaveTextContent("$15.12"),
-    );
+    fireEvent.change(screen.getByLabelText("Free-name account"), { target: { value: "Juan P." } });
+    fireEvent.click(screen.getByRole("button", { name: "Create free-name account" }));
+    await waitFor(() => expect(screen.getByRole("article", { name: "Account for Juan P." })).toBeInTheDocument());
+    const order = await ports.orders.findByTable("table-1");
+    const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
+    fireEvent.change(screen.getByLabelText("Account"), { target: { value: account.id } });
+    fireEvent.change(screen.getByLabelText("Line item"), { target: { value: order!.lineItems[0]!.id } });
+    fireEvent.click(screen.getByRole("button", { name: "Assign quantity" }));
+    await waitFor(() => expect(within(screen.getByRole("article", { name: "Account for Juan P." })).getAllByText("$3.92").length).toBeGreaterThan(0));
 
-    fireEvent.click(screen.getByRole("button", { name: "Force conflict (demo)" }));
-    fireEvent.click(screen.getAllByRole("button", { name: "Move to New Bill" })[0]!);
+    fireEvent.click(within(screen.getByRole("article", { name: "Account for Juan P." })).getByRole("button", { name: "Mark pending" }));
 
-    const banner = await screen.findByRole("alert");
-    expect(banner.textContent).toMatch(/this bill changed/i);
-    expect(banner.textContent).not.toMatch(/409|ConflictError|stack|Error:/i);
+    await waitFor(async () => expect((await ports.personalAccounts.findById(account.id))?.status).toBe("pending"));
+  });
 
-    // The move button must be disabled while the conflict is showing (re-enable happens on dismiss).
-    expect(screen.getAllByRole("button", { name: "Move to New Bill" })[0]).toBeDisabled();
+  it("marks unresolved closure attempts as review state", async () => {
+    const ports = await renderContainer();
 
-    fireEvent.click(screen.getByRole("button", { name: "Got it — try again" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review table closure" }));
 
-    await waitFor(() =>
-      expect(screen.getAllByRole("button", { name: "Move to New Bill" })[0]).not.toBeDisabled(),
-    );
-
-    // The action works after the conflict is dismissed.
-    fireEvent.click(screen.getAllByRole("button", { name: "Move to New Bill" })[0]!);
-    await waitFor(() =>
-      expect(screen.getByRole("region", { name: "New Bill" })).not.toHaveTextContent(
-        "No items moved yet.",
-      ),
-    );
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(/review required/i));
+    expect((await ports.orders.findByTable("table-1"))?.status).toBe("in_review");
   });
 });

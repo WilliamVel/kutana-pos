@@ -1,0 +1,10 @@
+project: kutana-pos
+summary: Restaurant POS and inventory system using a hexagonal TypeScript monorepo.
+architecture:
+  - packages/shared contains framework-free domain models, services, and ports.
+  - apps/web is a React/Vite PWA adapter using mock repositories for the current frontend-first milestone.
+  - apps/api is the future backend adapter shell.
+conventions:
+  - Domain behavior belongs in packages/shared and is developed test-first.
+  - UI components consume ports through composition roots; features do not import adapters directly.
+  - OpenSpec changes describe scope and behavior before implementation.

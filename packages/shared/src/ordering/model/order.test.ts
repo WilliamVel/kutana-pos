@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createOrder, requestCheck, markPaid } from "./order.js";
 import { createTable, occupyTable } from "./table.js";
-import { addLineItem, addAdjustmentLine } from "../services/line-item-service.js";
+import { addLineItem, addAdjustmentLine, removeLineItem } from "../services/line-item-service.js";
 
 describe("Order/Table status transitions", () => {
   it("starts a table free, then active once an order opens", () => {
@@ -91,6 +91,49 @@ describe("LineItem immutability within an Order", () => {
     const adjustment = corrected.lineItems[1]!;
     expect(adjustment.isAdjustment).toBe(true);
     expect(adjustment.unitPriceCents).toBe(-50);
+  });
+
+  it("removeLineItem takes a mistakenly added item back off an unpaid order", () => {
+    const order = createOrder({ tableId: "table-1" });
+    const withOne = addLineItem(order, {
+      productId: "p1",
+      nameSnapshot: "House Lager",
+      unitPriceCents: 250,
+      quantity: 1,
+      taxRateBp: 1200,
+    });
+    const withTwo = addLineItem(withOne, {
+      productId: "p2",
+      nameSnapshot: "Fries",
+      unitPriceCents: 300,
+      quantity: 1,
+      taxRateBp: 1200,
+    });
+    const keep = withTwo.lineItems[0]!;
+    const drop = withTwo.lineItems[1]!;
+
+    const after = removeLineItem(withTwo, drop.id);
+
+    expect(after.lineItems).toHaveLength(1);
+    expect(after.lineItems[0]).toBe(keep);
+    expect(after.version).toBe(withTwo.version + 1);
+  });
+
+  it("removeLineItem rejects an unknown line item id", () => {
+    const order = createOrder({ tableId: "table-1" });
+    expect(() => removeLineItem(order, "nope")).toThrow();
+  });
+
+  it("removeLineItem refuses to touch a paid order — use an adjustment instead", () => {
+    const withOne = addLineItem(createOrder({ tableId: "table-1" }), {
+      productId: "p1",
+      nameSnapshot: "House Lager",
+      unitPriceCents: 250,
+      quantity: 1,
+      taxRateBp: 1200,
+    });
+    const paid = markPaid(requestCheck(withOne));
+    expect(() => removeLineItem(paid, paid.lineItems[0]!.id)).toThrow();
   });
 
   it("rejects adding a line item to a paid order", () => {

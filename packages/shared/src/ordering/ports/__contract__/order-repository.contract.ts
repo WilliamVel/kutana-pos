@@ -40,6 +40,18 @@ export function runOrderRepositoryContract(
       expect(found?.status).toBe(order.status);
     });
 
+    it("lists all saved orders", async () => {
+      const repository = await createRepository();
+      const orderA = createOrder({ id: "order-a", tableId: "table-list-a" });
+      const orderB = createOrder({ id: "order-b", tableId: "table-list-b" });
+
+      await repository.save(orderB, orderB.version);
+      await repository.save(orderA, orderA.version);
+
+      const orders = await repository.listAll();
+      expect(orders.map((order) => order.id).sort()).toEqual(["order-a", "order-b"]);
+    });
+
     it("accepts a save whose expectedVersion matches the stored version and advances it", async () => {
       const repository = await createRepository();
       const order = createOrder({ tableId: "table-2" });

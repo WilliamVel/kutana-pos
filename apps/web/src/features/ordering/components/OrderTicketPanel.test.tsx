@@ -56,6 +56,6 @@ describe("OrderTicketPanel", () => {
       />,
     );
 
-    expect(screen.getByText("No items on this ticket yet.")).toBeInTheDocument();
+    expect(screen.getByText("No items on this order yet.")).toBeInTheDocument();
   });
 });

@@ -1,7 +1,7 @@
 import styles from "./StatusPill.module.css";
 
 export type StockStatus = "in-stock" | "low-stock" | "out-of-stock";
-export type OrderStatus = "active" | "needs-check" | "paid";
+export type OrderStatus = "active" | "needs-check" | "in-review" | "paid" | "closed-with-pending";
 
 export interface StatusPillProps {
   readonly status: StockStatus | OrderStatus;
@@ -13,7 +13,9 @@ const LABELS_BY_STATUS: Record<StockStatus | OrderStatus, string> = {
   "out-of-stock": "Out of stock",
   active: "Active",
   "needs-check": "Needs check",
+  "in-review": "In review",
   paid: "Paid",
+  "closed-with-pending": "Closed with pending",
 };
 
 // `noUncheckedIndexedAccess` widens CSS-module class lookups to
@@ -25,7 +27,9 @@ const CLASS_BY_STATUS: Record<StockStatus | OrderStatus, string> = {
   "out-of-stock": styles.outOfStock!,
   active: styles.active!,
   "needs-check": styles.needsCheck!,
+  "in-review": styles.needsCheck!,
   paid: styles.paid!,
+  "closed-with-pending": styles.needsCheck!,
 };
 
 /**

@@ -25,24 +25,20 @@ import {
 export interface RegisterPaymentContainerProps {
   readonly tableId: string;
   /**
-   * Pays a SPECIFIC ticket (e.g. one of two tickets produced by the
-   * split-bill screen). When omitted, falls back to the table's single
-   * default ticket (auto-created the first time this screen opens for a
-   * table with no ticket yet) — the pre-split-bill v1 behavior.
+   * @deprecated Legacy milestone-1 ticket payment path. Account-level payment
+   * now happens from the personal-account assignment flow; this remains only so
+   * historical whole-table payment scenarios keep working during migration.
    */
   readonly ticketId?: string;
 }
 
 /**
- * Wires the register/payment screen to the domain. Totals and lines are
- * always derived from the REAL `Allocation` set read via
- * `TicketRepository.listAllocationsByOrder` — never fabricated as "every
- * line item belongs to this ticket" — so paying one ticket after a
- * split-bill move never corrupts the other ticket's allocations. Payment
- * method selection is driven entirely from `usePaymentMethods()` (the
- * registry), never a hardcoded list. Multiple partial payments accumulate
- * against the same ticket until its balance reaches zero (spec: "Payments
- * N:1 with Ticket").
+ * Wires the legacy register/payment screen to the domain. New payable behavior
+ * should use `PersonalAccount` payment targets; this compatibility container
+ * derives totals from the v1 `Allocation` set so historical whole-table and
+ * ticket-specific tests keep their original data path while migration finishes.
+ * Payment method selection is driven entirely from `usePaymentMethods()` (the
+ * registry), never a hardcoded list.
  */
 export function RegisterPaymentContainer({
   tableId,

@@ -4,10 +4,13 @@ import type { Ports } from "./ports.js";
 import {
   PortsProvider,
   useCategories,
+  useCustomerDebts,
+  useCustomers,
   useOrderEvents,
   useOrders,
   usePaymentMethods,
   usePayments,
+  usePersonalAccounts,
   usePorts,
   useProducts,
   useStock,
@@ -17,7 +20,7 @@ import {
 
 function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
   return {
-    orders: { findByTable: async () => null, save: async (order) => order } as Ports["orders"],
+    orders: { findByTable: async () => null, listAll: async () => [], save: async (order) => order } as Ports["orders"],
     tables: {
       listAll: async () => [],
       findById: async () => null,
@@ -29,7 +32,25 @@ function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
       listAllocationsByOrder: async () => [],
       save: async (ticket) => ticket,
     } as Ports["tickets"],
+    customers: {
+      findById: async () => null,
+      listAll: async () => [],
+      save: async (customer) => customer,
+    } as Ports["customers"],
+    personalAccounts: {
+      findById: async () => null,
+      listByOrder: async () => [],
+      listPendingFreeName: async () => [],
+      listAllocationsByOrder: async () => [],
+      save: async (account) => account,
+    } as Ports["personalAccounts"],
+    customerDebts: {
+      listByCustomer: async () => [],
+      listAll: async () => [],
+      record: async (entry) => entry,
+    } as Ports["customerDebts"],
     payments: {
+      listByTarget: async () => [],
       listByTicket: async () => [],
       record: async (payment) => payment,
     } as Ports["payments"],
@@ -90,6 +111,9 @@ describe("PortsProvider", () => {
           <span data-testid="orders">{String(useOrders() === ports.orders)}</span>
           <span data-testid="tables">{String(useTables() === ports.tables)}</span>
           <span data-testid="tickets">{String(useTickets() === ports.tickets)}</span>
+          <span data-testid="customers">{String(useCustomers() === ports.customers)}</span>
+          <span data-testid="personalAccounts">{String(usePersonalAccounts() === ports.personalAccounts)}</span>
+          <span data-testid="customerDebts">{String(useCustomerDebts() === ports.customerDebts)}</span>
           <span data-testid="payments">{String(usePayments() === ports.payments)}</span>
           <span data-testid="products">{String(useProducts() === ports.products)}</span>
           <span data-testid="categories">{String(useCategories() === ports.categories)}</span>
@@ -110,6 +134,9 @@ describe("PortsProvider", () => {
       "orders",
       "tables",
       "tickets",
+      "customers",
+      "personalAccounts",
+      "customerDebts",
       "payments",
       "products",
       "categories",

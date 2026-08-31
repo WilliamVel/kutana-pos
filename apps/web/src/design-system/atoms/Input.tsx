@@ -6,7 +6,7 @@ export interface InputProps {
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly error?: string;
-  readonly type?: "text" | "number";
+  readonly type?: "text" | "number" | "password";
   /** Renders a `<textarea>` instead of an `<input>` for longer free-text content (e.g. a description). */
   readonly multiline?: boolean;
   readonly placeholder?: string;

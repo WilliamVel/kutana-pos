@@ -3,7 +3,7 @@
  * the App switcher and the tab label shown in the top bar (unchanged
  * visible text from the pre-shell nav).
  */
-export type ScreenId = "inventory" | "new-product" | "register";
+export type ScreenId = "inventory" | "new-product" | "register" | "pending-debts";
 
 export interface ScreenMeta {
   readonly id: ScreenId;
@@ -15,4 +15,5 @@ export const SCREENS: readonly ScreenMeta[] = [
   { id: "inventory", tabLabel: "Inventory" },
   { id: "new-product", tabLabel: "Add product" },
   { id: "register", tabLabel: "Register" },
+  { id: "pending-debts", tabLabel: "Pending debts" },
 ];

@@ -49,8 +49,21 @@ export function useTables(): Ports["tables"] {
   return usePorts().tables;
 }
 
+/** @deprecated Legacy milestone-1 payment compatibility only; prefer `usePersonalAccounts()`. */
 export function useTickets(): Ports["tickets"] {
   return usePorts().tickets;
+}
+
+export function useCustomers(): Ports["customers"] {
+  return usePorts().customers;
+}
+
+export function usePersonalAccounts(): Ports["personalAccounts"] {
+  return usePorts().personalAccounts;
+}
+
+export function useCustomerDebts(): Ports["customerDebts"] {
+  return usePorts().customerDebts;
 }
 
 export function usePayments(): Ports["payments"] {

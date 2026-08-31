@@ -1,3 +1,7 @@
+/**
+ * @deprecated Milestone-1 compatibility model. `PersonalAccount` is the payable
+ * unit for new account assignment and pending-debt flows.
+ */
 export type TicketStatus = "open" | "paid" | "void";
 
 export interface Ticket {

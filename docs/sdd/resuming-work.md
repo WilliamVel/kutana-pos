@@ -12,13 +12,14 @@ declined, and every one of their commits is contained in `main`.
 
 ```bash
 pnpm install
-pnpm --filter web dev      # the demo: inventory, orders, register, split bill
-pnpm test                  # 227 unit/component tests
+pnpm --filter web dev      # the demo: inventory, orders, account assignment, pending debts
+pnpm test                  # unit/component tests
 pnpm --filter web test:e2e # Playwright, real browser
 ```
 
-The authoritative plan lives in `docs/sdd/tasks-v1.md`. Milestones 2 and 3 are
-sketched there at coarse granularity and will be re-planned closer to the time.
+The historical milestone-1 plan lives in `docs/sdd/tasks-v1.md`. Current payable
+work uses `PersonalAccount` as the account/debt unit; legacy ticket paths remain
+only where historical tests or migration notes still need them.
 
 ## Starting a new session
 
@@ -74,10 +75,10 @@ Ask one question before starting:
 **Does this change need data that does not exist yet, or does it only display
 existing data differently?**
 
-- _"Make the split-bill panels wider"_ — display only. Design change.
-- _"Show which server took the order on the ticket"_ — needs a field that may not
-  be on the screen, or in the model at all. That is scope, and it touches the
-  domain.
+- _"Make the account-assignment panels wider"_ — display only. Design change.
+- _"Show which server took the order on the account summary"_ — needs a field
+  that may not be on the screen, or in the model at all. That is scope, and it
+  touches the domain.
 
 This distinction already bit once: the product form silently dropped Description
 and Cost Price because they were missing from the domain model. The correct fix
@@ -96,13 +97,14 @@ problem — never relax the rule.
 - No `'CASH'` literal in the domain — payment methods are registry data
 - No body-text terracotta token (it fails WCAG AA at body sizes)
 - The primary button stays at or above WCAG's large-bold threshold (18.66px)
-- `LineItem` never exposes a `ticket_id` — this protects the seam that makes
-  fractional bill splitting possible later
+- `LineItem` never exposes a `ticket_id` — legacy ticket compatibility stays
+  isolated from order line items while personal-account allocation owns new
+  payable behavior
 
 ## Open questions for the business
 
 Neither blocks Milestone 1. Both are worth asking once KUTANA has seen the demo.
 
-- Do split checks print as separate physical tickets, and in what format?
+- Do personal accounts print as separate physical checks, and in what format?
 - Is IVA uniform across products, or per product? (Seeding only — `tax_rate_bp`
   is per-product either way.)

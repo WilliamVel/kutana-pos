@@ -1,6 +1,9 @@
 import type { OrderRepository } from "@kutana/shared/ordering/ports/order-repository.js";
 import type { OrderEvents } from "@kutana/shared/ordering/ports/order-events.js";
 import type { TableRepository } from "@kutana/shared/ordering/ports/table-repository.js";
+import type { CustomerDebtRepository } from "@kutana/shared/billing/ports/customer-debt-repository.js";
+import type { CustomerRepository } from "@kutana/shared/billing/ports/customer-repository.js";
+import type { PersonalAccountRepository } from "@kutana/shared/billing/ports/personal-account-repository.js";
 import type { TicketRepository } from "@kutana/shared/billing/ports/ticket-repository.js";
 import type { PaymentRepository } from "@kutana/shared/payments/ports/payment-repository.js";
 import type { PaymentMethodRegistry } from "@kutana/shared/payments/model/payment-method-registry.js";
@@ -26,7 +29,14 @@ import type { StockRepository } from "@kutana/shared/inventory/ports/stock-repos
 export interface Ports {
   readonly orders: OrderRepository;
   readonly tables: TableRepository;
+  /**
+   * @deprecated Legacy milestone-1 payment compatibility only. New payable flows use
+   * `personalAccounts`, `customerDebts`, and explicit payment targets.
+   */
   readonly tickets: TicketRepository;
+  readonly customers: CustomerRepository;
+  readonly personalAccounts: PersonalAccountRepository;
+  readonly customerDebts: CustomerDebtRepository;
   readonly payments: PaymentRepository;
   readonly products: ProductRepository;
   readonly categories: CategoryRepository;

@@ -16,25 +16,31 @@
 .lines {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
 }
 
 .totals {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  border-top: 1px solid var(--border-subtle);
-  padding-top: 0.5rem;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-sunken);
 }
 
 .totalRow {
   display: flex;
   justify-content: space-between;
-  color: var(--text-primary);
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
 }
 
 .grandTotal {
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-primary);
   font-weight: 700;
+  font-size: 1.0625rem;
 }
 
 .empty {

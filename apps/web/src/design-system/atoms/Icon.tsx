@@ -1,4 +1,11 @@
-export type IconName = "beer" | "warning" | "check" | "close" | "receipt";
+export type IconName =
+  | "beer"
+  | "warning"
+  | "check"
+  | "close"
+  | "receipt"
+  | "arrow-right"
+  | "arrow-left";
 
 export interface IconProps {
   readonly name: IconName;
@@ -44,5 +51,9 @@ function IconGlyph({ name }: { name: IconName }): JSX.Element {
       return <path d="M6 6 18 18M18 6 6 18" strokeWidth={2} />;
     case "receipt":
       return <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" strokeWidth={2} />;
+    case "arrow-right":
+      return <path d="M5 12h14m-6-6 6 6-6 6" strokeWidth={2} />;
+    case "arrow-left":
+      return <path d="M19 12H5m6 6-6-6 6-6" strokeWidth={2} />;
   }
 }
