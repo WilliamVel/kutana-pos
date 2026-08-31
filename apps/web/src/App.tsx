@@ -32,12 +32,14 @@ export function App(): JSX.Element {
   const [screen, setScreen] = useState<ScreenId>("inventory");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [centerView, setCenterView] = useState<CenterView>("account");
   const [ordersReloadKey, setOrdersReloadKey] = useState(0);
 
   const resetCenter = (): void => {
     setCenterView("account");
     setSelectedTicketId(null);
+    setSelectedAccountId(null);
   };
 
   const navigate = (next: ScreenId): void => {
@@ -58,6 +60,8 @@ export function App(): JSX.Element {
           <RegisterPaymentContainer
             tableId={selectedTableId}
             ticketId={selectedTicketId ?? undefined}
+            personalAccountId={selectedAccountId ?? undefined}
+            onPaymentComplete={resetCenter}
           />
           <Button variant="secondary" onClick={resetCenter}>
             Back to order
@@ -67,7 +71,14 @@ export function App(): JSX.Element {
     } else if (centerView === "assignment") {
       center = (
         <>
-          <SplitBillContainer tableId={selectedTableId} />
+          <SplitBillContainer
+            tableId={selectedTableId}
+            onPayAccount={(accountId) => {
+              setSelectedTicketId(null);
+              setSelectedAccountId(accountId);
+              setCenterView("payment");
+            }}
+          />
           <Button variant="secondary" onClick={resetCenter}>
             Back to order
           </Button>
@@ -84,6 +95,7 @@ export function App(): JSX.Element {
             <Button
               onClick={() => {
                 setSelectedTicketId(null);
+                setSelectedAccountId(null);
                 setCenterView("payment");
               }}
             >

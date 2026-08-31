@@ -37,6 +37,7 @@ import styles from "./SplitBillContainer.module.css";
 
 export interface SplitBillContainerProps {
   readonly tableId: string;
+  readonly onPayAccount?: (accountId: string) => void;
 }
 
 interface AccountPaymentCache {
@@ -70,7 +71,7 @@ function toAccountPayments(payments: readonly AccountPaymentCache[]): AccountPay
   return payments.map((payment) => ({ accountId: payment.accountId, amountCents: payment.paidCents }));
 }
 
-export function SplitBillContainer({ tableId }: SplitBillContainerProps): JSX.Element | null {
+export function SplitBillContainer({ tableId, onPayAccount }: SplitBillContainerProps): JSX.Element | null {
   const tables = useTables();
   const orders = useOrders();
   const customersPort = useCustomers();
@@ -193,6 +194,11 @@ export function SplitBillContainer({ tableId }: SplitBillContainerProps): JSX.El
   };
 
   const payAccount = (accountId: string): void => {
+    if (onPayAccount) {
+      onPayAccount(accountId);
+      return;
+    }
+
     void runMutation(async () => {
       const account = accounts.find((candidate) => candidate.id === accountId);
       const row = accountRows.find((candidate) => candidate.id === accountId);

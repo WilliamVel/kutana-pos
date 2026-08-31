@@ -66,7 +66,7 @@ describe("SplitBillView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create customer account" }));
     fireEvent.change(screen.getByLabelText("Free-name account"), { target: { value: "Mesa amiga 2" } });
     fireEvent.click(screen.getByRole("button", { name: "Create free-name account" }));
-    fireEvent.click(screen.getByRole("button", { name: "Select account Juan P." }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear selected account Juan P." }));
     fireEvent.click(screen.getByRole("button", { name: "Add KUTANA Pilsener 500ml to selected account" }));
     fireEvent.click(screen.getByRole("button", { name: "Pay now" }));
     fireEvent.click(screen.getByRole("button", { name: "Mark pending" }));
@@ -76,11 +76,19 @@ describe("SplitBillView", () => {
     expect(props.onFreeNameChange).toHaveBeenCalledWith("Mesa amiga 2");
     expect(props.onCreateCustomerAccount).toHaveBeenCalled();
     expect(props.onCreateFreeNameAccount).toHaveBeenCalled();
-    expect(props.onAllocationDraftChange).toHaveBeenCalledWith({ accountId: "account-a", lineItemId: "line-a", quantity: "1" });
+    expect(props.onAllocationDraftChange).toHaveBeenCalledWith({ accountId: "", lineItemId: "line-a", quantity: "1" });
     expect(props.onAssignQuantity).toHaveBeenCalledWith({ accountId: "account-a", lineItemId: "line-a", quantity: "1" });
     expect(props.onPayAccount).toHaveBeenCalledWith("account-a");
     expect(props.onMarkPending).toHaveBeenCalledWith("account-a");
     expect(props.onAttemptClose).toHaveBeenCalled();
+  });
+
+  it("allows clicking the selected account again to clear the selection", () => {
+    const props = renderView({ allocationDraft: { accountId: "account-a", lineItemId: "", quantity: "1" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear selected account Juan P." }));
+
+    expect(props.onAllocationDraftChange).toHaveBeenCalledWith({ accountId: "", lineItemId: "", quantity: "1" });
   });
 
   it("groups split-bill work into clear account sections", () => {

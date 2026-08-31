@@ -27,6 +27,8 @@ export interface RegisterPaymentMethodOption {
 }
 
 export interface RegisterPaymentPanelProps {
+  readonly title?: string;
+  readonly subtitle?: string;
   readonly lines: readonly RegisterPaymentPanelLine[];
   /** Integer cents. */
   readonly subtotalCents: number;
@@ -84,6 +86,8 @@ function formatCentsToDollarsInput(cents: number | null): string {
  * `requiresTendered` flag says so.
  */
 export function RegisterPaymentPanel({
+  title = "Payment",
+  subtitle = "Choose how this balance is being paid.",
   lines,
   subtotalCents,
   taxCents,
@@ -105,6 +109,12 @@ export function RegisterPaymentPanel({
 
   return (
     <section className={styles.panel} aria-label="Register payment">
+      <header className={styles.header}>
+        <p className={styles.eyebrow}>Checkout</p>
+        <h2>{title}</h2>
+        <p>{subtitle}</p>
+      </header>
+
       <div className={styles.lines}>
         {lines.map((line) => (
           <LineItemRow
@@ -145,20 +155,26 @@ export function RegisterPaymentPanel({
         onChange={(value) => onAmountToPayChange(parseDollarsToCents(value))}
       />
 
-      <fieldset>
+      <fieldset className={styles.methodFieldset}>
         <legend>Payment method</legend>
         <div className={styles.methods}>
-          {methods.map((method) => (
-            <label key={method.code} className={styles.methodOption}>
-              <input
-                type="radio"
-                name="payment-method"
-                checked={method.code === selectedMethodCode}
-                onChange={() => onSelectMethod(method.code)}
-              />
-              {method.label}
-            </label>
-          ))}
+          {methods.map((method) => {
+            const selected = method.code === selectedMethodCode;
+            return (
+              <label key={method.code} className={selected ? styles.methodOptionSelected : styles.methodOption}>
+                <input
+                  type="radio"
+                  name="payment-method"
+                  checked={selected}
+                  onChange={() => onSelectMethod(method.code)}
+                />
+                <span>
+                  <strong>{method.label}</strong>
+                  <small aria-hidden="true">{method.requiresTendered ? "Cash tendered + change" : "No cash tender required"}</small>
+                </span>
+              </label>
+            );
+          })}
         </div>
       </fieldset>
 

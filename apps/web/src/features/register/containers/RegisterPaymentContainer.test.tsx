@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { createAccountLineAllocation, createPersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../../composition/mock.js";
 import { RegisterPaymentContainer } from "./RegisterPaymentContainer.js";
@@ -50,6 +51,39 @@ describe("RegisterPaymentContainer", () => {
     );
     expect(finalPayments).toHaveLength(2);
     expect(finalPayments.reduce((sum, payment) => sum + payment.amountCents, 0)).toBe(1512);
+  });
+
+  it("uses the same checkout screen to pay a selected personal account with method choice", async () => {
+    const ports = buildMockPorts();
+    const order = (await ports.orders.findByTable("table-1"))!;
+    const account = createPersonalAccount({ id: "account-juan", orderId: order.id, freeName: "Juan P." });
+    const allocation = createAccountLineAllocation({
+      id: "account-allocation-1",
+      accountId: account.id,
+      lineItemId: order.lineItems[0]!.id,
+      quantity: 1,
+    });
+    await ports.personalAccounts.save(account, [allocation], account.version);
+
+    render(
+      <PortsProvider value={ports}>
+        <RegisterPaymentContainer tableId="table-1" personalAccountId={account.id} />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Pay Juan P." })).toBeInTheDocument());
+    expect(screen.getByRole("radio", { name: /Cash/ })).toBeInTheDocument();
+    expect(screen.getAllByText("$3.92").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("radio", { name: /QR Payment/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm payment" }));
+
+    await waitFor(async () => {
+      const payments = await ports.payments.listByTarget({ kind: "personal_account", accountId: account.id });
+      expect(payments).toHaveLength(1);
+      expect(payments[0]!.amountCents).toBe(392);
+      expect((await ports.personalAccounts.findById(account.id))?.status).toBe("paid");
+    });
   });
 
   it("pays a SPECIFIC ticket by id, only charging the line items actually allocated to it (a split-bill scenario)", async () => {

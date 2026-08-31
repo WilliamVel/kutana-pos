@@ -169,9 +169,9 @@ export function SplitBillView({
                     key={account.id}
                     type="button"
                     className={isSelected ? styles.selectedAccountButton : styles.accountButton}
-                    onClick={() => onAllocationDraftChange({ ...allocationDraft, accountId: account.id })}
+                    onClick={() => onAllocationDraftChange({ ...allocationDraft, accountId: isSelected ? "" : account.id })}
                     disabled={disabled}
-                    aria-label={`Select account ${account.ownerLabel}`}
+                    aria-label={`${isSelected ? "Clear selected account" : "Select account"} ${account.ownerLabel}`}
                     aria-pressed={isSelected}
                   >
                     <span>Select account {account.ownerLabel}</span>
