@@ -5,19 +5,39 @@
   min-width: 0;
 }
 
-.header,
-.line,
-.account {
+.header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.eyebrow {
+.header h2,
+.sectionHeader h3,
+.subsection h4 {
   margin: 0;
-  color: var(--color-text-muted);
+}
+
+.headerCopy,
+.sectionHeader p,
+.accountIdentity span,
+.emptyState {
+  color: var(--text-secondary);
+}
+
+.headerCopy {
+  max-width: 42rem;
+  margin: var(--space-2) 0 0;
+}
+
+.eyebrow,
+.stepLabel {
+  margin: 0;
+  color: var(--text-secondary);
   font-size: 0.875rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -25,11 +45,35 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-3);
-  background: var(--color-surface);
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-md);
+}
+
+.sectionHeader {
+  display: grid;
+  grid-template-columns: minmax(4.75rem, max-content) 1fr;
+  gap: var(--space-4);
+  align-items: start;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.sectionHeader p:last-child {
+  margin: var(--space-1) 0 0;
+}
+
+.stepLabel {
+  display: inline-flex;
+  justify-content: center;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  white-space: nowrap;
 }
 
 .formGrid {
@@ -43,41 +87,241 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  color: var(--color-text-muted);
+  color: var(--text-secondary);
   font-weight: 600;
 }
 
 .field select {
   min-height: 2.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2);
-  background: var(--color-surface);
-  color: var(--color-text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-primary);
   padding: 0 var(--space-3);
 }
 
+.subsection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
 .lines,
-.accounts {
+.accounts,
+.assignmentList {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
 .line,
-.account {
+.account,
+.assignmentItem {
+  display: grid;
+  gap: var(--space-3);
   padding: var(--space-3);
-  border: 1px solid var(--color-border-muted, var(--color-border));
-  border-radius: var(--radius-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
 }
 
-.account p {
-  margin: var(--space-1) 0 0;
-  color: var(--color-text-muted);
+.line,
+.assignmentSummary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content max-content;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.assignmentItem {
+  border-color: var(--border-strong);
+}
+
+.assignmentWorkspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.45fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.quickAssignControls {
+  display: grid;
+  grid-template-columns: minmax(10rem, 14rem) max-content;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.selectedAccountPanel {
+  position: sticky;
+  top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.selectedAccountPanel h4,
+.selectedAccountPanel p {
+  margin: 0;
+}
+
+.selectedAccountPanel p {
+  color: var(--text-secondary);
+}
+
+.accountPicker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.accountButton,
+.selectedAccountButton {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.selectedAccountButton {
+  border-color: var(--border-strong);
+  box-shadow: inset 0 0 0 2px var(--border-strong);
+}
+
+.accountButton span,
+.selectedAccountButton span,
+.accountButton small,
+.selectedAccountButton small {
+  color: var(--text-secondary);
+}
+
+.accountButton span,
+.selectedAccountButton span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.itemName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.unassignedBadge,
+.assignedBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.unassignedBadge {
+  background: var(--order-needs-check-bg);
+  color: var(--order-needs-check-fg);
+}
+
+.assignedBadge {
+  background: var(--order-paid-bg);
+  color: var(--order-paid-fg);
+}
+
+.account {
+  grid-template-columns: minmax(10rem, 1fr) minmax(16rem, 2fr) max-content;
+  align-items: center;
+}
+
+.accountIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.accountIdentity strong {
+  overflow-wrap: anywhere;
+}
+
+.balanceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.balanceGrid div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+.balanceGrid dt {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.balanceGrid dd {
+  margin: 0;
+}
+
+.emptyState {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
 }
 
 .review {
   padding: var(--space-3);
-  border: 1px solid var(--color-warning, var(--color-border));
-  border-radius: var(--radius-2);
-  background: var(--color-warning-surface, var(--color-surface));
+  border: 1px solid var(--order-needs-check-fg);
+  border-radius: var(--radius-md);
+  background: var(--order-needs-check-bg);
+  color: var(--order-needs-check-fg);
+}
+
+@media (max-width: 760px) {
+  .header,
+  .sectionHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    display: grid;
+  }
+
+  .line,
+  .account,
+  .assignmentWorkspace,
+  .assignmentSummary,
+  .quickAssignControls,
+  .balanceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .selectedAccountPanel {
+    position: static;
+  }
 }

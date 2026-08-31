@@ -16,6 +16,7 @@ import { OrdersOverviewContainer } from "./features/ordering/containers/OrdersOv
 import { RegisterPaymentContainer } from "./features/register/containers/RegisterPaymentContainer.js";
 import { SplitBillContainer } from "./features/split-bill/containers/SplitBillContainer.js";
 import { PendingDebtsContainer } from "./features/pending-debts/containers/PendingDebtsContainer.js";
+import { CustomerManagementContainer } from "./features/customers/containers/CustomerManagementContainer.js";
 
 /** Center-column sub-state of the unified Register workspace. */
 type CenterView = "account" | "payment" | "assignment";
@@ -110,6 +111,8 @@ export function App(): JSX.Element {
           />
         </Panel>
       ) : null}
+
+      {screen === "customers" ? <CustomerManagementContainer /> : null}
 
       {screen === "pending-debts" ? <PendingDebtsContainer /> : null}
 

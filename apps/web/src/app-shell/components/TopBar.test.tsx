@@ -8,7 +8,7 @@ describe("TopBar", () => {
 
     expect(screen.getByRole("heading", { name: "KUTANA" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute("src", "/LOGOkutana.svg");
-    for (const label of ["Inventory", "Add product", "Register"]) {
+    for (const label of ["Inventory", "Add product", "Register", "Customers"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
   });

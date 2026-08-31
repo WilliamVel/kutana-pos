@@ -176,19 +176,19 @@ export function SplitBillContainer({ tableId }: SplitBillContainerProps): JSX.El
     });
   };
 
-  const assignQuantity = (): void => {
+  const assignQuantity = (draft = allocationDraft): void => {
     void runMutation(async () => {
-      const quantity = Number(allocationDraft.quantity);
+      const quantity = Number(draft.quantity);
       const next = createAccountLineAllocation({
-        accountId: allocationDraft.accountId,
-        lineItemId: allocationDraft.lineItemId,
+        accountId: draft.accountId,
+        lineItemId: draft.lineItemId,
         quantity,
       });
       const result = addAccountLineAllocation({ allocations, lineItems: order.lineItems, next });
-      const account = accounts.find((candidate) => candidate.id === allocationDraft.accountId);
+      const account = accounts.find((candidate) => candidate.id === draft.accountId);
       if (!account) return;
       await accountsPort.save(account, result.allocations, account.version);
-      setAllocationDraft({ ...allocationDraft, quantity: "1" });
+      setAllocationDraft({ ...draft, quantity: "1" });
     });
   };
 

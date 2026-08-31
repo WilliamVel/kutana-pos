@@ -24,21 +24,20 @@ describe("SplitBillContainer", () => {
     fireEvent.change(screen.getByLabelText("Existing customer"), { target: { value: "customer-ada" } });
     fireEvent.click(screen.getByRole("button", { name: "Create customer account" }));
 
-    await waitFor(() => expect(screen.getByRole("article", { name: /Account for Ada Lovelace/ })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("article", { name: /Account balance for Ada Lovelace/ })).toBeInTheDocument());
     const order = await ports.orders.findByTable("table-1");
     const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
 
-    fireEvent.change(screen.getByLabelText("Account"), { target: { value: account.id } });
-    fireEvent.change(screen.getByLabelText("Line item"), { target: { value: order!.lineItems[0]!.id } });
-    fireEvent.change(screen.getByLabelText(/Quantity/), { target: { value: "1" } });
-    fireEvent.click(screen.getByRole("button", { name: "Assign quantity" }));
+    fireEvent.change(screen.getByLabelText(`Quantity for ${order!.lineItems[0]!.nameSnapshot}`), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Select account Ada Lovelace" }));
+    fireEvent.click(screen.getByRole("button", { name: `Add ${order!.lineItems[0]!.nameSnapshot} to selected account` }));
 
     await waitFor(async () => {
       const allocations = await ports.personalAccounts.listAllocationsByOrder(order!.id);
       expect(allocations).toHaveLength(1);
       expect(allocations[0]).toMatchObject({ accountId: account.id, quantity: 1 });
     });
-    expect(screen.getByRole("region", { name: "Unassigned quantities" })).toHaveTextContent("1 unassigned");
+    expect(screen.getByRole("region", { name: "Pending Items" })).toHaveTextContent("1 unassigned");
   });
 
   it("records account-level pay-now payments without using concrete adapters", async () => {
@@ -46,18 +45,17 @@ describe("SplitBillContainer", () => {
 
     fireEvent.change(screen.getByLabelText("Free-name account"), { target: { value: "Juan P." } });
     fireEvent.click(screen.getByRole("button", { name: "Create free-name account" }));
-    await waitFor(() => expect(screen.getByRole("article", { name: "Account for Juan P." })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("article", { name: "Account balance for Juan P." })).toBeInTheDocument());
 
     const order = await ports.orders.findByTable("table-1");
     const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
-    fireEvent.change(screen.getByLabelText("Account"), { target: { value: account.id } });
-    fireEvent.change(screen.getByLabelText("Line item"), { target: { value: order!.lineItems[0]!.id } });
-    fireEvent.click(screen.getByRole("button", { name: "Assign quantity" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select account Juan P." }));
+    fireEvent.click(screen.getByRole("button", { name: `Add ${order!.lineItems[0]!.nameSnapshot} to selected account` }));
     await waitFor(() => {
-      expect(within(screen.getByRole("article", { name: "Account for Juan P." })).getAllByText("$3.92").length).toBeGreaterThan(0);
+      expect(within(screen.getByRole("article", { name: "Account balance for Juan P." })).getAllByText("$3.92").length).toBeGreaterThan(0);
     });
 
-    fireEvent.click(within(screen.getByRole("article", { name: "Account for Juan P." })).getByRole("button", { name: "Pay now" }));
+    fireEvent.click(within(screen.getByRole("article", { name: "Account balance for Juan P." })).getByRole("button", { name: "Pay now" }));
 
     await waitFor(async () => {
       const payments = await ports.payments.listByTarget({ kind: "personal_account", accountId: account.id });
@@ -71,15 +69,14 @@ describe("SplitBillContainer", () => {
 
     fireEvent.change(screen.getByLabelText("Free-name account"), { target: { value: "Juan P." } });
     fireEvent.click(screen.getByRole("button", { name: "Create free-name account" }));
-    await waitFor(() => expect(screen.getByRole("article", { name: "Account for Juan P." })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("article", { name: "Account balance for Juan P." })).toBeInTheDocument());
     const order = await ports.orders.findByTable("table-1");
     const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
-    fireEvent.change(screen.getByLabelText("Account"), { target: { value: account.id } });
-    fireEvent.change(screen.getByLabelText("Line item"), { target: { value: order!.lineItems[0]!.id } });
-    fireEvent.click(screen.getByRole("button", { name: "Assign quantity" }));
-    await waitFor(() => expect(within(screen.getByRole("article", { name: "Account for Juan P." })).getAllByText("$3.92").length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole("button", { name: "Select account Juan P." }));
+    fireEvent.click(screen.getByRole("button", { name: `Add ${order!.lineItems[0]!.nameSnapshot} to selected account` }));
+    await waitFor(() => expect(within(screen.getByRole("article", { name: "Account balance for Juan P." })).getAllByText("$3.92").length).toBeGreaterThan(0));
 
-    fireEvent.click(within(screen.getByRole("article", { name: "Account for Juan P." })).getByRole("button", { name: "Mark pending" }));
+    fireEvent.click(within(screen.getByRole("article", { name: "Account balance for Juan P." })).getByRole("button", { name: "Mark pending" }));
 
     await waitFor(async () => expect((await ports.personalAccounts.findById(account.id))?.status).toBe("pending"));
   });

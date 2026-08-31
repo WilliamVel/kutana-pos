@@ -45,10 +45,22 @@ export interface SplitBillViewProps {
   readonly onCreateCustomerAccount: () => void;
   readonly onCreateFreeNameAccount: () => void;
   readonly onAllocationDraftChange: (draft: AccountAllocationDraft) => void;
-  readonly onAssignQuantity: () => void;
+  readonly onAssignQuantity: (draft?: AccountAllocationDraft) => void;
   readonly onPayAccount: (accountId: string) => void;
   readonly onMarkPending: (accountId: string) => void;
   readonly onAttemptClose: () => void;
+}
+
+function SectionHeader({ label, title, description }: { readonly label: string; readonly title: string; readonly description: string }): JSX.Element {
+  return (
+    <div className={styles.sectionHeader}>
+      <p className={styles.stepLabel}>{label}</p>
+      <div>
+        <h3>{title}</h3>
+        <p>{description}</p>
+      </div>
+    </div>
+  );
 }
 
 export function SplitBillView({
@@ -71,8 +83,7 @@ export function SplitBillView({
   onMarkPending,
   onAttemptClose,
 }: SplitBillViewProps): JSX.Element {
-  const selectedLine = lines.find((line) => line.id === allocationDraft.lineItemId);
-  const selectedLineUnassigned = selectedLine?.unassignedQuantity ?? 0;
+  const selectedAccount = accounts.find((account) => account.id === allocationDraft.accountId) ?? null;
 
   return (
     <div className={styles.screen}>
@@ -80,6 +91,7 @@ export function SplitBillView({
         <div>
           <p className={styles.eyebrow}>Account assignment</p>
           <h2>{tableLabel} — Personal accounts</h2>
+          <p className={styles.headerCopy}>Create named accounts, assign item quantities, then settle or mark each balance pending.</p>
         </div>
         <Button variant="secondary" onClick={onAttemptClose} disabled={disabled}>
           Review table closure
@@ -88,8 +100,8 @@ export function SplitBillView({
 
       {reviewMessage ? <div role="alert" className={styles.review}>{reviewMessage}</div> : null}
 
-      <section aria-label="Create personal account" className={styles.card}>
-        <h3>Create personal account</h3>
+      <section aria-label="Account Setup" className={styles.card}>
+        <SectionHeader label="Step 1" title="Account Setup" description="Choose who gets their own account before assigning items." />
         <div className={styles.formGrid}>
           <label className={styles.field}>
             Existing customer
@@ -114,66 +126,105 @@ export function SplitBillView({
         </div>
       </section>
 
-      <section aria-label="Unassigned quantities" className={styles.card}>
-        <h3>Unassigned quantities</h3>
-        <div className={styles.lines}>
-          {lines.map((line) => (
-            <div key={line.id} className={styles.line}>
-              <span><strong>{line.name}</strong> × {line.quantity}</span>
-              <span>{line.unassignedQuantity} unassigned</span>
-              <PriceTag cents={line.totalCents} />
+      <section aria-label="Assign Items" className={styles.card}>
+        <SectionHeader label="Step 2" title="Assign Items" description="Choose one account, then add pending items from the left panel." />
+        <div className={styles.assignmentWorkspace}>
+          <section aria-label="Pending Items" className={styles.assignmentList}>
+            {lines.map((line) => {
+              const quantity = allocationDraft.lineItemId === line.id ? allocationDraft.quantity : "1";
+              return (
+                <article key={line.id} className={styles.assignmentItem} aria-label={`Assign ${line.name}`}>
+                  <div className={styles.assignmentSummary}>
+                    <span className={styles.itemName}><strong>{line.name}</strong> × {line.quantity}</span>
+                    <span className={line.unassignedQuantity > 0 ? styles.unassignedBadge : styles.assignedBadge}>{line.unassignedQuantity} unassigned</span>
+                    <PriceTag cents={line.totalCents} />
+                  </div>
+                  <div className={styles.quickAssignControls}>
+                    <Input
+                      label={`Quantity for ${line.name}`}
+                      type="number"
+                      value={quantity}
+                      onChange={(nextQuantity) => onAllocationDraftChange({ ...allocationDraft, lineItemId: line.id, quantity: nextQuantity })}
+                    />
+                    <Button
+                      onClick={() => onAssignQuantity({ ...allocationDraft, lineItemId: line.id, quantity })}
+                      disabled={disabled || !allocationDraft.accountId || line.unassignedQuantity === 0 || Number(quantity) <= 0}
+                    >
+                      Add {line.name} to selected account
+                    </Button>
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+          <section aria-label="Selected Account" className={styles.selectedAccountPanel}>
+            <h4>Selected Account</h4>
+            <p>Choose the account receiving items.</p>
+            <div className={styles.accountPicker}>
+              {accounts.length === 0 ? <span className={styles.emptyState}>Create an account first.</span> : null}
+              {accounts.map((account) => {
+                const isSelected = account.id === allocationDraft.accountId;
+                return (
+                  <button
+                    key={account.id}
+                    type="button"
+                    className={isSelected ? styles.selectedAccountButton : styles.accountButton}
+                    onClick={() => onAllocationDraftChange({ ...allocationDraft, accountId: account.id })}
+                    disabled={disabled}
+                    aria-label={`Select account ${account.ownerLabel}`}
+                    aria-pressed={isSelected}
+                  >
+                    <span>Select account {account.ownerLabel}</span>
+                    <strong>{account.ownerLabel}</strong>
+                    <small>{account.status.replace("_", " ")}</small>
+                  </button>
+                );
+              })}
             </div>
-          ))}
+            {selectedAccount ? (
+              <dl className={styles.balanceGrid}>
+                <div>
+                  <dt>Total</dt>
+                  <dd><PriceTag cents={selectedAccount.totalCents} /></dd>
+                </div>
+                <div>
+                  <dt>Paid</dt>
+                  <dd><PriceTag cents={selectedAccount.paidCents} /></dd>
+                </div>
+                <div>
+                  <dt>Remaining</dt>
+                  <dd><PriceTag cents={selectedAccount.remainingCents} /></dd>
+                </div>
+              </dl>
+            ) : null}
+          </section>
         </div>
       </section>
 
-      <section aria-label="Assign quantity" className={styles.card}>
-        <h3>Assign quantity to account</h3>
-        <div className={styles.formGrid}>
-          <label className={styles.field}>
-            Account
-            <select
-              value={allocationDraft.accountId}
-              onChange={(event) => onAllocationDraftChange({ ...allocationDraft, accountId: event.target.value })}
-              disabled={disabled || accounts.length === 0}
-            >
-              <option value="">Select account</option>
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>{account.ownerLabel}</option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.field}>
-            Line item
-            <select
-              value={allocationDraft.lineItemId}
-              onChange={(event) => onAllocationDraftChange({ ...allocationDraft, lineItemId: event.target.value })}
-              disabled={disabled || lines.length === 0}
-            >
-              <option value="">Select line item</option>
-              {lines.map((line) => (
-                <option key={line.id} value={line.id}>{line.name} ({line.unassignedQuantity} unassigned)</option>
-              ))}
-            </select>
-          </label>
-          <Input label={`Quantity${selectedLine ? ` available: ${selectedLineUnassigned}` : ""}`} type="number" value={allocationDraft.quantity} onChange={(quantity) => onAllocationDraftChange({ ...allocationDraft, quantity })} />
-          <Button onClick={onAssignQuantity} disabled={disabled || !allocationDraft.accountId || !allocationDraft.lineItemId || Number(allocationDraft.quantity) <= 0}>
-            Assign quantity
-          </Button>
-        </div>
-      </section>
-
-      <section aria-label="Personal accounts" className={styles.card}>
-        <h3>Personal accounts</h3>
-        {accounts.length === 0 ? <p>No personal accounts yet.</p> : null}
+      <section aria-label="Account Balances" className={styles.card}>
+        <SectionHeader label="Step 3" title="Account Balances" description="Review each account total, paid amount, and remaining balance." />
+        {accounts.length === 0 ? <p className={styles.emptyState}>No personal accounts yet.</p> : null}
         <div className={styles.accounts}>
           {accounts.map((account) => (
-            <article key={account.id} className={styles.account} aria-label={`Account for ${account.ownerLabel}`}>
-              <div>
+            <article key={account.id} className={styles.account} aria-label={`Account balance for ${account.ownerLabel}`}>
+              <div className={styles.accountIdentity}>
                 <strong>{account.ownerLabel}</strong>
-                <p>{account.status.replace("_", " ")} · paid <PriceTag cents={account.paidCents} /> · remaining <PriceTag cents={account.remainingCents} /></p>
+                <span>{account.status.replace("_", " ")}</span>
               </div>
-              <PriceTag cents={account.totalCents} />
+              <dl className={styles.balanceGrid}>
+                <div>
+                  <dt>Total</dt>
+                  <dd><PriceTag cents={account.totalCents} /></dd>
+                </div>
+                <div>
+                  <dt>Paid</dt>
+                  <dd><PriceTag cents={account.paidCents} /></dd>
+                </div>
+                <div>
+                  <dt>Remaining</dt>
+                  <dd><PriceTag cents={account.remainingCents} /></dd>
+                </div>
+              </dl>
               <ButtonRow>
                 <Button onClick={() => onPayAccount(account.id)} disabled={disabled || account.remainingCents === 0 || account.status === "pending"}>
                   Pay now

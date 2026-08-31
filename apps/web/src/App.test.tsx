@@ -21,4 +21,20 @@ describe("App", () => {
     expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute("src", "/LOGOkutana.svg");
     expect(screen.getByRole("button", { name: "Inventory" })).toBeInTheDocument();
   });
+
+  it("opens customer management from the top bar", () => {
+    render(
+      <PortsProvider value={buildMockPorts()}>
+        <App />
+      </PortsProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Operator"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    fireEvent.click(screen.getByRole("button", { name: "Customers" }));
+
+    expect(screen.getByRole("heading", { name: "Customers" })).toBeInTheDocument();
+    expect(screen.getByRole("form", { name: "Customer form" })).toBeInTheDocument();
+  });
 });
