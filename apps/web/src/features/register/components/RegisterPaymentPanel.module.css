@@ -2,12 +2,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  min-width: 0;
+  max-width: min(100%, 32rem);
   padding: var(--space-5);
   background: linear-gradient(180deg, var(--surface-raised), var(--surface-page));
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  max-width: 32rem;
 }
 
 .header {
@@ -50,7 +51,14 @@
 .totalRow {
   display: flex;
   justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
   color: var(--text-primary);
+}
+
+.totalRow span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .remaining {
@@ -71,7 +79,7 @@
 
 .methods {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
   gap: 0.75rem;
 }
 
@@ -80,6 +88,7 @@
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
+  min-width: 0;
   min-height: 4.5rem;
   padding: var(--space-3);
   color: var(--text-primary);
@@ -99,20 +108,37 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.methodOption strong,
+.methodOptionSelected strong {
+  line-height: 1.2;
 }
 
 .methodOption small,
 .methodOptionSelected small {
   color: var(--text-secondary);
+  line-height: 1.25;
 }
 
 .change {
   display: flex;
   justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
   padding: var(--space-3);
   background-color: var(--surface-raised);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.panel > button {
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: 1rem;
+  white-space: normal;
 }

@@ -53,6 +53,16 @@ function toAccountPayments(accountId: string, payments: readonly Payment[]): Acc
   return payments.map((payment) => ({ accountId, amountCents: payment.amountCents }));
 }
 
+function paymentMethodLabel(code: string, fallback: string): string {
+  const labels: Record<string, string> = {
+    CASH: "Efectivo",
+    BANK_TRANSFER: "Transferencia bancaria",
+    QR_PAYMENT: "Pago QR",
+  };
+
+  return labels[code] ?? fallback;
+}
+
 /**
  * Wires the legacy register/payment screen to the domain. New payable behavior
  * should use `PersonalAccount` payment targets; this compatibility container
@@ -270,8 +280,8 @@ export function RegisterPaymentContainer({
 
   return (
     <RegisterPaymentPanel
-      title={personalAccount ? `Pay ${ownerLabel(personalAccount, customers)}` : "Pay table balance"}
-      subtitle={personalAccount ? "Settle this selected personal account with the same checkout flow." : "Settle the current table balance."}
+      title={personalAccount ? `Cobrar a ${ownerLabel(personalAccount, customers)}` : "Cobrar saldo de mesa"}
+      subtitle={personalAccount ? "Cobrale a esta cuenta personal con el mismo flujo de pago." : "Cobrá el saldo actual de la mesa."}
       lines={lines}
       subtotalCents={subtotalCents}
       taxCents={taxCents}
@@ -281,7 +291,7 @@ export function RegisterPaymentContainer({
       onAmountToPayChange={setAmountToPayCents}
       methods={methodRegistry.map((method) => ({
         code: method.code,
-        label: method.label,
+        label: paymentMethodLabel(method.code, method.label),
         requiresTendered: method.requiresTendered,
       }))}
       selectedMethodCode={selectedMethodCode}

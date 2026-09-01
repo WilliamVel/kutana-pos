@@ -14,9 +14,9 @@ describe("RegisterPaymentContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByRole("radio", { name: "Cash" })).toBeInTheDocument());
-    expect(screen.getByRole("radio", { name: "Bank Transfer" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "QR Payment" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Efectivo" })).toBeInTheDocument());
+    expect(screen.getByRole("radio", { name: "Transferencia bancaria" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Pago QR" })).toBeInTheDocument();
     expect(screen.queryByText(/card/i)).not.toBeInTheDocument();
   });
 
@@ -32,17 +32,17 @@ describe("RegisterPaymentContainer", () => {
     await waitFor(() => expect(screen.getAllByText("$15.12").length).toBeGreaterThan(0));
 
     // First partial payment: CASH, pay 1000 of the 1512 total, tendered exactly 1000.
-    fireEvent.click(screen.getByRole("radio", { name: "Cash" }));
-    fireEvent.change(screen.getByLabelText("Amount to pay now"), { target: { value: "10.00" } });
-    fireEvent.change(screen.getByLabelText("Amount tendered"), { target: { value: "10.00" } });
-    fireEvent.click(screen.getByRole("button", { name: "Confirm payment" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Efectivo" }));
+    fireEvent.change(screen.getByLabelText("Monto a pagar ahora"), { target: { value: "10.00" } });
+    fireEvent.change(screen.getByLabelText("Efectivo recibido"), { target: { value: "10.00" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar pago" }));
 
     // Remaining balance drops to 512.
     await waitFor(() => expect(screen.getByText("$5.12")).toBeInTheDocument());
 
     // Second partial payment: QR_PAYMENT (no tendered/change UI) covers the rest.
-    fireEvent.click(screen.getByRole("radio", { name: "QR Payment" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm payment" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Pago QR" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar pago" }));
 
     await waitFor(() => expect(screen.getAllByText("$0.00").length).toBeGreaterThan(0));
 
@@ -71,12 +71,12 @@ describe("RegisterPaymentContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Pay Juan P." })).toBeInTheDocument());
-    expect(screen.getByRole("radio", { name: /Cash/ })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Cobrar a Juan P." })).toBeInTheDocument());
+    expect(screen.getByRole("radio", { name: /Efectivo/ })).toBeInTheDocument();
     expect(screen.getAllByText("$3.92").length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole("radio", { name: /QR Payment/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm payment" }));
+    fireEvent.click(screen.getByRole("radio", { name: /Pago QR/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar pago" }));
 
     await waitFor(async () => {
       const payments = await ports.payments.listByTarget({ kind: "personal_account", accountId: account.id });
@@ -142,8 +142,8 @@ describe("RegisterPaymentContainer", () => {
     );
     expect(screen.queryByText("KUTANA Pilsener 500ml")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("radio", { name: "QR Payment" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm payment" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Pago QR" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar pago" }));
 
     await waitFor(async () => {
       const payments = await ports.payments.listByTicket(newTicket.id);

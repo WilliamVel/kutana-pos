@@ -15,7 +15,7 @@ export interface NewOrderButtonProps {
 }
 
 /**
- * Purely presentational: a "New order" button that toggles a picker of
+ * Purely presentational: a "Nueva orden" button that toggles a picker of
  * currently-free tables. Choosing one calls `onSelectTable`; the container
  * turns that into an order + an occupied table. Props in, markup out — no
  * port access.
@@ -30,14 +30,14 @@ export function NewOrderButton({
   return (
     <div className={styles.wrap}>
       <Button variant="secondary" onClick={() => setOpen((current) => !current)}>
-        New order
+        Nueva orden
       </Button>
 
       {open ? (
         freeTables.length === 0 ? (
-          <p className={styles.empty}>No free tables right now.</p>
+          <p className={styles.empty}>No hay mesas libres ahora.</p>
         ) : (
-          <ul className={styles.picker} aria-label="Free tables">
+          <ul className={styles.picker} aria-label="Mesas libres">
             {freeTables.map((table) => (
               <li key={table.id}>
                 <button

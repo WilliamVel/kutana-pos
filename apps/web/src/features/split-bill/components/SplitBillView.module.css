@@ -78,9 +78,32 @@
 
 .formGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-4);
+  align-items: stretch;
+}
+
+/*
+ * Each account-creation path (existing customer / free name) is one vertical
+ * group: its field on top, its own action button flush to the bottom edge so
+ * the button unambiguously belongs to that input.
+ */
+.pathGroup {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
-  align-items: end;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.pathGroup > *:first-child {
+  flex: 1 1 auto;
+}
+
+.pathGroup button {
+  width: 100%;
 }
 
 .field {
@@ -150,9 +173,17 @@
 
 .quickAssignControls {
   display: grid;
-  grid-template-columns: minmax(10rem, 14rem) max-content;
+  grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
   gap: var(--space-3);
   align-items: end;
+  min-width: 0;
+}
+
+.quickAssignControls button {
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: 1rem;
+  white-space: normal;
 }
 
 .selectedAccountPanel {
@@ -243,8 +274,23 @@
 }
 
 .account {
-  grid-template-columns: minmax(10rem, 1fr) minmax(16rem, 2fr) max-content;
+  grid-template-columns: minmax(8rem, 1fr) minmax(0, 2fr);
   align-items: center;
+  min-width: 0;
+}
+
+.account > * {
+  min-width: 0;
+}
+
+/* Actions get their own full-width line so the labels never wrap or clip. */
+.accountActions {
+  grid-column: 1 / -1;
+}
+
+.account button {
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .accountIdentity {
@@ -302,7 +348,7 @@
   color: var(--order-needs-check-fg);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 64rem) {
   .header,
   .sectionHeader {
     grid-template-columns: 1fr;

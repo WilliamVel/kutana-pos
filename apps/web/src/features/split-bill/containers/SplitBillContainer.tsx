@@ -308,14 +308,14 @@ export function SplitBillContainer({
       });
       if (result.kind === "review_required") {
         setReviewMessage(
-          `Review required: ${result.unresolvedLineItems.length} line item(s) have unassigned or over-assigned quantities, and ${result.blockingAccounts.length} account(s) still need payment or pending resolution.`,
+          `Revisión requerida: ${result.unresolvedLineItems.length} producto(s) tienen cantidades sin asignar o asignadas de más, y ${result.blockingAccounts.length} cuenta(s) todavía necesitan cobro o resolución pendiente.`,
         );
         await orders.save(result.order, order.version);
       } else {
         setReviewMessage(
           result.pendingAccountIds.length > 0
-            ? "Table closed with pending personal debt."
-            : "Table closed fully paid.",
+            ? "Mesa cerrada con deuda personal pendiente."
+            : "Mesa cerrada con todo pagado.",
         );
         const saved = await orders.save(result.order, order.version);
         events.publish({

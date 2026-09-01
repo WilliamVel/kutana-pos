@@ -16,7 +16,7 @@ describe("AddItemPanel", () => {
   it("renders a category tab strip and a tile per product", () => {
     render(<AddItemPanel products={PRODUCTS} onAdd={vi.fn()} />);
 
-    expect(screen.getByRole("tab", { name: "All" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Todos" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Draft Beer" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Food" })).toBeInTheDocument();
     expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
@@ -32,7 +32,7 @@ describe("AddItemPanel", () => {
     const onAdd = vi.fn();
     render(<AddItemPanel products={PRODUCTS} onAdd={onAdd} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Add Loaded Nachos" }));
+    fireEvent.click(screen.getByRole("button", { name: "Agregar Loaded Nachos" }));
 
     expect(onAdd).toHaveBeenCalledWith("product-nachos", 1);
   });
@@ -49,17 +49,17 @@ describe("AddItemPanel", () => {
   it("narrows the visible product tiles as the search input is typed", () => {
     render(<AddItemPanel products={PRODUCTS} onAdd={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText("Search products"), {
+    fireEvent.change(screen.getByLabelText("Buscar productos"), {
       target: { value: "nach" },
     });
 
     expect(screen.queryByText("KUTANA Pilsener 500ml")).not.toBeInTheDocument();
     expect(screen.getByText("Loaded Nachos")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Search products"), {
+    fireEvent.change(screen.getByLabelText("Buscar productos"), {
       target: { value: "zzz" },
     });
-    expect(screen.getByText("No products match.")).toBeInTheDocument();
+    expect(screen.getByText("No hay productos que coincidan.")).toBeInTheDocument();
   });
 
   it("disables the add buttons when disabled", () => {
@@ -67,7 +67,7 @@ describe("AddItemPanel", () => {
 
     const addButtons = screen
       .getAllByRole("button")
-      .filter((button) => button.getAttribute("aria-label")?.startsWith("Add "));
+      .filter((button) => button.getAttribute("aria-label")?.startsWith("Agregar "));
     expect(addButtons).toHaveLength(PRODUCTS.length);
     for (const button of addButtons) {
       expect(button).toBeDisabled();

@@ -12,7 +12,7 @@ describe("NewOrderContainer", () => {
       </PortsProvider>,
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: "New order" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Nueva orden" }));
 
     await waitFor(() => expect(screen.getByText("Table 4")).toBeInTheDocument());
     expect(screen.getByText("Table 5")).toBeInTheDocument();
@@ -29,7 +29,7 @@ describe("NewOrderContainer", () => {
       </PortsProvider>,
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: "New order" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Nueva orden" }));
     fireEvent.click(await screen.findByRole("button", { name: "Table 4" }));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith("table-4"));

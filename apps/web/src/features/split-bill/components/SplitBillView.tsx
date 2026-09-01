@@ -76,6 +76,18 @@ function SectionHeader({
   );
 }
 
+function formatAccountStatus(status: PersonalAccountStatus): string {
+  const labels: Record<PersonalAccountStatus, string> = {
+    open: "Abierta",
+    partially_paid: "Parcialmente pagada",
+    pending: "Pendiente",
+    paid: "Pagada",
+    void: "Anulada",
+  };
+
+  return labels[status];
+}
+
 export function SplitBillView({
   tableLabel,
   customers,
@@ -104,14 +116,14 @@ export function SplitBillView({
     <div className={styles.screen}>
       <header className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>Account assignment</p>
-          <h2>{tableLabel} — Personal accounts</h2>
+          <p className={styles.eyebrow}>Asignación de cuentas</p>
+          <h2>{tableLabel} — Cuentas personales</h2>
           <p className={styles.headerCopy}>
-            Create named accounts, assign item quantities, then settle or mark each balance pending.
+            Creá cuentas por persona, asigná cantidades y después cobrá o dejá saldos pendientes.
           </p>
         </div>
         <Button variant="secondary" onClick={onAttemptClose} disabled={disabled}>
-          Review table closure
+          Revisar cierre de mesa
         </Button>
       </header>
 
@@ -121,58 +133,62 @@ export function SplitBillView({
         </div>
       ) : null}
 
-      <section aria-label="Account Setup" className={styles.card}>
+      <section aria-label="Configuración de cuentas" className={styles.card}>
         <SectionHeader
-          label="Step 1"
-          title="Account Setup"
-          description="Choose who gets their own account before assigning items."
+          label="Paso 1"
+          title="Configuración de cuentas"
+          description="Elegí quién necesita una cuenta propia antes de asignar productos."
         />
         <div className={styles.formGrid}>
-          <label className={styles.field}>
-            Existing customer
-            <select
-              value={selectedCustomerId}
-              onChange={(event) => onSelectCustomer(event.target.value)}
-              disabled={disabled || customers.length === 0}
+          <div className={styles.pathGroup}>
+            <label className={styles.field}>
+              Cliente existente
+              <select
+                value={selectedCustomerId}
+                onChange={(event) => onSelectCustomer(event.target.value)}
+                disabled={disabled || customers.length === 0}
+              >
+                <option value="">Seleccionar cliente</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              onClick={onCreateCustomerAccount}
+              disabled={disabled || selectedCustomerId.length === 0}
             >
-              <option value="">Select customer</option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.displayName}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Button
-            onClick={onCreateCustomerAccount}
-            disabled={disabled || selectedCustomerId.length === 0}
-          >
-            Create customer account
-          </Button>
-          <Input
-            label="Free-name account"
-            value={freeName}
-            onChange={onFreeNameChange}
-            placeholder="Juan P."
-          />
-          <Button
-            variant="secondary"
-            onClick={onCreateFreeNameAccount}
-            disabled={disabled || freeName.trim().length === 0}
-          >
-            Create free-name account
-          </Button>
+              Crear cuenta de cliente
+            </Button>
+          </div>
+          <div className={styles.pathGroup}>
+            <Input
+              label="Cuenta con nombre libre"
+              value={freeName}
+              onChange={onFreeNameChange}
+              placeholder="Juan P."
+            />
+            <Button
+              variant="secondary"
+              onClick={onCreateFreeNameAccount}
+              disabled={disabled || freeName.trim().length === 0}
+            >
+              Crear cuenta libre
+            </Button>
+          </div>
         </div>
       </section>
 
-      <section aria-label="Assign Items" className={styles.card}>
+      <section aria-label="Asignar productos" className={styles.card}>
         <SectionHeader
-          label="Step 2"
-          title="Assign Items"
-          description="Choose one account, then add pending items from the left panel."
+          label="Paso 2"
+          title="Asignar productos"
+          description="Elegí una cuenta y sumale los productos pendientes desde la lista."
         />
         <div className={styles.assignmentWorkspace}>
-          <section aria-label="Pending Items" className={styles.assignmentList}>
+          <section aria-label="Productos pendientes" className={styles.assignmentList}>
             {lines.map((line) => {
               const quantity =
                 allocationDraft.lineItemId === line.id ? allocationDraft.quantity : "1";
@@ -180,7 +196,7 @@ export function SplitBillView({
                 <article
                   key={line.id}
                   className={styles.assignmentItem}
-                  aria-label={`Assign ${line.name}`}
+                  aria-label={`Asignar ${line.name}`}
                 >
                   <div className={styles.assignmentSummary}>
                     <span className={styles.itemName}>
@@ -191,13 +207,13 @@ export function SplitBillView({
                         line.unassignedQuantity > 0 ? styles.unassignedBadge : styles.assignedBadge
                       }
                     >
-                      {line.unassignedQuantity} unassigned
+                      {line.unassignedQuantity} sin asignar
                     </span>
                     <PriceTag cents={line.totalCents} />
                   </div>
                   <div className={styles.quickAssignControls}>
                     <Input
-                      label={`Quantity for ${line.name}`}
+                      label={`Cantidad para ${line.name}`}
                       type="number"
                       value={quantity}
                       onChange={(nextQuantity) =>
@@ -219,19 +235,19 @@ export function SplitBillView({
                         Number(quantity) <= 0
                       }
                     >
-                      Add {line.name} to selected account
+                      Agregar
                     </Button>
                   </div>
                 </article>
               );
             })}
           </section>
-          <section aria-label="Selected Account" className={styles.selectedAccountPanel}>
-            <h4>Selected Account</h4>
-            <p>Choose the account receiving items.</p>
+          <section aria-label="Cuenta seleccionada" className={styles.selectedAccountPanel}>
+            <h4>Cuenta seleccionada</h4>
+            <p>Elegí la cuenta que va a recibir los productos.</p>
             <div className={styles.accountPicker}>
               {accounts.length === 0 ? (
-                <span className={styles.emptyState}>Create an account first.</span>
+                <span className={styles.emptyState}>Primero creá una cuenta.</span>
               ) : null}
               {accounts.map((account) => {
                 const isSelected = account.id === allocationDraft.accountId;
@@ -247,12 +263,12 @@ export function SplitBillView({
                       })
                     }
                     disabled={disabled}
-                    aria-label={`${isSelected ? "Clear selected account" : "Select account"} ${account.ownerLabel}`}
+                    aria-label={`${isSelected ? "Quitar cuenta seleccionada" : "Seleccionar cuenta"} ${account.ownerLabel}`}
                     aria-pressed={isSelected}
                   >
-                    <span>Select account {account.ownerLabel}</span>
+                    <span>{isSelected ? "Cuenta seleccionada" : "Seleccionar cuenta"}</span>
                     <strong>{account.ownerLabel}</strong>
-                    <small>{account.status.replace("_", " ")}</small>
+                    <small>{formatAccountStatus(account.status)}</small>
                   </button>
                 );
               })}
@@ -266,13 +282,13 @@ export function SplitBillView({
                   </dd>
                 </div>
                 <div>
-                  <dt>Paid</dt>
+                  <dt>Pagado</dt>
                   <dd>
                     <PriceTag cents={selectedAccount.paidCents} />
                   </dd>
                 </div>
                 <div>
-                  <dt>Remaining</dt>
+                  <dt>Restante</dt>
                   <dd>
                     <PriceTag cents={selectedAccount.remainingCents} />
                   </dd>
@@ -283,25 +299,25 @@ export function SplitBillView({
         </div>
       </section>
 
-      <section aria-label="Account Balances" className={styles.card}>
+      <section aria-label="Saldos de cuentas" className={styles.card}>
         <SectionHeader
-          label="Step 3"
-          title="Account Balances"
-          description="Review each account total, paid amount, and remaining balance."
+          label="Paso 3"
+          title="Saldos de cuentas"
+          description="Revisá el total, lo pagado y el saldo restante de cada cuenta."
         />
         {accounts.length === 0 ? (
-          <p className={styles.emptyState}>No personal accounts yet.</p>
+          <p className={styles.emptyState}>Todavía no hay cuentas personales.</p>
         ) : null}
         <div className={styles.accounts}>
           {accounts.map((account) => (
             <article
               key={account.id}
               className={styles.account}
-              aria-label={`Account balance for ${account.ownerLabel}`}
+              aria-label={`Saldo de cuenta de ${account.ownerLabel}`}
             >
               <div className={styles.accountIdentity}>
                 <strong>{account.ownerLabel}</strong>
-                <span>{account.status.replace("_", " ")}</span>
+                <span>{formatAccountStatus(account.status)}</span>
               </div>
               <dl className={styles.balanceGrid}>
                 <div>
@@ -311,49 +327,51 @@ export function SplitBillView({
                   </dd>
                 </div>
                 <div>
-                  <dt>Paid</dt>
+                  <dt>Pagado</dt>
                   <dd>
                     <PriceTag cents={account.paidCents} />
                   </dd>
                 </div>
                 <div>
-                  <dt>Remaining</dt>
+                  <dt>Restante</dt>
                   <dd>
                     <PriceTag cents={account.remainingCents} />
                   </dd>
                 </div>
               </dl>
-              <ButtonRow>
-                <Button
-                  onClick={() => onPayAccount(account.id)}
-                  disabled={
-                    disabled || account.remainingCents === 0 || account.status === "pending"
-                  }
-                >
-                  Pay now
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => onMarkPending(account.id)}
-                  disabled={
-                    disabled || account.remainingCents === 0 || account.status === "pending"
-                  }
-                >
-                  Mark pending
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => onDeleteAccount(account.id)}
-                  disabled={
-                    disabled ||
-                    account.paidCents > 0 ||
-                    account.status === "pending" ||
-                    account.status === "paid"
-                  }
-                >
-                  Delete account
-                </Button>
-              </ButtonRow>
+              <div className={styles.accountActions}>
+                <ButtonRow>
+                  <Button
+                    onClick={() => onPayAccount(account.id)}
+                    disabled={
+                      disabled || account.remainingCents === 0 || account.status === "pending"
+                    }
+                  >
+                    Cobrar
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => onMarkPending(account.id)}
+                    disabled={
+                      disabled || account.remainingCents === 0 || account.status === "pending"
+                    }
+                  >
+                    Dejar pendiente
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => onDeleteAccount(account.id)}
+                    disabled={
+                      disabled ||
+                      account.paidCents > 0 ||
+                      account.status === "pending" ||
+                      account.status === "paid"
+                    }
+                  >
+                    Eliminar
+                  </Button>
+                </ButtonRow>
+              </div>
             </article>
           ))}
         </div>

@@ -60,7 +60,7 @@ export function PendingDebtsContainer(): JSX.Element {
 
   const recordPayment = async (target: Payment["target"], amountCents: number): Promise<Payment> => {
     const method = methods.find((candidate) => candidate.active) ?? methods[0];
-    if (!method) throw new Error("No active payment method is configured");
+    if (!method) throw new Error("No hay un método de pago activo configurado");
     return paymentsPort.record({
       id: crypto.randomUUID(),
       target,
@@ -84,7 +84,7 @@ export function PendingDebtsContainer(): JSX.Element {
         paymentId: payment.id,
       }));
       setCustomerPaymentDrafts((drafts) => ({ ...drafts, [customerId]: "" }));
-      return "Customer debt payment recorded without reopening the original table.";
+      return "Pago de deuda registrado sin reabrir la mesa original.";
     });
   };
 
@@ -97,14 +97,14 @@ export function PendingDebtsContainer(): JSX.Element {
         await accountsPort.save({ ...context.account, status: "paid", closedAt: new Date().toISOString() }, context.allocations, context.account.version);
       }
       setAccountPaymentDrafts((drafts) => ({ ...drafts, [accountId]: "" }));
-      return "Free-name pending account payment recorded.";
+      return "Pago de cuenta pendiente registrado.";
     });
   };
 
   const linkToCustomer = (accountId: string): void => {
     void runMutation(async () => {
       const customerId = linkCustomerDrafts[accountId];
-      if (!customerId) throw new Error("Select a customer before linking the account");
+      if (!customerId) throw new Error("Seleccioná un cliente antes de vincular la cuenta");
       const context = await getAccountContext(accountId, accountsPort, ordersPort, paymentsPort);
       const linked = { ...context.account, owner: { kind: "customer" as const, customerId } };
       await accountsPort.save(linked, context.allocations, context.account.version);
@@ -118,14 +118,14 @@ export function PendingDebtsContainer(): JSX.Element {
         }));
       }
       setLinkCustomerDrafts((drafts) => ({ ...drafts, [accountId]: "" }));
-      return "Free-name account linked to an existing customer.";
+      return "Cuenta con nombre libre vinculada a un cliente existente.";
     });
   };
 
   const createCustomerFromAccount = (accountId: string): void => {
     void runMutation(async () => {
       const context = await getAccountContext(accountId, accountsPort, ordersPort, paymentsPort);
-      if (context.account.owner.kind !== "free_name") throw new Error("Account is already linked");
+      if (context.account.owner.kind !== "free_name") throw new Error("La cuenta ya está vinculada");
       const customer = await customersPort.save(createCustomer({ displayName: context.account.owner.freeName }));
       const linked = { ...context.account, owner: { kind: "customer" as const, customerId: customer.id } };
       await accountsPort.save(linked, context.allocations, context.account.version);
@@ -138,7 +138,7 @@ export function PendingDebtsContainer(): JSX.Element {
           accountId,
         }));
       }
-      return "Customer created from free-name account and linked.";
+      return "Cliente creado desde la cuenta con nombre libre y vinculado.";
     });
   };
 
@@ -227,6 +227,6 @@ async function getAccountContext(
 
 function positiveDraft(value: string | undefined): number {
   const amount = Number(value ?? 0);
-  if (!Number.isInteger(amount) || amount <= 0) throw new Error("Payment amount must be a positive number of cents");
+  if (!Number.isInteger(amount) || amount <= 0) throw new Error("El monto de pago debe ser un número positivo de centavos");
   return amount;
 }
