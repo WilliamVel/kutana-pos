@@ -58,21 +58,53 @@ export function InventoryList({
 }: InventoryListProps): JSX.Element {
   const categoryFieldId = useId();
   const stockFieldId = useId();
+  const searchFieldId = useId();
+  const productCount = new Intl.NumberFormat().format(rows.length);
 
   return (
-    <div>
-      <div className={styles.filters}>
+    <section className={styles.screen} aria-labelledby="inventory-heading">
+      <header className={styles.header}>
+        <div>
+          <p className={styles.eyebrow}>Catálogo</p>
+          <h2 id="inventory-heading">Productos</h2>
+          <p>Buscá, filtrá y revisá el estado del stock antes de vender.</p>
+        </div>
+        <div className={styles.summaryCard} aria-live="polite">
+          <strong>{productCount}</strong>
+          <span>{rows.length === 1 ? "Producto visible" : "Productos visibles"}</span>
+        </div>
+      </header>
+
+      <div className={styles.filters} role="search" aria-label="Filtros de productos">
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor={searchFieldId}>
+            Buscar
+          </label>
+          <input
+            id={searchFieldId}
+            name="inventory-search"
+            autoComplete="off"
+            role="searchbox"
+            className={styles.search}
+            type="search"
+            placeholder="Buscar por nombre o SKU…"
+            value={searchQuery}
+            onChange={(event) => onSearchQueryChange(event.target.value)}
+          />
+        </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor={categoryFieldId}>
-            Category
+            Categoría
           </label>
           <select
             id={categoryFieldId}
+            name="inventory-category"
+            autoComplete="off"
             className={styles.select}
             value={selectedCategoryId ?? ""}
             onChange={(event) => onCategoryChange(event.target.value || null)}
           >
-            <option value="">All categories</option>
+            <option value="">Todas las categorías</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -82,92 +114,104 @@ export function InventoryList({
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor={stockFieldId}>
-            Stock status
+            Estado de stock
           </label>
           <select
             id={stockFieldId}
+            name="inventory-stock-status"
+            autoComplete="off"
             className={styles.select}
             value={stockStatusFilter ?? ""}
             onChange={(event) =>
               onStockStatusFilterChange((event.target.value || null) as StockDisplayStatus | null)
             }
           >
-            <option value="">All stock levels</option>
-            <option value="in-stock">In stock</option>
-            <option value="low-stock">Low stock</option>
-            <option value="out-of-stock">Out of stock</option>
+            <option value="">Todos los niveles de stock</option>
+            <option value="in-stock">Con stock</option>
+            <option value="low-stock">Stock bajo</option>
+            <option value="out-of-stock">Sin stock</option>
           </select>
-        </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="inventory-search">
-            Search
-          </label>
-          <input
-            id="inventory-search"
-            role="searchbox"
-            className={styles.search}
-            type="search"
-            placeholder="Search by name or SKU"
-            value={searchQuery}
-            onChange={(event) => onSearchQueryChange(event.target.value)}
-          />
         </div>
       </div>
 
       {rows.length === 0 ? (
-        <p className={styles.empty}>No products match your filters.</p>
+        <div className={styles.empty} role="status">
+          <h3>No hay productos que coincidan</h3>
+          <p>No hay productos que coincidan con los filtros.</p>
+          <p>Limpiá la búsqueda o elegí otra categoría o estado de stock.</p>
+        </div>
       ) : (
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th aria-hidden="true" />
-              <th>Name</th>
-              <th>SKU</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Stock</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} className={styles.row}>
-                <td>
-                  {row.imageUrl ? (
-                    <img className={styles.image} src={row.imageUrl} alt="" />
-                  ) : (
-                    <div className={styles.image} aria-hidden="true" />
-                  )}
-                </td>
-                <td>{row.name}</td>
-                <td>{row.sku}</td>
-                <td>{row.categoryName}</td>
-                <td>
-                  <PriceTag cents={row.priceCents} />
-                </td>
-                <td>
-                  <StatusPill status={row.stockStatus} /> <span>{row.stockLabel}</span>
-                </td>
+        <div className={styles.tableShell}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th aria-hidden="true" />
+                <th>Nombre</th>
+                <th>SKU</th>
+                <th>Categoría</th>
+                <th>Precio</th>
+                <th>Stock</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id} className={styles.row}>
+                  <td>
+                    {row.imageUrl ? (
+                      <img
+                        className={styles.image}
+                        src={row.imageUrl}
+                        alt=""
+                        width="48"
+                        height="48"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className={styles.image} aria-hidden="true">
+                        {row.name.charAt(0)}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <strong className={styles.productName}>{row.name}</strong>
+                  </td>
+                  <td>
+                    <code className={styles.sku} translate="no">
+                      {row.sku}
+                    </code>
+                  </td>
+                  <td>{row.categoryName}</td>
+                  <td className={styles.priceCell}>
+                    <PriceTag cents={row.priceCents} />
+                  </td>
+                  <td>
+                    <div className={styles.stockCell}>
+                      <StatusPill status={row.stockStatus} />
+                      <span>{row.stockLabel}</span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      <div className={styles.pagination}>
+      <nav className={styles.pagination} aria-label="Páginas de productos">
         <Button variant="secondary" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
-          Previous page
+          Página anterior
         </Button>
-        <span>
-          Page {page} of {pageCount}
+        <span aria-live="polite">
+          Página {page} de {pageCount}
         </span>
         <Button
           variant="secondary"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= pageCount}
         >
-          Next page
+          Página siguiente
         </Button>
-      </div>
-    </div>
+      </nav>
+    </section>
   );
 }

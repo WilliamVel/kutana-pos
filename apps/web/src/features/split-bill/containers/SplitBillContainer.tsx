@@ -48,10 +48,15 @@ interface AccountPaymentCache {
 function ownerLabel(account: PersonalAccount, customers: readonly Customer[]): string {
   const { owner } = account;
   if (owner.kind === "free_name") return owner.freeName;
-  return customers.find((customer) => customer.id === owner.customerId)?.displayName ?? owner.customerId;
+  return (
+    customers.find((customer) => customer.id === owner.customerId)?.displayName ?? owner.customerId
+  );
 }
 
-function toLines(order: Order, allocations: readonly AccountLineAllocation[]): AccountAssignmentLine[] {
+function toLines(
+  order: Order,
+  allocations: readonly AccountLineAllocation[],
+): AccountAssignmentLine[] {
   return order.lineItems.map((line) => {
     const assigned = allocations
       .filter((allocation) => allocation.lineItemId === line.id)
@@ -68,10 +73,16 @@ function toLines(order: Order, allocations: readonly AccountLineAllocation[]): A
 }
 
 function toAccountPayments(payments: readonly AccountPaymentCache[]): AccountPaymentAmount[] {
-  return payments.map((payment) => ({ accountId: payment.accountId, amountCents: payment.paidCents }));
+  return payments.map((payment) => ({
+    accountId: payment.accountId,
+    amountCents: payment.paidCents,
+  }));
 }
 
-export function SplitBillContainer({ tableId, onPayAccount }: SplitBillContainerProps): JSX.Element | null {
+export function SplitBillContainer({
+  tableId,
+  onPayAccount,
+}: SplitBillContainerProps): JSX.Element | null {
   const tables = useTables();
   const orders = useOrders();
   const customersPort = useCustomers();
@@ -89,7 +100,11 @@ export function SplitBillContainer({ tableId, onPayAccount }: SplitBillContainer
   const [payments, setPayments] = useState<AccountPaymentCache[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [freeName, setFreeName] = useState("");
-  const [allocationDraft, setAllocationDraft] = useState<AccountAllocationDraft>({ accountId: "", lineItemId: "", quantity: "1" });
+  const [allocationDraft, setAllocationDraft] = useState<AccountAllocationDraft>({
+    accountId: "",
+    lineItemId: "",
+    quantity: "1",
+  });
   const [reviewMessage, setReviewMessage] = useState<string | null>(null);
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -109,10 +124,9 @@ export function SplitBillContainer({ tableId, onPayAccount }: SplitBillContainer
     const accountPayments = await Promise.all(
       orderAccounts.map(async (account) => ({
         accountId: account.id,
-        paidCents: (await paymentsPort.listByTarget({ kind: "personal_account", accountId: account.id })).reduce(
-          (sum, payment) => sum + payment.amountCents,
-          0,
-        ),
+        paidCents: (
+          await paymentsPort.listByTarget({ kind: "personal_account", accountId: account.id })
+        ).reduce((sum, payment) => sum + payment.amountCents, 0),
       })),
     );
 
@@ -138,7 +152,9 @@ export function SplitBillContainer({ tableId, onPayAccount }: SplitBillContainer
       } catch (error) {
         if (error instanceof ConflictError) {
           await load();
-          setConflictMessage("This account assignment changed on another device. We've refreshed it below — please review and try again.");
+          setConflictMessage(
+            "This account assignment changed on another device. We've refreshed it below — please review and try again.",
+          );
         } else {
           throw error;
         }
@@ -158,7 +174,13 @@ export function SplitBillContainer({ tableId, onPayAccount }: SplitBillContainer
       allocations,
       payments: toAccountPayments(payments),
     });
-    return { ...balance, id: account.id, owner: account.owner, status: account.status, ownerLabel: ownerLabel(account, customers) };
+    return {
+      ...balance,
+      id: account.id,
+      owner: account.owner,
+      status: account.status,
+      ownerLabel: ownerLabel(account, customers),
+    };
   });
 
   const createCustomerAccount = (): void => {
@@ -214,7 +236,11 @@ export function SplitBillContainer({ tableId, onPayAccount }: SplitBillContainer
         recordedAt: new Date().toISOString(),
       };
       await paymentsPort.record(payment);
-      await accountsPort.save({ ...account, status: "paid", closedAt: new Date().toISOString() }, allocations, account.version);
+      await accountsPort.save(
+        { ...account, status: "paid", closedAt: new Date().toISOString() },
+        allocations,
+        account.version,
+      );
     });
   };
 
@@ -223,15 +249,40 @@ export function SplitBillContainer({ tableId, onPayAccount }: SplitBillContainer
       const account = accounts.find((candidate) => candidate.id === accountId);
       const row = accountRows.find((candidate) => candidate.id === accountId);
       if (!account || !row || row.remainingCents <= 0) return;
-      const saved = await accountsPort.save({ ...account, status: "pending", closedAt: new Date().toISOString() }, allocations, account.version);
+      const saved = await accountsPort.save(
+        { ...account, status: "pending", closedAt: new Date().toISOString() },
+        allocations,
+        account.version,
+      );
       if (saved.owner.kind === "customer") {
-        await debtsPort.record(createCustomerDebtEntry({
-          customerId: saved.owner.customerId,
-          direction: "debit",
-          kind: "pending_account",
-          amountCents: row.remainingCents,
-          accountId: saved.id,
-        }));
+        await debtsPort.record(
+          createCustomerDebtEntry({
+            customerId: saved.owner.customerId,
+            direction: "debit",
+            kind: "pending_account",
+            amountCents: row.remainingCents,
+            accountId: saved.id,
+          }),
+        );
+      }
+    });
+  };
+
+  const deleteAccount = (accountId: string): void => {
+    void runMutation(async () => {
+      const account = accounts.find((candidate) => candidate.id === accountId);
+      const row = accountRows.find((candidate) => candidate.id === accountId);
+      if (
+        !account ||
+        !row ||
+        row.paidCents > 0 ||
+        account.status === "pending" ||
+        account.status === "paid"
+      )
+        return;
+      await accountsPort.delete(account.id, account.version);
+      if (allocationDraft.accountId === account.id) {
+        setAllocationDraft({ ...allocationDraft, accountId: "" });
       }
     });
   };
@@ -240,7 +291,14 @@ export function SplitBillContainer({ tableId, onPayAccount }: SplitBillContainer
     void runMutation(async () => {
       const effectiveAccounts = accountRows.map((row) => {
         const account = accounts.find((candidate) => candidate.id === row.id)!;
-        return { ...account, status: derivePersonalAccountStatus({ totalCents: row.totalCents, paidCents: row.paidCents, isPending: account.status === "pending" }) };
+        return {
+          ...account,
+          status: derivePersonalAccountStatus({
+            totalCents: row.totalCents,
+            paidCents: row.paidCents,
+            isPending: account.status === "pending",
+          }),
+        };
       });
       const result = closeOrderWithPersonalAccounts({
         order,
@@ -254,16 +312,29 @@ export function SplitBillContainer({ tableId, onPayAccount }: SplitBillContainer
         );
         await orders.save(result.order, order.version);
       } else {
-        setReviewMessage(result.pendingAccountIds.length > 0 ? "Table closed with pending personal debt." : "Table closed fully paid.");
+        setReviewMessage(
+          result.pendingAccountIds.length > 0
+            ? "Table closed with pending personal debt."
+            : "Table closed fully paid.",
+        );
         const saved = await orders.save(result.order, order.version);
-        events.publish({ type: "order.updated", orderId: saved.id, tableId, version: saved.version, at: new Date().toISOString(), payload: saved });
+        events.publish({
+          type: "order.updated",
+          orderId: saved.id,
+          tableId,
+          version: saved.version,
+          at: new Date().toISOString(),
+          payload: saved,
+        });
       }
     });
   };
 
   return (
     <div className={styles.screen}>
-      {conflictMessage ? <ConflictBanner message={conflictMessage} onDismiss={() => setConflictMessage(null)} /> : null}
+      {conflictMessage ? (
+        <ConflictBanner message={conflictMessage} onDismiss={() => setConflictMessage(null)} />
+      ) : null}
       <SplitBillView
         tableLabel={table.label}
         customers={customers}
@@ -282,6 +353,7 @@ export function SplitBillContainer({ tableId, onPayAccount }: SplitBillContainer
         onAssignQuantity={assignQuantity}
         onPayAccount={payAccount}
         onMarkPending={markPending}
+        onDeleteAccount={deleteAccount}
         onAttemptClose={attemptClose}
       />
     </div>

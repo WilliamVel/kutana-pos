@@ -7,19 +7,29 @@ export interface CustomerListProps {
 
 export function CustomerList({ customers }: CustomerListProps): JSX.Element {
   return (
-    <section aria-label="Customer list" className={styles.card}>
+    <section aria-label="Lista de clientes" className={styles.card}>
       <div className={styles.header}>
-        <p className={styles.eyebrow}>Available For Selection</p>
-        <h3>Saved Customers</h3>
-        <p>These names appear when creating personal accounts or linking free-name pending debts.</p>
+        <p className={styles.eyebrow}>Disponibles para selección</p>
+        <h3>Clientes guardados</h3>
+        <p>Estos nombres aparecen al crear cuentas personales o vincular deudas pendientes.</p>
       </div>
-      {customers.length === 0 ? <p className={styles.emptyState}>No customers yet. Create the first customer to use them in account assignment.</p> : null}
+      {customers.length === 0 ? (
+        <p className={styles.emptyState}>
+          Todavía no hay clientes. Creá el primero para usarlo en la asignación de cuentas.
+        </p>
+      ) : null}
       <div className={styles.rows}>
         {customers.map((customer) => (
-          <article key={customer.id} aria-label={`Customer ${customer.displayName}`} className={styles.row}>
+          <article
+            key={customer.id}
+            aria-label={`Cliente ${customer.displayName}`}
+            className={styles.row}
+          >
             <div>
               <strong>{customer.displayName}</strong>
-              <p>{customer.phone || "No phone"} · {customer.email || "No email"}</p>
+              <p>
+                {customer.phone || "Sin teléfono"} · {customer.email || "Sin email"}
+              </p>
             </div>
             {customer.notes ? <p className={styles.notes}>{customer.notes}</p> : null}
           </article>

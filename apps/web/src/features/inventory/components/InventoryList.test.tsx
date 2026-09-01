@@ -21,7 +21,7 @@ const ROWS: InventoryRow[] = [
     priceCents: 380,
     imageUrl: null,
     stockStatus: "in-stock",
-    stockLabel: "48 units",
+    stockLabel: "48 unidades",
   },
 ];
 
@@ -56,13 +56,13 @@ describe("InventoryList", () => {
     expect(screen.getByText("$3.50")).toBeInTheDocument();
     // Volume stock MUST show millilitres, never a unit count for draft beer.
     expect(screen.getByText("4500ml")).toBeInTheDocument();
-    expect(screen.getByText("48 units")).toBeInTheDocument();
+    expect(screen.getByText("48 unidades")).toBeInTheDocument();
   });
 
   it("shows the stock status pill matching each row's real status", () => {
     const { container } = { container: renderList() && document.body };
-    expect(container.querySelector('[data-status="low-stock"]')).toHaveTextContent("Low stock");
-    expect(container.querySelector('[data-status="in-stock"]')).toHaveTextContent("In stock");
+    expect(container.querySelector('[data-status="low-stock"]')).toHaveTextContent("Stock bajo");
+    expect(container.querySelector('[data-status="in-stock"]')).toHaveTextContent("Con stock");
   });
 
   it("calls onSearchQueryChange as the user types in the search box", () => {
@@ -73,33 +73,33 @@ describe("InventoryList", () => {
 
   it("calls onCategoryChange when a category filter is selected", () => {
     const props = renderList();
-    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "cat-bottled" } });
+    fireEvent.change(screen.getByLabelText("Categoría"), { target: { value: "cat-bottled" } });
     expect(props.onCategoryChange).toHaveBeenCalledWith("cat-bottled");
   });
 
   it("calls onStockStatusFilterChange when a stock-status filter is selected", () => {
     const props = renderList();
-    fireEvent.change(screen.getByLabelText("Stock status"), { target: { value: "low-stock" } });
+    fireEvent.change(screen.getByLabelText("Estado de stock"), { target: { value: "low-stock" } });
     expect(props.onStockStatusFilterChange).toHaveBeenCalledWith("low-stock");
   });
 
   it("renders pagination controls and calls onPageChange", () => {
     const props = renderList({ page: 2, pageCount: 5 });
-    expect(screen.getByText("Page 2 of 5")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(screen.getByText("Página 2 de 5")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
     expect(props.onPageChange).toHaveBeenCalledWith(3);
-    fireEvent.click(screen.getByRole("button", { name: "Previous page" }));
+    fireEvent.click(screen.getByRole("button", { name: "Página anterior" }));
     expect(props.onPageChange).toHaveBeenCalledWith(1);
   });
 
   it("disables Previous on the first page and Next on the last page", () => {
     renderList({ page: 1, pageCount: 1 });
-    expect(screen.getByRole("button", { name: "Previous page" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Página anterior" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Página siguiente" })).toBeDisabled();
   });
 
   it("shows an empty state when there are no rows", () => {
     renderList({ rows: [] });
-    expect(screen.getByText("No products match your filters.")).toBeInTheDocument();
+    expect(screen.getByText("No hay productos que coincidan con los filtros.")).toBeInTheDocument();
   });
 });

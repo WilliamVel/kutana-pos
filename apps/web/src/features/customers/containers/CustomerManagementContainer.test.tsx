@@ -13,12 +13,18 @@ describe("CustomerManagementContainer", () => {
       </PortsProvider>,
     );
 
-    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Ada Lovelace" } });
-    fireEvent.change(screen.getByLabelText("Phone"), { target: { value: "555-0101" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create customer" }));
+    fireEvent.change(screen.getByLabelText("Nombre visible"), {
+      target: { value: "Ada Lovelace" },
+    });
+    fireEvent.change(screen.getByLabelText("Teléfono"), { target: { value: "555-0101" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear cliente" }));
 
-    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Customer created."));
-    await waitFor(() => expect(screen.getByRole("article", { name: "Customer Ada Lovelace" })).toBeInTheDocument());
-    expect((await ports.customers.listAll()).some((customer) => customer.displayName === "Ada Lovelace")).toBe(true);
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Cliente creado."));
+    await waitFor(() =>
+      expect(screen.getByRole("article", { name: "Cliente Ada Lovelace" })).toBeInTheDocument(),
+    );
+    expect(
+      (await ports.customers.listAll()).some((customer) => customer.displayName === "Ada Lovelace"),
+    ).toBe(true);
   });
 });

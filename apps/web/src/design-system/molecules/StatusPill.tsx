@@ -8,14 +8,14 @@ export interface StatusPillProps {
 }
 
 const LABELS_BY_STATUS: Record<StockStatus | OrderStatus, string> = {
-  "in-stock": "In stock",
-  "low-stock": "Low stock",
-  "out-of-stock": "Out of stock",
-  active: "Active",
-  "needs-check": "Needs check",
-  "in-review": "In review",
-  paid: "Paid",
-  "closed-with-pending": "Closed with pending",
+  "in-stock": "Con stock",
+  "low-stock": "Stock bajo",
+  "out-of-stock": "Sin stock",
+  active: "Activa",
+  "needs-check": "Requiere revisión",
+  "in-review": "En revisión",
+  paid: "Pagada",
+  "closed-with-pending": "Cerrada con deuda",
 };
 
 // `noUncheckedIndexedAccess` widens CSS-module class lookups to

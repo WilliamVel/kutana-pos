@@ -28,16 +28,21 @@ export function LoginPanel({ onLogin }: LoginPanelProps): JSX.Element {
         <img className={styles.logo} src="/LOGOkutana.svg" alt="KUTANA" />
         <div className={styles.copy}>
           <h1 id="login-title" className={styles.title}>
-            Operator login
+            Ingreso de operador
           </h1>
-          <p className={styles.subtitle}>Sign in to open the POS workspace.</p>
+          <p className={styles.subtitle}>Iniciá sesión para abrir el espacio de caja.</p>
         </div>
 
         <form className={styles.form} onSubmit={submit}>
-          <Input label="Operator" value={operator} onChange={setOperator} placeholder="Your name" />
+          <Input
+            label="Operador"
+            value={operator}
+            onChange={setOperator}
+            placeholder="Tu nombre…"
+          />
           <Input label="PIN" value={pin} onChange={setPin} type="password" placeholder="••••" />
           <Button type="submit" disabled={!canSubmit} onClick={() => undefined}>
-            Sign in
+            Ingresar
           </Button>
         </form>
       </section>

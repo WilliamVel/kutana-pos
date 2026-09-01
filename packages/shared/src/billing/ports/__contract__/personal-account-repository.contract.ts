@@ -18,8 +18,17 @@ export function runPersonalAccountRepositoryContract(
 
     it("saves an account with its quantity allocations transactionally", async () => {
       const repository = await createRepository();
-      const account = createPersonalAccount({ id: "account-1", orderId: "order-1", customerId: "customer-1" });
-      const allocation = createAccountLineAllocation({ id: "allocation-1", accountId: account.id, lineItemId: "line-1", quantity: 2 });
+      const account = createPersonalAccount({
+        id: "account-1",
+        orderId: "order-1",
+        customerId: "customer-1",
+      });
+      const allocation = createAccountLineAllocation({
+        id: "allocation-1",
+        accountId: account.id,
+        lineItemId: "line-1",
+        quantity: 2,
+      });
 
       const saved = await repository.save(account, [allocation], account.version);
 
@@ -30,9 +39,21 @@ export function runPersonalAccountRepositoryContract(
 
     it("lists every personal account that belongs to an order", async () => {
       const repository = await createRepository();
-      const accountA = createPersonalAccount({ id: "account-a", orderId: "order-2", freeName: "A" });
-      const accountB = createPersonalAccount({ id: "account-b", orderId: "order-2", freeName: "B" });
-      const other = createPersonalAccount({ id: "account-other", orderId: "order-other", freeName: "Other" });
+      const accountA = createPersonalAccount({
+        id: "account-a",
+        orderId: "order-2",
+        freeName: "A",
+      });
+      const accountB = createPersonalAccount({
+        id: "account-b",
+        orderId: "order-2",
+        freeName: "B",
+      });
+      const other = createPersonalAccount({
+        id: "account-other",
+        orderId: "order-other",
+        freeName: "Other",
+      });
 
       await repository.save(accountB, [], accountB.version);
       await repository.save(other, [], other.version);
@@ -44,29 +65,89 @@ export function runPersonalAccountRepositoryContract(
 
     it("lists only pending free-name accounts for debt collection", async () => {
       const repository = await createRepository();
-      const pendingFreeName = createPersonalAccount({ id: "account-pending-free", orderId: "order-5", freeName: "Juan P." });
-      const openFreeName = createPersonalAccount({ id: "account-open-free", orderId: "order-5", freeName: "Lina M." });
-      const pendingCustomer = createPersonalAccount({ id: "account-pending-customer", orderId: "order-5", customerId: "customer-1" });
+      const pendingFreeName = createPersonalAccount({
+        id: "account-pending-free",
+        orderId: "order-5",
+        freeName: "Juan P.",
+      });
+      const openFreeName = createPersonalAccount({
+        id: "account-open-free",
+        orderId: "order-5",
+        freeName: "Lina M.",
+      });
+      const pendingCustomer = createPersonalAccount({
+        id: "account-pending-customer",
+        orderId: "order-5",
+        customerId: "customer-1",
+      });
 
       await repository.save({ ...pendingFreeName, status: "pending" }, [], pendingFreeName.version);
       await repository.save(openFreeName, [], openFreeName.version);
       await repository.save({ ...pendingCustomer, status: "pending" }, [], pendingCustomer.version);
 
-      await expect(repository.listPendingFreeName()).resolves.toEqual([{ ...pendingFreeName, status: "pending", version: pendingFreeName.version + 1 }]);
+      await expect(repository.listPendingFreeName()).resolves.toEqual([
+        { ...pendingFreeName, status: "pending", version: pendingFreeName.version + 1 },
+      ]);
+    });
+
+    it("deletes an account and its allocations transactionally", async () => {
+      const repository = await createRepository();
+      const account = createPersonalAccount({
+        id: "account-delete",
+        orderId: "order-delete",
+        freeName: "Wrong name",
+      });
+      const allocation = createAccountLineAllocation({
+        id: "allocation-delete",
+        accountId: account.id,
+        lineItemId: "line-delete",
+        quantity: 1,
+      });
+      const saved = await repository.save(account, [allocation], account.version);
+
+      await repository.delete(saved.id, saved.version);
+
+      await expect(repository.findById(saved.id)).resolves.toBeNull();
+      await expect(repository.listAllocationsByOrder(saved.orderId)).resolves.toEqual([]);
+    });
+
+    it("throws ConflictError when deleting with a stale expectedVersion", async () => {
+      const repository = await createRepository();
+      const account = createPersonalAccount({
+        id: "account-delete-conflict",
+        orderId: "order-delete-conflict",
+        freeName: "Wrong name",
+      });
+      const saved = await repository.save(account, [], account.version);
+      await repository.save({ ...saved, status: "pending" }, [], saved.version);
+
+      await expect(repository.delete(saved.id, saved.version)).rejects.toBeInstanceOf(
+        ConflictError,
+      );
     });
 
     it("throws ConflictError when expectedVersion is stale", async () => {
       const repository = await createRepository();
-      const account = createPersonalAccount({ id: "account-conflict", orderId: "order-3", freeName: "Mesa" });
+      const account = createPersonalAccount({
+        id: "account-conflict",
+        orderId: "order-3",
+        freeName: "Mesa",
+      });
       const saved = await repository.save(account, [], account.version);
       await repository.save({ ...saved, status: "pending" }, [], saved.version);
 
-      await expect(repository.save({ ...saved, status: "paid" }, [], saved.version)).rejects.toBeInstanceOf(ConflictError);
+      await expect(
+        repository.save({ ...saved, status: "paid" }, [], saved.version),
+      ).rejects.toBeInstanceOf(ConflictError);
     });
 
     it("carries the current stored account snapshot on ConflictError", async () => {
       const repository = await createRepository();
-      const account = createPersonalAccount({ id: "account-conflict-current", orderId: "order-4", freeName: "Mesa" });
+      const account = createPersonalAccount({
+        id: "account-conflict-current",
+        orderId: "order-4",
+        freeName: "Mesa",
+      });
       const saved = await repository.save(account, [], account.version);
       const winner = await repository.save({ ...saved, status: "pending" }, [], saved.version);
 

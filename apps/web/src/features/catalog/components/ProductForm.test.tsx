@@ -28,7 +28,7 @@ function renderForm(overrides: Partial<React.ComponentProps<typeof ProductForm>>
     initialValues: BLANK_VALUES,
     onSubmit: vi.fn(),
     onCancel: vi.fn(),
-    submitLabel: "Create product",
+    submitLabel: "Crear producto",
     errors: {},
     ...overrides,
   };
@@ -40,23 +40,25 @@ describe("ProductForm", () => {
   it("renders every required field pre-filled from initialValues when editing", () => {
     renderForm({
       initialValues: { ...BLANK_VALUES, name: "KUTANA Pilsener 500ml", sku: "DRAFT-PILS-500" },
-      submitLabel: "Save changes",
+      submitLabel: "Guardar cambios",
     });
 
-    expect(screen.getByLabelText("Name")).toHaveValue("KUTANA Pilsener 500ml");
+    expect(screen.getByLabelText("Nombre")).toHaveValue("KUTANA Pilsener 500ml");
     expect(screen.getByLabelText("SKU")).toHaveValue("DRAFT-PILS-500");
-    expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeInTheDocument();
   });
 
   it("submits the exact edited values, with price parsed to integer cents (never a float)", () => {
     const onSubmit = vi.fn();
     renderForm({ onSubmit });
 
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Loaded Nachos" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Loaded Nachos" } });
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "FOOD-NACHOS" } });
-    fireEvent.change(screen.getByLabelText("Retail price (USD)"), { target: { value: "6.50" } });
-    fireEvent.change(screen.getByLabelText("Initial stock quantity"), { target: { value: "20" } });
-    fireEvent.change(screen.getByLabelText("Low-stock alert level"), { target: { value: "5" } });
+    fireEvent.change(screen.getByLabelText("Precio de venta (USD)"), { target: { value: "6.50" } });
+    fireEvent.change(screen.getByLabelText("Cantidad inicial de stock"), {
+      target: { value: "20" },
+    });
+    fireEvent.change(screen.getByLabelText("Alerta de stock bajo"), { target: { value: "5" } });
     fireEvent.submit(screen.getByRole("form"));
 
     expect(onSubmit).toHaveBeenCalledWith(
@@ -72,17 +74,17 @@ describe("ProductForm", () => {
 
   it("reveals the pour-size field only when stock kind is volume (draft beer)", () => {
     renderForm();
-    expect(screen.queryByLabelText("Pour size (ml)")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Medida del vaso (ml)")).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Stock kind"), { target: { value: "volume" } });
-    expect(screen.getByLabelText("Pour size (ml)")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Tipo de stock"), { target: { value: "volume" } });
+    expect(screen.getByLabelText("Medida del vaso (ml)")).toBeInTheDocument();
   });
 
   it("toggles the active switch", () => {
     const onSubmit = vi.fn();
     renderForm({ onSubmit, initialValues: { ...BLANK_VALUES, active: true } });
 
-    fireEvent.click(screen.getByLabelText("Active"));
+    fireEvent.click(screen.getByLabelText("Activo"));
     fireEvent.submit(screen.getByRole("form"));
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ active: false }));
@@ -92,7 +94,7 @@ describe("ProductForm", () => {
     const onSubmit = vi.fn();
     renderForm({ onSubmit });
 
-    const descriptionField = screen.getByLabelText("Description");
+    const descriptionField = screen.getByLabelText("Descripción");
     expect(descriptionField.tagName).toBe("TEXTAREA");
 
     fireEvent.change(descriptionField, { target: { value: "Crisp, cold, and local." } });
@@ -107,7 +109,7 @@ describe("ProductForm", () => {
     const onSubmit = vi.fn();
     renderForm({ onSubmit });
 
-    fireEvent.change(screen.getByLabelText("Cost price (USD)"), { target: { value: "4.25" } });
+    fireEvent.change(screen.getByLabelText("Costo (USD)"), { target: { value: "4.25" } });
     fireEvent.submit(screen.getByRole("form"));
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ costPriceCents: 425 }));
@@ -117,7 +119,7 @@ describe("ProductForm", () => {
     const onSubmit = vi.fn();
     renderForm({ onSubmit, initialValues: { ...BLANK_VALUES, costPriceCents: 500 } });
 
-    fireEvent.change(screen.getByLabelText("Cost price (USD)"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("Costo (USD)"), { target: { value: "" } });
     fireEvent.submit(screen.getByRole("form"));
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ costPriceCents: null }));
@@ -130,22 +132,22 @@ describe("ProductForm", () => {
         description: "House-made salsa on the side.",
         costPriceCents: 275,
       },
-      submitLabel: "Save changes",
+      submitLabel: "Guardar cambios",
     });
 
-    expect(screen.getByLabelText("Description")).toHaveValue("House-made salsa on the side.");
-    expect(screen.getByLabelText("Cost price (USD)")).toHaveValue("2.75");
+    expect(screen.getByLabelText("Descripción")).toHaveValue("House-made salsa on the side.");
+    expect(screen.getByLabelText("Costo (USD)")).toHaveValue("2.75");
   });
 
   it("shows field-level validation errors passed in via props", () => {
-    renderForm({ errors: { sku: "SKU already in use" } });
-    expect(screen.getByText("SKU already in use")).toBeInTheDocument();
+    renderForm({ errors: { sku: "El SKU ya está en uso" } });
+    expect(screen.getByText("El SKU ya está en uso")).toBeInTheDocument();
   });
 
   it("calls onCancel when the cancel button is pressed", () => {
     const onCancel = vi.fn();
     renderForm({ onCancel });
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(onCancel).toHaveBeenCalledOnce();
   });
 });

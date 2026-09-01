@@ -23,13 +23,15 @@ export function CustomerManagementContainer(): JSX.Element {
     void (async () => {
       setBusy(true);
       try {
-        await customersPort.save(createCustomer({
-          displayName: values.displayName,
-          phone: values.phone.trim() || null,
-          email: values.email.trim() || null,
-          notes: values.notes.trim() || null,
-        }));
-        setMessage("Customer created.");
+        await customersPort.save(
+          createCustomer({
+            displayName: values.displayName,
+            phone: values.phone.trim() || null,
+            email: values.email.trim() || null,
+            notes: values.notes.trim() || null,
+          }),
+        );
+        setMessage("Cliente creado.");
         await load();
       } finally {
         setBusy(false);

@@ -11,4 +11,5 @@ export interface PersonalAccountRepository {
     allocations: readonly AccountLineAllocation[],
     expectedVersion: number,
   ): Promise<PersonalAccount>;
+  delete(id: string, expectedVersion: number): Promise<void>;
 }

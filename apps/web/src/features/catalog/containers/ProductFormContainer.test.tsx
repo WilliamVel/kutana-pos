@@ -17,9 +17,9 @@ describe("ProductFormContainer", () => {
 
     await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "House Lager" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "House Lager" } });
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "SKU-NEW-1" } });
-    fireEvent.change(screen.getByLabelText("Retail price (USD)"), { target: { value: "4.25" } });
+    fireEvent.change(screen.getByLabelText("Precio de venta (USD)"), { target: { value: "4.25" } });
     fireEvent.submit(screen.getByRole("form"));
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
@@ -43,13 +43,13 @@ describe("ProductFormContainer", () => {
 
     await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "House Lager" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "House Lager" } });
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "SKU-NEW-2" } });
-    fireEvent.change(screen.getByLabelText("Description"), {
+    fireEvent.change(screen.getByLabelText("Descripción"), {
       target: { value: "Smooth and light." },
     });
-    fireEvent.change(screen.getByLabelText("Retail price (USD)"), { target: { value: "4.25" } });
-    fireEvent.change(screen.getByLabelText("Cost price (USD)"), { target: { value: "1.50" } });
+    fireEvent.change(screen.getByLabelText("Precio de venta (USD)"), { target: { value: "4.25" } });
+    fireEvent.change(screen.getByLabelText("Costo (USD)"), { target: { value: "1.50" } });
     fireEvent.submit(screen.getByRole("form"));
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
@@ -71,11 +71,11 @@ describe("ProductFormContainer", () => {
 
     await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Duplicate" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Duplicate" } });
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "DRAFT-PILS-500" } });
     fireEvent.submit(screen.getByRole("form"));
 
-    await waitFor(() => expect(screen.getByText("SKU already in use")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("El SKU ya está en uso")).toBeInTheDocument());
     expect(onSaved).not.toHaveBeenCalled();
   });
 });
