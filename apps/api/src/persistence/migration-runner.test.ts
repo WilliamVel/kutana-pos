@@ -11,6 +11,7 @@ describe("migration discovery", () => {
       "005_billing_reference_ids_text.sql",
       "006_customer_reference_ids_text.sql",
       "007_personal_account_reference_ids_text.sql",
+      "008_customer_debt_ledger_shape.sql",
     ]);
   });
 });

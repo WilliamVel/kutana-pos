@@ -2,17 +2,20 @@ import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { createAllocation } from "@kutana/shared/billing/model/allocation.js";
+import { createCustomerDebtEntry } from "@kutana/shared/billing/model/customer-debt-ledger.js";
 import {
   createAccountLineAllocation,
   createCustomer,
   createPersonalAccount,
 } from "@kutana/shared/billing/model/personal-account.js";
 import { createTicket } from "@kutana/shared/billing/model/ticket.js";
+import { runCustomerDebtRepositoryContract } from "@kutana/shared/billing/ports/__contract__/customer-debt-repository.contract.js";
 import { runCustomerRepositoryContract } from "@kutana/shared/billing/ports/__contract__/customer-repository.contract.js";
 import { runPersonalAccountRepositoryContract } from "@kutana/shared/billing/ports/__contract__/personal-account-repository.contract.js";
 import { runTicketRepositoryContract } from "@kutana/shared/billing/ports/__contract__/ticket-repository.contract.js";
 import { postgresConfig } from "../../../infrastructure/postgres/postgres-config.js";
 import { migrate } from "../../../persistence/migration-runner.js";
+import { PostgresCustomerDebtRepository } from "./customer-debt-repository.js";
 import { PostgresCustomerRepository } from "./customer-repository.js";
 import { PostgresPersonalAccountRepository } from "./personal-account-repository.js";
 import { PostgresTicketRepository } from "./ticket-repository.js";
@@ -35,6 +38,7 @@ const orderIds = [
 describe.skipIf(!databaseAvailable)("PostgreSQL billing adapters", () => {
   const pool = new Pool(postgresConfig());
   const customers = new PostgresCustomerRepository(pool);
+  const customerDebts = new PostgresCustomerDebtRepository(pool);
   const personalAccounts = new PostgresPersonalAccountRepository(pool);
   const tickets = new PostgresTicketRepository(pool);
 
@@ -43,7 +47,7 @@ describe.skipIf(!databaseAvailable)("PostgreSQL billing adapters", () => {
 
   async function resetBillingFixtures(seedCustomer = false): Promise<void> {
     await pool.query(
-      "TRUNCATE payments, account_line_allocations, personal_accounts, allocations, tickets, line_items, orders, customers, restaurant_tables, products, categories CASCADE",
+      "TRUNCATE customer_debt_ledger, payments, account_line_allocations, personal_accounts, allocations, tickets, line_items, orders, customers, restaurant_tables, products, categories CASCADE",
     );
     await pool.query(
       `INSERT INTO restaurant_tables (id, label, status, version) VALUES
@@ -80,6 +84,21 @@ describe.skipIf(!databaseAvailable)("PostgreSQL billing adapters", () => {
         createCustomer({ id: "customer-1", displayName: "Ana", now: "2025-01-01T00:00:00.000Z" }),
       );
     }
+  }
+
+  async function seedCustomerDebtContractCustomers(): Promise<void> {
+    await customers.save(
+      createCustomer({ id: "customer-1", displayName: "Ana", now: "2025-01-01T00:00:00.000Z" }),
+    );
+    await customers.save(
+      createCustomer({ id: "customer-a", displayName: "Customer A", now: "2025-01-01T00:01:00.000Z" }),
+    );
+    await customers.save(
+      createCustomer({ id: "customer-b", displayName: "Customer B", now: "2025-01-01T00:02:00.000Z" }),
+    );
+    await customers.save(
+      createCustomer({ id: "customer-empty", displayName: "Empty Customer", now: "2025-01-01T00:03:00.000Z" }),
+    );
   }
 
   describe("tickets", () => {
@@ -119,6 +138,35 @@ describe.skipIf(!databaseAvailable)("PostgreSQL billing adapters", () => {
 
       expect(saved.id).toBe("customer-string-id");
       expect(await customers.findById("customer-string-id")).toEqual(saved);
+    });
+  });
+
+  describe("customer debts", () => {
+    beforeEach(async () => {
+      await resetBillingFixtures();
+      await seedCustomerDebtContractCustomers();
+    });
+
+    runCustomerDebtRepositoryContract(() => customerDebts);
+
+    it("round-trips non-UUID debt identifiers and explicit references", async () => {
+      const entry = createCustomerDebtEntry({
+        id: "debt-string-id",
+        customerId: "customer-1",
+        kind: "adjustment",
+        direction: "credit",
+        amountCents: 125,
+        accountId: "account-string-id",
+        paymentId: "payment-string-id",
+        note: "Manual correction",
+        createdAt: "2025-01-02T00:00:00.000Z",
+      });
+
+      const saved = await customerDebts.record(entry);
+
+      expect(saved).toEqual(entry);
+      expect(await customerDebts.listByCustomer("customer-1")).toEqual([entry]);
+      expect(await customerDebts.listAll()).toEqual([entry]);
     });
   });
 
