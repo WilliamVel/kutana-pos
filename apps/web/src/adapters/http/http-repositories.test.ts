@@ -1,0 +1,208 @@
+import { describe, expect, it, vi } from "vitest";
+import type { Allocation } from "@kutana/shared/billing/model/allocation.js";
+import type { CustomerDebtEntry } from "@kutana/shared/billing/model/customer-debt-ledger.js";
+import type { Customer, PersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
+import type { Ticket } from "@kutana/shared/billing/model/ticket.js";
+import type { PaymentMethodCode } from "@kutana/shared/payments/model/payment-method-registry.js";
+import type { Payment } from "@kutana/shared/payments/model/payment.js";
+import { HttpCustomerDebtRepository } from "./customer-debt-repository.js";
+import { HttpCustomerRepository } from "./customer-repository.js";
+import { HttpClient, HttpError } from "./http-client.js";
+import { HttpPaymentRepository } from "./payment-repository.js";
+import { HttpPersonalAccountRepository } from "./personal-account-repository.js";
+import { HttpTicketRepository } from "./ticket-repository.js";
+
+const BASE_URL = "http://api.example.test/root";
+
+interface FetchCall {
+  readonly url: string;
+  readonly init: RequestInit;
+}
+
+function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  });
+}
+
+function createFetch(responses: readonly Response[] = [jsonResponse({ ok: true })]): {
+  readonly fetchImpl: typeof fetch;
+  readonly calls: FetchCall[];
+} {
+  const calls: FetchCall[] = [];
+  const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ url: String(input), init: init ?? {} });
+    const response = responses[calls.length - 1] ?? responses[responses.length - 1];
+    if (!response) throw new Error("No mocked response configured");
+    return response;
+  }) as unknown as typeof fetch;
+
+  return { fetchImpl, calls };
+}
+
+function parseJsonBody(call: FetchCall): unknown {
+  return JSON.parse(String(call.init.body));
+}
+
+const customer: Customer = {
+  id: "customer 1/with slash",
+  displayName: "Ana",
+  phone: null,
+  email: null,
+  notes: null,
+  createdAt: "2025-01-01T00:00:00.000Z",
+  updatedAt: "2025-01-01T00:00:00.000Z",
+};
+
+const ticket: Ticket = {
+  id: "ticket-1",
+  orderId: "order-1",
+  label: "Mesa",
+  status: "open",
+  version: 3,
+};
+
+const allocation: Allocation = {
+  id: "allocation-1",
+  lineItemId: "line-1",
+  ticketId: "ticket-1",
+  shareBp: 10_000,
+};
+
+const account: PersonalAccount = {
+  id: "account-1",
+  orderId: "order-1",
+  owner: { kind: "free_name", freeName: "Mesa" },
+  status: "open",
+  createdAt: "2025-01-01T00:00:00.000Z",
+  closedAt: null,
+  version: 2,
+};
+
+const debtEntry: CustomerDebtEntry = {
+  id: "debt-1",
+  customerId: "customer 1",
+  kind: "pending_account",
+  direction: "debit",
+  amountCents: 1200,
+  accountId: "account-1",
+  paymentId: null,
+  note: null,
+  createdAt: "2025-01-01T00:00:00.000Z",
+};
+
+const payment: Payment = {
+  id: "payment-1",
+  target: { kind: "personal_account", accountId: "account-1" },
+  methodCode: "FIXTURE_METHOD" as PaymentMethodCode,
+  amountCents: 1200,
+  tenderedCents: 1200,
+  changeCents: 0,
+  recordedAt: "2025-01-01T00:00:00.000Z",
+};
+
+describe("HTTP repositories", () => {
+  it("composes baseUrl and URL-encodes path segments", async () => {
+    const { fetchImpl, calls } = createFetch([jsonResponse(customer)]);
+    const repository = new HttpCustomerRepository({ baseUrl: `${BASE_URL}/`, fetchImpl });
+
+    await repository.findById("customer 1/with slash");
+
+    expect(calls[0]?.url).toBe("http://api.example.test/root/billing/customers/customer%201%2Fwith%20slash");
+    expect(calls[0]?.init.method).toBe("GET");
+  });
+
+  it("passes through JSON null for findById", async () => {
+    const { fetchImpl } = createFetch([jsonResponse(null)]);
+    const repository = new HttpCustomerRepository({ baseUrl: BASE_URL, fetchImpl });
+
+    await expect(repository.findById("missing-customer")).resolves.toBeNull();
+  });
+
+  it("rejects non-2xx responses with status and message", async () => {
+    const { fetchImpl } = createFetch([new Response("Version conflict", { status: 409, statusText: "Conflict" })]);
+    const client = new HttpClient({ baseUrl: BASE_URL, fetchImpl });
+
+    await expect(client.request("/billing/tickets/ticket-1")).rejects.toMatchObject({
+      name: "HttpError",
+      status: 409,
+      message: expect.stringContaining("Version conflict"),
+    } satisfies Partial<HttpError>);
+  });
+
+  it("maps CustomerRepository listAll and save", async () => {
+    const { fetchImpl, calls } = createFetch([jsonResponse([customer]), jsonResponse(customer)]);
+    const repository = new HttpCustomerRepository({ baseUrl: BASE_URL, fetchImpl });
+
+    await repository.listAll();
+    await repository.save(customer);
+
+    expect(calls[0]?.url).toBe(`${BASE_URL}/billing/customers`);
+    expect(calls[0]?.init.method).toBe("GET");
+    expect(calls[1]?.url).toBe(`${BASE_URL}/billing/customers/customer%201%2Fwith%20slash`);
+    expect(calls[1]?.init.method).toBe("PUT");
+    expect(parseJsonBody(calls[1]!)).toEqual(customer);
+  });
+
+  it("maps TicketRepository save body shape", async () => {
+    const { fetchImpl, calls } = createFetch([jsonResponse(ticket)]);
+    const repository = new HttpTicketRepository({ baseUrl: BASE_URL, fetchImpl });
+
+    await repository.save(ticket, [allocation], 3);
+
+    expect(calls[0]?.url).toBe(`${BASE_URL}/billing/tickets/ticket-1`);
+    expect(calls[0]?.init.method).toBe("PUT");
+    expect(parseJsonBody(calls[0]!)).toEqual({ ticket, allocations: [allocation], expectedVersion: 3 });
+  });
+
+  it("maps PersonalAccountRepository listByOrder query and delete expectedVersion query", async () => {
+    const { fetchImpl, calls } = createFetch([jsonResponse([account]), new Response(null, { status: 204 })]);
+    const repository = new HttpPersonalAccountRepository({ baseUrl: BASE_URL, fetchImpl });
+
+    await repository.listByOrder("order 1/with slash");
+    await repository.delete("account 1/with slash", 7);
+
+    expect(calls[0]?.url).toBe(`${BASE_URL}/billing/personal-accounts?orderId=order+1%2Fwith+slash`);
+    expect(calls[0]?.init.method).toBe("GET");
+    expect(calls[1]?.url).toBe(`${BASE_URL}/billing/personal-accounts/account%201%2Fwith%20slash?expectedVersion=7`);
+    expect(calls[1]?.init.method).toBe("DELETE");
+  });
+
+  it("maps CustomerDebtRepository record and listByCustomer", async () => {
+    const { fetchImpl, calls } = createFetch([jsonResponse(debtEntry), jsonResponse([debtEntry])]);
+    const repository = new HttpCustomerDebtRepository({ baseUrl: BASE_URL, fetchImpl });
+
+    await repository.record(debtEntry);
+    await repository.listByCustomer("customer 1");
+
+    expect(calls[0]?.url).toBe(`${BASE_URL}/billing/customer-debts`);
+    expect(calls[0]?.init.method).toBe("POST");
+    expect(parseJsonBody(calls[0]!)).toEqual(debtEntry);
+    expect(calls[1]?.url).toBe(`${BASE_URL}/billing/customers/customer%201/debts`);
+    expect(calls[1]?.init.method).toBe("GET");
+  });
+
+  it("maps PaymentRepository listByTarget for all target kinds and record", async () => {
+    const { fetchImpl, calls } = createFetch([
+      jsonResponse([]),
+      jsonResponse([]),
+      jsonResponse([]),
+      jsonResponse(payment),
+    ]);
+    const repository = new HttpPaymentRepository({ baseUrl: BASE_URL, fetchImpl });
+
+    await repository.listByTarget({ kind: "personal_account", accountId: "account 1" });
+    await repository.listByTarget({ kind: "customer_debt", customerId: "customer 1" });
+    await repository.listByTarget({ kind: "ticket", ticketId: "ticket 1" });
+    await repository.record(payment);
+
+    expect(calls[0]?.url).toBe(`${BASE_URL}/payments?targetKind=personal_account&accountId=account+1`);
+    expect(calls[1]?.url).toBe(`${BASE_URL}/payments?targetKind=customer_debt&customerId=customer+1`);
+    expect(calls[2]?.url).toBe(`${BASE_URL}/payments?targetKind=ticket&ticketId=ticket+1`);
+    expect(calls[3]?.url).toBe(`${BASE_URL}/payments`);
+    expect(calls[3]?.init.method).toBe("POST");
+    expect(parseJsonBody(calls[3]!)).toEqual(payment);
+  });
+});
