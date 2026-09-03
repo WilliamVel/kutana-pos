@@ -199,7 +199,7 @@ export function InventoryList({
 
       <nav className={styles.pagination} aria-label="Páginas de productos">
         <Button variant="secondary" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
-          Página anterior
+          Anterior
         </Button>
         <span aria-live="polite">
           Página {page} de {pageCount}
@@ -209,7 +209,7 @@ export function InventoryList({
           onClick={() => onPageChange(page + 1)}
           disabled={page >= pageCount}
         >
-          Página siguiente
+          Siguiente
         </Button>
       </nav>
     </section>
