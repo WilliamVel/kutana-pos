@@ -1,13 +1,13 @@
 import { Module } from "@nestjs/common";
 import { AppController } from "./app.controller.js";
 import { AppService } from "./app.service.js";
-import { PostgresPool } from "./infrastructure/postgres/postgres-pool.js";
+import { BillingCoreModule } from "./billing/billing-core.module.js";
+import { PostgresModule } from "./infrastructure/postgres/postgres.module.js";
 
 /** Root application module; domain modules are added in later milestones. */
 @Module({
-  imports: [],
+  imports: [PostgresModule, BillingCoreModule],
   controllers: [AppController],
-  providers: [AppService, PostgresPool],
-  exports: [PostgresPool],
+  providers: [AppService],
 })
 export class AppModule {}
