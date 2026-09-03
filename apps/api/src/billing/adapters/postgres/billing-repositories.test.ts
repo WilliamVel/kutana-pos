@@ -2,33 +2,59 @@ import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { createAllocation } from "@kutana/shared/billing/model/allocation.js";
-import { createCustomer } from "@kutana/shared/billing/model/personal-account.js";
+import {
+  createAccountLineAllocation,
+  createCustomer,
+  createPersonalAccount,
+} from "@kutana/shared/billing/model/personal-account.js";
 import { createTicket } from "@kutana/shared/billing/model/ticket.js";
 import { runCustomerRepositoryContract } from "@kutana/shared/billing/ports/__contract__/customer-repository.contract.js";
+import { runPersonalAccountRepositoryContract } from "@kutana/shared/billing/ports/__contract__/personal-account-repository.contract.js";
 import { runTicketRepositoryContract } from "@kutana/shared/billing/ports/__contract__/ticket-repository.contract.js";
 import { postgresConfig } from "../../../infrastructure/postgres/postgres-config.js";
 import { migrate } from "../../../persistence/migration-runner.js";
 import { PostgresCustomerRepository } from "./customer-repository.js";
+import { PostgresPersonalAccountRepository } from "./personal-account-repository.js";
 import { PostgresTicketRepository } from "./ticket-repository.js";
 
 const databaseAvailable = Boolean(process.env.DATABASE_URL);
 const migrationDirectory = join(process.cwd(), "migrations");
 const productId = "00000000-0000-0000-0000-000000000001";
 
+const orderIds = [
+  "order-1",
+  "order-2",
+  "order-3",
+  "order-4",
+  "order-other",
+  "order-5",
+  "order-delete",
+  "order-delete-conflict",
+];
+
 describe.skipIf(!databaseAvailable)("PostgreSQL billing adapters", () => {
   const pool = new Pool(postgresConfig());
   const customers = new PostgresCustomerRepository(pool);
+  const personalAccounts = new PostgresPersonalAccountRepository(pool);
   const tickets = new PostgresTicketRepository(pool);
 
   beforeAll(async () => migrate(pool, migrationDirectory));
-  beforeEach(async () => {
-    await pool.query("TRUNCATE payments, allocations, tickets, line_items, orders, customers, restaurant_tables, products, categories CASCADE");
+  afterAll(async () => pool.end());
+
+  async function resetBillingFixtures(seedCustomer = false): Promise<void> {
+    await pool.query(
+      "TRUNCATE payments, account_line_allocations, personal_accounts, allocations, tickets, line_items, orders, customers, restaurant_tables, products, categories CASCADE",
+    );
     await pool.query(
       `INSERT INTO restaurant_tables (id, label, status, version) VALUES
         ('table-1', 'Table 1', 'free', 1),
         ('table-2', 'Table 2', 'free', 1),
         ('table-3', 'Table 3', 'free', 1),
-        ('table-4', 'Table 4', 'free', 1)`,
+        ('table-4', 'Table 4', 'free', 1),
+        ('table-5', 'Table 5', 'free', 1),
+        ('table-6', 'Table 6', 'free', 1),
+        ('table-7', 'Table 7', 'free', 1),
+        ('table-8', 'Table 8', 'free', 1)`,
     );
     await pool.query("INSERT INTO categories (id, name, sort_order) VALUES ('billing-category', 'Billing', 1)");
     await pool.query(
@@ -37,49 +63,90 @@ describe.skipIf(!databaseAvailable)("PostgreSQL billing adapters", () => {
       [productId],
     );
     await pool.query(
-      `INSERT INTO orders (id, table_id, status, opened_at, version) VALUES
-        ('order-1', 'table-1', 'active', '2025-01-01T00:00:00.000Z', 1),
-        ('order-2', 'table-2', 'active', '2025-01-01T00:00:00.000Z', 1),
-        ('order-3', 'table-3', 'active', '2025-01-01T00:00:00.000Z', 1),
-        ('order-4', 'table-4', 'active', '2025-01-01T00:00:00.000Z', 1)`,
+      `INSERT INTO orders (id, table_id, status, opened_at, version)
+       SELECT order_id, 'table-' || ordinal::text, 'active', '2025-01-01T00:00:00.000Z', 1
+       FROM unnest($1::text[]) WITH ORDINALITY AS fixture(order_id, ordinal)`,
+      [orderIds],
     );
     await pool.query(
       `INSERT INTO line_items (id, order_id, product_id, name_snapshot, unit_price_cents, quantity, pour_size_ml, tax_rate_bp, tax_cents, total_cents, is_adjustment, created_at)
-       VALUES ('line-1', 'order-1', $1, 'Coffee', 300, 1, NULL, 1000, 30, 330, false, '2025-01-01T00:01:00.000Z')`,
+       VALUES
+        ('line-1', 'order-1', $1, 'Coffee', 300, 2, NULL, 1000, 60, 660, false, '2025-01-01T00:01:00.000Z'),
+        ('line-delete', 'order-delete', $1, 'Coffee', 300, 1, NULL, 1000, 30, 330, false, '2025-01-01T00:02:00.000Z')`,
       [productId],
     );
-  });
-  afterAll(async () => pool.end());
+    if (seedCustomer) {
+      await customers.save(
+        createCustomer({ id: "customer-1", displayName: "Ana", now: "2025-01-01T00:00:00.000Z" }),
+      );
+    }
+  }
 
-  runTicketRepositoryContract(() => tickets);
-  runCustomerRepositoryContract(() => customers);
+  describe("tickets", () => {
+    beforeEach(async () => resetBillingFixtures());
 
-  it("round-trips non-UUID billing identifiers", async () => {
-    const ticket = createTicket({ id: "ticket-string-id", orderId: "order-1", label: "String ticket" });
-    const allocation = createAllocation({
-      id: "alloc-string-id",
-      lineItemId: "line-1",
-      ticketId: ticket.id,
+    runTicketRepositoryContract(() => tickets);
+
+    it("round-trips non-UUID billing identifiers", async () => {
+      const ticket = createTicket({ id: "ticket-string-id", orderId: "order-1", label: "String ticket" });
+      const allocation = createAllocation({
+        id: "alloc-string-id",
+        lineItemId: "line-1",
+        ticketId: ticket.id,
+      });
+
+      const saved = await tickets.save(ticket, [allocation], ticket.version);
+
+      expect(saved.id).toBe("ticket-string-id");
+      expect(await tickets.findById("ticket-string-id")).toEqual(saved);
+      expect(await tickets.listAllocationsByOrder("order-1")).toEqual([allocation]);
     });
-
-    const saved = await tickets.save(ticket, [allocation], ticket.version);
-
-    expect(saved.id).toBe("ticket-string-id");
-    expect(await tickets.findById("ticket-string-id")).toEqual(saved);
-    expect(await tickets.listAllocationsByOrder("order-1")).toEqual([allocation]);
   });
 
-  it("round-trips non-UUID customer identifiers", async () => {
-    const customer = createCustomer({
-      id: "customer-string-id",
-      displayName: "String Customer",
-      now: "2025-01-02T00:00:00.000Z",
+  describe("customers", () => {
+    beforeEach(async () => resetBillingFixtures());
+
+    runCustomerRepositoryContract(() => customers);
+
+    it("round-trips non-UUID customer identifiers", async () => {
+      const customer = createCustomer({
+        id: "customer-string-id",
+        displayName: "String Customer",
+        now: "2025-01-02T00:00:00.000Z",
+      });
+
+      const saved = await customers.save(customer);
+
+      expect(saved.id).toBe("customer-string-id");
+      expect(await customers.findById("customer-string-id")).toEqual(saved);
     });
+  });
 
-    const saved = await customers.save(customer);
+  describe("personal accounts", () => {
+    beforeEach(async () => resetBillingFixtures(true));
 
-    expect(saved.id).toBe("customer-string-id");
-    expect(await customers.findById("customer-string-id")).toEqual(saved);
+    runPersonalAccountRepositoryContract(() => personalAccounts);
+
+    it("round-trips non-UUID personal account and allocation identifiers", async () => {
+      const account = createPersonalAccount({
+        id: "personal-account-string-id",
+        orderId: "order-1",
+        freeName: "String account",
+        createdAt: "2025-01-02T00:00:00.000Z",
+      });
+      const allocation = createAccountLineAllocation({
+        id: "account-allocation-string-id",
+        accountId: account.id,
+        lineItemId: "line-1",
+        quantity: 1,
+      });
+
+      const saved = await personalAccounts.save(account, [allocation], account.version);
+
+      expect(saved.id).toBe("personal-account-string-id");
+      expect(await personalAccounts.findById("personal-account-string-id")).toEqual(saved);
+      expect(await personalAccounts.listAllocationsByOrder("order-1")).toEqual([allocation]);
+    });
   });
 });
 
