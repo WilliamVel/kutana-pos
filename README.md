@@ -6,77 +6,50 @@ the design doc (`sdd/inventory-system/design`) for the full architecture.
 
 ## Workspaces
 
-| Workspace         | What                                                                               | Stack        |
-| ----------------- | ---------------------------------------------------------------------------------- | ------------ |
-| `packages/shared` | Pure domain (entities, value objects, services, ports). Zero runtime dependencies. | TypeScript   |
-| `apps/api`        | Backend adapter shell.                                                             | NestJS       |
-| `apps/web`        | Frontend adapter shell (PWA).                                                      | React + Vite |
+| Workspace | What | Stack |
+|---|---|---|
+| `packages/shared` | Pure domain (framework- and I/O-free). | TypeScript |
+| `apps/api` | Backend adapter shell. | NestJS + PostgreSQL |
+| `apps/web` | Frontend adapter shell (PWA). | React + Vite |
 
 ## Prerequisites
 
 - Node.js >= 20
 - pnpm 10.x (`corepack enable` recommended)
-
-## Install
-
-```bash
-pnpm install
-```
+- Docker (for local PostgreSQL)
 
 ## Run
 
 ```bash
-# Web app dev server
-pnpm --filter @kutana/web dev
-
-# API dev server (boots on http://localhost:3000, health check at /health)
+pnpm install
+docker compose up -d postgres
+pnpm --filter @kutana/api migration:apply
 pnpm --filter @kutana/api dev
 ```
 
-## Test
+Copy `.env.example` to `.env` for local configuration. `DATABASE_URL` takes
+precedence; otherwise the API uses the safe local defaults shown in Compose.
+Never commit `.env` or production credentials.
+
+## Migrations
+
+SQL migrations live in `apps/api/migrations` and use the deterministic
+`NNN_description.sql` convention (for example `001_initial_schema.sql`). They
+run in numeric order inside one transaction. Applied versions and SHA-256
+checksums are tracked in `schema_migrations`; changing an applied file fails
+rather than silently masking drift.
 
 ```bash
-# Whole monorepo (shared + api + web projects)
-pnpm test
-
-# One workspace only
-pnpm --filter @kutana/shared test
-pnpm --filter @kutana/api test
-pnpm --filter @kutana/web test
+pnpm --filter @kutana/api migration:apply
+pnpm --filter @kutana/api migration:rollback # forward-only v1 currently refuses rollback
 ```
 
-## Typecheck
+## Test and typecheck
 
 ```bash
+pnpm --filter @kutana/api test
 pnpm typecheck
 ```
 
-Uses TypeScript project references (`tsconfig.json` at the root) so each
-workspace is checked incrementally against `packages/shared`.
-
-## Lint / Format
-
-```bash
-pnpm lint
-pnpm format
-```
-
-The root ESLint flat config (`eslint.config.js`) enforces the hexagonal
-boundary: `packages/shared` cannot import `@nestjs/*`, `react`, `pg`, or
-Node's `fs` module. This is mechanically enforced by pnpm's strict,
-non-hoisted `node_modules` (an illegal cross-boundary import fails at
-resolve time) plus the ESLint `no-restricted-imports` rule as a
-defense-in-depth check exercised in
-`packages/shared/src/__tests__/architecture-boundary.test.ts`.
-
-## Architecture
-
-- **Hexagonal**: `packages/shared` holds domain and port interfaces; `apps/*`
-  are adapter shells depending inward on shared. Shared depends on nothing.
-- **Payable model**: `PersonalAccount` is the current payable unit for account
-  assignment and pending debts. Legacy `Ticket`/`Allocation` code is retained
-  only as milestone-1 compatibility for historical whole-table payment tests.
-- **Frontend-first delivery**: milestone 1 runs the real domain against
-  in-memory mock adapters in `apps/web`; milestone 2 swaps them for
-  HTTP/Postgres without touching component code (see `apps/web/src/composition`,
-  added starting PR5).
+The root ESLint configuration enforces the shared package boundary: shared
+cannot import Nest, React, `pg`, or Node I/O modules.
