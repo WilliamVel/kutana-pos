@@ -5,11 +5,15 @@ import type { Customer, PersonalAccount } from "@kutana/shared/billing/model/per
 import type { Ticket } from "@kutana/shared/billing/model/ticket.js";
 import type { PaymentMethodCode } from "@kutana/shared/payments/model/payment-method-registry.js";
 import type { Payment } from "@kutana/shared/payments/model/payment.js";
+import type { Order } from "@kutana/shared/ordering/model/order.js";
+import type { Table } from "@kutana/shared/ordering/model/table.js";
 import { HttpCustomerDebtRepository } from "./customer-debt-repository.js";
 import { HttpCustomerRepository } from "./customer-repository.js";
 import { HttpClient, HttpError } from "./http-client.js";
+import { HttpOrderRepository } from "./order-repository.js";
 import { HttpPaymentRepository } from "./payment-repository.js";
 import { HttpPersonalAccountRepository } from "./personal-account-repository.js";
+import { HttpTableRepository } from "./table-repository.js";
 import { HttpTicketRepository } from "./ticket-repository.js";
 
 const BASE_URL = "http://api.example.test/root";
@@ -101,6 +105,25 @@ const payment: Payment = {
   tenderedCents: 1200,
   changeCents: 0,
   recordedAt: "2025-01-01T00:00:00.000Z",
+};
+
+const table: Table = {
+  id: "table 1/with slash",
+  label: "Mesa 1",
+  status: "active",
+  currentOrderId: "order 1/with slash",
+  version: 2,
+};
+
+const order: Order = {
+  id: "order 1/with slash",
+  tableId: "table 1/with slash",
+  status: "active",
+  lineItems: [],
+  openedAt: "2025-01-01T00:00:00.000Z",
+  closedAt: null,
+  customerId: null,
+  version: 3,
 };
 
 describe("HTTP repositories", () => {
@@ -204,5 +227,39 @@ describe("HTTP repositories", () => {
     expect(calls[3]?.url).toBe(`${BASE_URL}/payments`);
     expect(calls[3]?.init.method).toBe("POST");
     expect(parseJsonBody(calls[3]!)).toEqual(payment);
+  });
+
+  it("maps OrderRepository findByTable, listAll, and save", async () => {
+    const { fetchImpl, calls } = createFetch([jsonResponse(order), jsonResponse([order]), jsonResponse(order)]);
+    const repository = new HttpOrderRepository({ baseUrl: BASE_URL, fetchImpl });
+
+    await repository.findByTable("table 1/with slash");
+    await repository.listAll();
+    await repository.save(order, 3);
+
+    expect(calls[0]?.url).toBe(`${BASE_URL}/ordering/orders?tableId=table+1%2Fwith+slash`);
+    expect(calls[0]?.init.method).toBe("GET");
+    expect(calls[1]?.url).toBe(`${BASE_URL}/ordering/orders`);
+    expect(calls[1]?.init.method).toBe("GET");
+    expect(calls[2]?.url).toBe(`${BASE_URL}/ordering/orders/order%201%2Fwith%20slash`);
+    expect(calls[2]?.init.method).toBe("PUT");
+    expect(parseJsonBody(calls[2]!)).toEqual({ order, expectedVersion: 3 });
+  });
+
+  it("maps TableRepository listAll, findById, and save", async () => {
+    const { fetchImpl, calls } = createFetch([jsonResponse([table]), jsonResponse(table), jsonResponse(table)]);
+    const repository = new HttpTableRepository({ baseUrl: BASE_URL, fetchImpl });
+
+    await repository.listAll();
+    await repository.findById("table 1/with slash");
+    await repository.save(table, 2);
+
+    expect(calls[0]?.url).toBe(`${BASE_URL}/ordering/tables`);
+    expect(calls[0]?.init.method).toBe("GET");
+    expect(calls[1]?.url).toBe(`${BASE_URL}/ordering/tables/table%201%2Fwith%20slash`);
+    expect(calls[1]?.init.method).toBe("GET");
+    expect(calls[2]?.url).toBe(`${BASE_URL}/ordering/tables/table%201%2Fwith%20slash`);
+    expect(calls[2]?.init.method).toBe("PUT");
+    expect(parseJsonBody(calls[2]!)).toEqual({ table, expectedVersion: 2 });
   });
 });
