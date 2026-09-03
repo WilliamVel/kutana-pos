@@ -104,7 +104,7 @@ export function PendingDebtsContainer(): JSX.Element {
   const linkToCustomer = (accountId: string): void => {
     void runMutation(async () => {
       const customerId = linkCustomerDrafts[accountId];
-      if (!customerId) throw new Error("Seleccioná un cliente antes de vincular la cuenta");
+      if (!customerId) throw new Error("Selecciona un cliente antes de vincular la cuenta");
       const context = await getAccountContext(accountId, accountsPort, ordersPort, paymentsPort);
       const linked = { ...context.account, owner: { kind: "customer" as const, customerId } };
       await accountsPort.save(linked, context.allocations, context.account.version);

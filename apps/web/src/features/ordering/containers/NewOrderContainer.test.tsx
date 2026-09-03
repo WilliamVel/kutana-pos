@@ -45,4 +45,28 @@ describe("NewOrderContainer", () => {
     // The table is no longer offered once occupied.
     await waitFor(() => expect(screen.queryByText("Table 4")).not.toBeInTheDocument());
   });
+
+  it("creates a new table on demand before opening its order", async () => {
+    const ports = buildMockPorts();
+    const onCreated = vi.fn();
+    render(
+      <PortsProvider value={ports}>
+        <NewOrderContainer onCreated={onCreated} />
+      </PortsProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Nueva orden" }));
+    fireEvent.change(screen.getByLabelText("Nombre de mesa"), { target: { value: "Barra" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear mesa" }));
+
+    await waitFor(() => expect(onCreated).toHaveBeenCalled());
+    const createdTableId = onCreated.mock.calls[0]?.[0] as string;
+    const createdTable = await ports.tables.findById(createdTableId);
+    const order = await ports.orders.findByTable(createdTableId);
+
+    expect(createdTable?.label).toBe("Barra");
+    expect(createdTable?.status).toBe("active");
+    expect(createdTable?.currentOrderId).toBe(order?.id);
+    expect(order?.lineItems).toHaveLength(0);
+  });
 });

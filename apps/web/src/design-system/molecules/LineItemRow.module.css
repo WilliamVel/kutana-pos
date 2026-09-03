@@ -24,7 +24,17 @@
 }
 
 .quantity {
-  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: var(--accent-emphasis);
+  color: var(--surface-raised);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .pourSize {

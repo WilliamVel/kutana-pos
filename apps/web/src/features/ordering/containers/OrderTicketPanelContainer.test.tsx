@@ -19,6 +19,32 @@ describe("OrderTicketPanelContainer", () => {
     expect(screen.getByText("Loaded Nachos")).toBeInTheDocument();
   });
 
+  it("groups repeated products into one visible counter", async () => {
+    const ports = buildMockPorts();
+    const currentOrder = await ports.orders.findByTable("table-1");
+    if (!currentOrder) throw new Error("expected seeded order");
+    const updatedOrder = addLineItem(currentOrder, {
+      productId: "product-pilsener-500",
+      nameSnapshot: "KUTANA Pilsener 500ml",
+      unitPriceCents: 350,
+      quantity: 1,
+      taxRateBp: 1200,
+      pourSizeMl: 500,
+    });
+    await ports.orders.save(updatedOrder, currentOrder.version);
+
+    render(
+      <PortsProvider value={ports}>
+        <OrderTicketPanelContainer tableId="table-1" />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument());
+
+    expect(screen.getAllByText("KUTANA Pilsener 500ml")).toHaveLength(1);
+    expect(screen.getByText("x3")).toBeInTheDocument();
+  });
+
   it("updates live when OrderEvents publishes a change from another device (waiter -> register realtime)", async () => {
     const ports = buildMockPorts();
     render(

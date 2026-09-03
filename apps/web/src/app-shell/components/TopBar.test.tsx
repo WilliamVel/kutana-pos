@@ -17,7 +17,7 @@ describe("TopBar", () => {
     ]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
-    expect(screen.getByRole("button", { name: "Cuenta" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cuenta Operador" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Abrir menú de navegación" })).toBeInTheDocument();
   });
 
@@ -41,7 +41,11 @@ describe("TopBar", () => {
     const onLogout = vi.fn();
     render(<TopBar currentScreen="inventory" onNavigate={vi.fn()} onLogout={onLogout} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Cuenta" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cuenta Operador" }));
+
+    expect(screen.getByText("Sesión activa")).toBeInTheDocument();
+    expect(screen.getByText("Ingreso de operador habilitado")).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
 
     expect(onLogout).toHaveBeenCalledOnce();

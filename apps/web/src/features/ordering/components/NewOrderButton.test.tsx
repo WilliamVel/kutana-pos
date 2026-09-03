@@ -28,8 +28,19 @@ describe("NewOrderButton", () => {
   });
 
   it("shows an empty note when no tables are free", () => {
-    render(<NewOrderButton freeTables={[]} onSelectTable={vi.fn()} />);
+    render(<NewOrderButton freeTables={[]} onSelectTable={vi.fn()} onCreateTable={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Nueva orden" }));
     expect(screen.getByText("No hay mesas libres ahora.")).toBeInTheDocument();
+  });
+
+  it("creates a table from a custom label", () => {
+    const onCreateTable = vi.fn();
+    render(<NewOrderButton freeTables={FREE} onSelectTable={vi.fn()} onCreateTable={onCreateTable} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Nueva orden" }));
+    fireEvent.change(screen.getByLabelText("Nombre de mesa"), { target: { value: "Barra" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear mesa" }));
+
+    expect(onCreateTable).toHaveBeenCalledWith("Barra");
   });
 });

@@ -158,7 +158,7 @@ export function App(): JSX.Element {
             </>
           }
           center={center}
-          emptyCenter="Seleccioná un pedido para ver sus cuentas a cobrar."
+          emptyCenter="Selecciona un pedido para ver sus cuentas a cobrar."
           railHidden={centerView !== "account"}
           rail={
             selectedTableId && centerView === "account" ? (
@@ -166,8 +166,8 @@ export function App(): JSX.Element {
             ) : (
               <p>
                 {selectedTableId
-                  ? "Terminá o salí del cobro para agregar más ítems."
-                  : "Seleccioná un pedido para agregar ítems."}
+                  ? "Termina o sal del cobro para agregar más ítems."
+                  : "Selecciona un pedido para agregar ítems."}
               </p>
             )
           }

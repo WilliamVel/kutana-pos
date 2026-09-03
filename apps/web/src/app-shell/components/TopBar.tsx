@@ -63,12 +63,31 @@ export function TopBar({ currentScreen, onNavigate, onLogout }: TopBarProps): JS
             type="button"
             className={styles.accountButton}
             aria-expanded={isAccountOpen}
+            aria-controls="account-actions"
             onClick={() => setIsAccountOpen((open) => !open)}
           >
-            Cuenta
+            <span className={styles.accountAvatar} aria-hidden="true">
+              OP
+            </span>
+            <span className={styles.accountCopy}>
+              <span className={styles.accountEyebrow}>Cuenta</span>
+              <span className={styles.accountName}>Operador</span>
+            </span>
+            <span className={styles.accountChevron} aria-hidden="true">
+              ▾
+            </span>
           </button>
           {isAccountOpen ? (
-            <div className={styles.accountActions}>
+            <div id="account-actions" className={styles.accountActions}>
+              <div className={styles.accountSummary}>
+                <span className={styles.accountAvatarLarge} aria-hidden="true">
+                  OP
+                </span>
+                <div>
+                  <p className={styles.accountStatus}>Sesión activa</p>
+                  <p className={styles.accountHint}>Ingreso de operador habilitado</p>
+                </div>
+              </div>
               <button type="button" className={styles.logoutButton} onClick={logout}>
                 Cerrar sesión
               </button>

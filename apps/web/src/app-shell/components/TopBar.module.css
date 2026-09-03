@@ -44,10 +44,10 @@
   align-items: center;
   gap: var(--space-1);
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .tab,
-.accountButton,
 .logoutButton {
   border: none;
   background: transparent;
@@ -60,7 +60,6 @@
 }
 
 .tab:hover,
-.accountButton:hover,
 .logoutButton:hover {
   background: var(--surface-sunken);
   color: var(--text-primary);
@@ -74,29 +73,120 @@
 
 .accountMenu {
   position: relative;
+  margin-left: auto;
 }
 
 .accountButton {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  background: linear-gradient(135deg, var(--surface-raised), var(--surface-sunken));
+  color: var(--text-primary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+
+.accountButton:hover,
+.accountButton[aria-expanded="true"] {
+  border-color: var(--accent-emphasis);
+  box-shadow: var(--shadow-md);
+}
+
+.accountAvatar,
+.accountAvatarLarge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--accent-emphasis);
+  color: var(--surface-raised);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.accountAvatar {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.75rem;
+}
+
+.accountAvatarLarge {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+}
+
+.accountCopy {
+  display: grid;
+  gap: 0.1rem;
+  text-align: left;
+}
+
+.accountEyebrow {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.accountName {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.accountChevron {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
 }
 
 .accountActions {
   position: absolute;
-  top: calc(100% + var(--space-1));
+  top: calc(100% + var(--space-2));
   right: 0;
-  min-width: 8rem;
-  padding: var(--space-1);
+  min-width: 17rem;
+  padding: var(--space-2);
   background: var(--surface-raised);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   z-index: 10;
 }
 
+.accountSummary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.accountStatus,
+.accountHint {
+  margin: 0;
+}
+
+.accountStatus {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.accountHint {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
 .logoutButton {
   width: 100%;
+  margin-top: var(--space-2);
   text-align: left;
 }
 

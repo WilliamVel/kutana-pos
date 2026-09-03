@@ -60,7 +60,7 @@ export function AddItemPanel({
 
   return (
     <section className={styles.panel} aria-label="Agregar productos a la orden">
-      <h2>Agregar productos rápido</h2>
+      <h2>Agregar productos</h2>
 
       <input
         type="search"
