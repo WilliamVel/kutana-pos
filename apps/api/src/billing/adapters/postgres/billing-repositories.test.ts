@@ -2,10 +2,13 @@ import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { createAllocation } from "@kutana/shared/billing/model/allocation.js";
+import { createCustomer } from "@kutana/shared/billing/model/personal-account.js";
 import { createTicket } from "@kutana/shared/billing/model/ticket.js";
+import { runCustomerRepositoryContract } from "@kutana/shared/billing/ports/__contract__/customer-repository.contract.js";
 import { runTicketRepositoryContract } from "@kutana/shared/billing/ports/__contract__/ticket-repository.contract.js";
 import { postgresConfig } from "../../../infrastructure/postgres/postgres-config.js";
 import { migrate } from "../../../persistence/migration-runner.js";
+import { PostgresCustomerRepository } from "./customer-repository.js";
 import { PostgresTicketRepository } from "./ticket-repository.js";
 
 const databaseAvailable = Boolean(process.env.DATABASE_URL);
@@ -14,11 +17,12 @@ const productId = "00000000-0000-0000-0000-000000000001";
 
 describe.skipIf(!databaseAvailable)("PostgreSQL billing adapters", () => {
   const pool = new Pool(postgresConfig());
+  const customers = new PostgresCustomerRepository(pool);
   const tickets = new PostgresTicketRepository(pool);
 
   beforeAll(async () => migrate(pool, migrationDirectory));
   beforeEach(async () => {
-    await pool.query("TRUNCATE payments, allocations, tickets, line_items, orders, restaurant_tables, products, categories CASCADE");
+    await pool.query("TRUNCATE payments, allocations, tickets, line_items, orders, customers, restaurant_tables, products, categories CASCADE");
     await pool.query(
       `INSERT INTO restaurant_tables (id, label, status, version) VALUES
         ('table-1', 'Table 1', 'free', 1),
@@ -48,6 +52,7 @@ describe.skipIf(!databaseAvailable)("PostgreSQL billing adapters", () => {
   afterAll(async () => pool.end());
 
   runTicketRepositoryContract(() => tickets);
+  runCustomerRepositoryContract(() => customers);
 
   it("round-trips non-UUID billing identifiers", async () => {
     const ticket = createTicket({ id: "ticket-string-id", orderId: "order-1", label: "String ticket" });
@@ -62,6 +67,19 @@ describe.skipIf(!databaseAvailable)("PostgreSQL billing adapters", () => {
     expect(saved.id).toBe("ticket-string-id");
     expect(await tickets.findById("ticket-string-id")).toEqual(saved);
     expect(await tickets.listAllocationsByOrder("order-1")).toEqual([allocation]);
+  });
+
+  it("round-trips non-UUID customer identifiers", async () => {
+    const customer = createCustomer({
+      id: "customer-string-id",
+      displayName: "String Customer",
+      now: "2025-01-02T00:00:00.000Z",
+    });
+
+    const saved = await customers.save(customer);
+
+    expect(saved.id).toBe("customer-string-id");
+    expect(await customers.findById("customer-string-id")).toEqual(saved);
   });
 });
 

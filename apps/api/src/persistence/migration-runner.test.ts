@@ -9,6 +9,7 @@ describe("migration discovery", () => {
       "003_catalog_inventory_reference_ids_text.sql",
       "004_ordering_reference_ids_text.sql",
       "005_billing_reference_ids_text.sql",
+      "006_customer_reference_ids_text.sql",
     ]);
   });
 });
