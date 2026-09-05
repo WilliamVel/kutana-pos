@@ -4,17 +4,24 @@
   gap: var(--space-3);
 }
 
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+}
+
 .picker {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   margin: 0;
-  padding: var(--space-3);
+  padding: 0;
   list-style: none;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background-color: var(--surface-raised);
-  box-shadow: var(--shadow-sm);
 }
 
 .tableButton {
@@ -29,6 +36,41 @@
 
 .tableButton:hover {
   border-color: var(--border-strong);
+}
+
+.createForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.createLabel {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.createRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.createInput {
+  min-width: 0;
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.createInput:focus {
+  outline: 2px solid var(--accent-emphasis);
+  outline-offset: 2px;
 }
 
 .empty {

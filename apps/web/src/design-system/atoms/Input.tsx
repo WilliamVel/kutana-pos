@@ -7,6 +7,9 @@ export interface InputProps {
   readonly onChange: (value: string) => void;
   readonly error?: string;
   readonly type?: "text" | "number" | "password";
+  readonly name?: string;
+  readonly autoComplete?: string;
+  readonly inputMode?: "decimal" | "numeric" | "search" | "text";
   /** Renders a `<textarea>` instead of an `<input>` for longer free-text content (e.g. a description). */
   readonly multiline?: boolean;
   readonly placeholder?: string;
@@ -19,6 +22,9 @@ export function Input({
   onChange,
   error,
   type = "text",
+  name,
+  autoComplete,
+  inputMode,
   multiline = false,
   placeholder,
 }: InputProps): JSX.Element {
@@ -33,6 +39,8 @@ export function Input({
       {multiline ? (
         <textarea
           id={inputId}
+          name={name}
+          autoComplete={autoComplete}
           className={styles.input}
           value={value}
           placeholder={placeholder}
@@ -43,6 +51,9 @@ export function Input({
       ) : (
         <input
           id={inputId}
+          name={name}
+          autoComplete={autoComplete}
+          inputMode={inputMode}
           className={styles.input}
           type={type}
           value={value}

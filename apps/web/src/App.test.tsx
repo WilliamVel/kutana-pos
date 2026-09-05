@@ -12,14 +12,14 @@ describe("App", () => {
       </PortsProvider>,
     );
 
-    expect(screen.getByRole("heading", { name: "Operator login" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ingreso de operador" })).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Operator"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("Operador"), { target: { value: "Mina" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
-    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
 
     expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute("src", "/LOGOkutana.svg");
-    expect(screen.getByRole("button", { name: "Inventory" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Inventario" })).toBeInTheDocument();
   });
 
   it("opens customer management from the top bar", () => {
@@ -29,12 +29,28 @@ describe("App", () => {
       </PortsProvider>,
     );
 
-    fireEvent.change(screen.getByLabelText("Operator"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("Operador"), { target: { value: "Mina" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
-    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    fireEvent.click(screen.getByRole("button", { name: "Customers" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clientes" }));
 
-    expect(screen.getByRole("heading", { name: "Customers" })).toBeInTheDocument();
-    expect(screen.getByRole("form", { name: "Customer form" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Clientes" })).toBeInTheDocument();
+    expect(screen.getByRole("form", { name: "Formulario de cliente" })).toBeInTheDocument();
+  });
+
+  it("logs out from the account menu", () => {
+    render(
+      <PortsProvider value={buildMockPorts()}>
+        <App />
+      </PortsProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Operador"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
+    fireEvent.click(screen.getByRole("button", { name: /Cuenta\s+Operador/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
+
+    expect(screen.getByRole("heading", { name: "Ingreso de operador" })).toBeInTheDocument();
   });
 });

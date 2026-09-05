@@ -1,4 +1,7 @@
-import type { AccountLineAllocation, PersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
+import type {
+  AccountLineAllocation,
+  PersonalAccount,
+} from "@kutana/shared/billing/model/personal-account.js";
 import type { PersonalAccountRepository } from "@kutana/shared/billing/ports/personal-account-repository.js";
 import { ConflictError } from "@kutana/shared/errors/conflict-error.js";
 import { ConflictTrigger } from "./conflict-trigger.js";
@@ -14,7 +17,9 @@ export class MockPersonalAccountRepository implements PersonalAccountRepository 
   }
 
   async listByOrder(orderId: string): Promise<PersonalAccount[]> {
-    return simulateLatency(() => [...this.accountsById.values()].filter((account) => account.orderId === orderId));
+    return simulateLatency(() =>
+      [...this.accountsById.values()].filter((account) => account.orderId === orderId),
+    );
   }
 
   async listPendingFreeName(): Promise<PersonalAccount[]> {
@@ -28,9 +33,13 @@ export class MockPersonalAccountRepository implements PersonalAccountRepository 
   async listAllocationsByOrder(orderId: string): Promise<AccountLineAllocation[]> {
     return simulateLatency(() => {
       const accountIds = new Set(
-        [...this.accountsById.values()].filter((account) => account.orderId === orderId).map((account) => account.id),
+        [...this.accountsById.values()]
+          .filter((account) => account.orderId === orderId)
+          .map((account) => account.id),
       );
-      return [...this.allocationsById.values()].filter((allocation) => accountIds.has(allocation.accountId));
+      return [...this.allocationsById.values()].filter((allocation) =>
+        accountIds.has(allocation.accountId),
+      );
     });
   }
 
@@ -43,7 +52,10 @@ export class MockPersonalAccountRepository implements PersonalAccountRepository 
       const stored = this.accountsById.get(account.id) ?? null;
 
       if (this.conflictTrigger.consumeForcedConflict()) {
-        throw new ConflictError<PersonalAccount>("Forced conflict (test/demo trigger)", stored ?? account);
+        throw new ConflictError<PersonalAccount>(
+          "Forced conflict (test/demo trigger)",
+          stored ?? account,
+        );
       }
 
       if (stored && stored.version !== expectedVersion) {
@@ -59,6 +71,42 @@ export class MockPersonalAccountRepository implements PersonalAccountRepository 
         this.allocationsById.set(allocation.id, allocation);
       }
       return next;
+    });
+  }
+
+  async delete(id: string, expectedVersion: number): Promise<void> {
+    return simulateLatency(() => {
+      const stored = this.accountsById.get(id) ?? null;
+
+      if (this.conflictTrigger.consumeForcedConflict()) {
+        throw new ConflictError<PersonalAccount>(
+          "Forced conflict (test/demo trigger)",
+          stored ?? {
+            id,
+            orderId: "unknown-order",
+            owner: { kind: "free_name", freeName: "Unknown account" },
+            status: "open",
+            createdAt: new Date().toISOString(),
+            closedAt: null,
+            version: expectedVersion,
+          },
+        );
+      }
+
+      if (!stored) return;
+      if (stored.version !== expectedVersion) {
+        throw new ConflictError<PersonalAccount>(
+          `PersonalAccount ${id} version conflict: expected ${expectedVersion}, stored ${stored.version}`,
+          stored,
+        );
+      }
+
+      this.accountsById.delete(id);
+      for (const [allocationId, allocation] of this.allocationsById.entries()) {
+        if (allocation.accountId === id) {
+          this.allocationsById.delete(allocationId);
+        }
+      }
     });
   }
 }

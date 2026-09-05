@@ -51,7 +51,7 @@ describe("computeStockDisplay", () => {
 
     const result = computeStockDisplay(product, bottle);
 
-    expect(result.label).toBe("48 units");
+    expect(result.label).toBe("48 unidades");
   });
 
   it("reports in-stock when quantity is above the low-stock threshold", () => {
@@ -130,6 +130,6 @@ describe("computeStockDisplay", () => {
     const result = computeStockDisplay(product, null);
 
     expect(result.status).toBe("out-of-stock");
-    expect(result.label).toBe("0 units");
+    expect(result.label).toBe("0 unidades");
   });
 });

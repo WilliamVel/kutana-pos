@@ -18,6 +18,50 @@ const STATUS_MAP: Record<DomainOrderStatus, OrderStatus> = {
   closed_with_pending: "closed-with-pending",
 };
 
+type LineItem = Order["lineItems"][number];
+
+function lineGroupKey(line: LineItem): string {
+  return [
+    line.productId,
+    line.nameSnapshot,
+    line.unitPriceCents,
+    line.pourSizeMl ?? "",
+    line.taxRateBp,
+    line.isAdjustment ? "adjustment" : "sale",
+  ].join("|");
+}
+
+function aggregateLines(lines: readonly LineItem[]): OrderTicketPanelLine[] {
+  const groups = new Map<string, OrderTicketPanelLine>();
+
+  for (const line of lines) {
+    const key = lineGroupKey(line);
+    const existing = groups.get(key);
+
+    if (existing) {
+      groups.set(key, {
+        ...existing,
+        id: line.id,
+        quantity: existing.quantity + line.quantity,
+        totalCents: existing.totalCents + line.totalCents,
+      });
+      continue;
+    }
+
+    groups.set(key, {
+      id: line.id,
+      name: line.nameSnapshot,
+      quantity: line.quantity,
+      unitPriceCents: line.unitPriceCents,
+      totalCents: line.totalCents,
+      pourSizeMl: line.pourSizeMl as OrderTicketPanelLine["pourSizeMl"],
+      isAdjustment: line.isAdjustment,
+    });
+  }
+
+  return [...groups.values()];
+}
+
 export interface OrderTicketPanelContainerProps {
   readonly tableId: string;
 }
@@ -90,15 +134,7 @@ export function OrderTicketPanelContainer({
 
   if (!table || !order) return null;
 
-  const lines: OrderTicketPanelLine[] = order.lineItems.map((line) => ({
-    id: line.id,
-    name: line.nameSnapshot,
-    quantity: line.quantity,
-    unitPriceCents: line.unitPriceCents,
-    totalCents: line.totalCents,
-    pourSizeMl: line.pourSizeMl as OrderTicketPanelLine["pourSizeMl"],
-    isAdjustment: line.isAdjustment,
-  }));
+  const lines = aggregateLines(order.lineItems);
   const subtotalCents = order.lineItems.reduce(
     (sum, line) => sum + line.unitPriceCents * line.quantity,
     0,

@@ -39,25 +39,55 @@ export function CustomerForm({ onSubmit, disabled, message }: CustomerFormProps)
   const canSubmit = values.displayName.trim().length > 0 && !disabled;
 
   return (
-    <form aria-label="Customer form" role="form" className={styles.form} onSubmit={handleSubmit}>
+    <form
+      aria-label="Formulario de cliente"
+      role="form"
+      className={styles.form}
+      onSubmit={handleSubmit}
+    >
       <div className={styles.header}>
-        <p className={styles.eyebrow}>Customer Directory</p>
-        <h2>Customers</h2>
-        <p>Create customers here so they appear in account assignment and pending-debt linking.</p>
+        <p className={styles.eyebrow}>Directorio de clientes</p>
+        <h2>Clientes</h2>
+        <p>Creá clientes para usarlos en cuentas personales y en deudas pendientes.</p>
       </div>
 
-      {message ? <div role="status" aria-live="polite" className={styles.message}>{message}</div> : null}
+      {message ? (
+        <div role="status" aria-live="polite" className={styles.message}>
+          {message}
+        </div>
+      ) : null}
 
-      <Input label="Display name" value={values.displayName} onChange={(value) => update("displayName", value)} placeholder="Ada Lovelace" />
+      <Input
+        label="Nombre visible"
+        value={values.displayName}
+        onChange={(value) => update("displayName", value)}
+        placeholder="Ada Lovelace…"
+      />
       <div className={styles.row}>
-        <Input label="Phone" value={values.phone} onChange={(value) => update("phone", value)} placeholder="555-0101" />
-        <Input label="Email" value={values.email} onChange={(value) => update("email", value)} placeholder="ada@example.com" />
+        <Input
+          label="Teléfono"
+          value={values.phone}
+          onChange={(value) => update("phone", value)}
+          placeholder="555-0101…"
+        />
+        <Input
+          label="Email"
+          value={values.email}
+          onChange={(value) => update("email", value)}
+          placeholder="ada@example.com…"
+        />
       </div>
-      <Input label="Notes" value={values.notes} onChange={(value) => update("notes", value)} multiline placeholder="Preferences, contact context, or collection notes" />
+      <Input
+        label="Notas"
+        value={values.notes}
+        onChange={(value) => update("notes", value)}
+        multiline
+        placeholder="Preferencias, contexto de contacto o notas de cobro…"
+      />
 
       <div className={styles.actions}>
         <Button type="submit" onClick={() => {}} disabled={!canSubmit}>
-          Create customer
+          Crear cliente
         </Button>
       </div>
     </form>

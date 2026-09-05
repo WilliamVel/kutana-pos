@@ -1,21 +1,37 @@
+import { KUTANA_V1_PAYMENT_METHODS } from "@kutana/shared/payments/model/payment-method-registry.seed.js";
+import { HttpCategoryRepository } from "../adapters/http/category-repository.js";
+import { HttpCustomerDebtRepository } from "../adapters/http/customer-debt-repository.js";
+import { HttpCustomerRepository } from "../adapters/http/customer-repository.js";
+import type { HttpClientOptions } from "../adapters/http/http-client.js";
+import { HttpOrderEvents, type HttpOrderEventsOptions } from "../adapters/http/order-events.js";
+import { HttpOrderRepository } from "../adapters/http/order-repository.js";
+import { HttpPaymentRepository } from "../adapters/http/payment-repository.js";
+import { HttpPersonalAccountRepository } from "../adapters/http/personal-account-repository.js";
+import { HttpProductRepository } from "../adapters/http/product-repository.js";
+import { HttpStockRepository } from "../adapters/http/stock-repository.js";
+import { HttpTableRepository } from "../adapters/http/table-repository.js";
+import { HttpTicketRepository } from "../adapters/http/ticket-repository.js";
 import type { Ports } from "./ports.js";
 
 /**
- * Milestone-2 wiring. Deliberately NOT implemented yet: milestone 1 is
- * frontend-first and ships with zero backend dependency (see design.md
- * "Local-first deployment" and the v1 scope decision on frontend-first
- * delivery). `buildHttpPorts()` will construct the same `Ports` shape from
- * `apps/web/src/adapters/http/*` (fetch + WebSocket implementations of the
- * exact same port interfaces as the mocks) once `apps/api` exists.
- *
- * TODO(milestone-2): implement fetch/WebSocket adapters under
- * `apps/web/src/adapters/http/` and replace this stub. Until then, setting
- * `VITE_ADAPTER=http` is not a supported way to run this app.
+ * HTTP wiring: repository ports are backed by fetch-based HTTP adapters and
+ * order events use SSE plus same-tab fanout after successful local saves.
  */
-export function buildHttpPorts(): Ports {
-  throw new Error(
-    "buildHttpPorts() is not implemented yet. HTTP/WebSocket adapters land at " +
-      "milestone 2 alongside apps/api. Run without VITE_ADAPTER=http (or unset " +
-      "it) to use the milestone-1 mock adapters instead.",
-  );
+export type HttpPortsOptions = HttpClientOptions & HttpOrderEventsOptions;
+
+export function buildHttpPorts(options: HttpPortsOptions = {}): Ports {
+  return {
+    orders: new HttpOrderRepository(options),
+    tables: new HttpTableRepository(options),
+    tickets: new HttpTicketRepository(options),
+    customers: new HttpCustomerRepository(options),
+    personalAccounts: new HttpPersonalAccountRepository(options),
+    customerDebts: new HttpCustomerDebtRepository(options),
+    payments: new HttpPaymentRepository(options),
+    products: new HttpProductRepository(options),
+    categories: new HttpCategoryRepository(options),
+    stock: new HttpStockRepository(options),
+    methods: KUTANA_V1_PAYMENT_METHODS,
+    events: new HttpOrderEvents(options),
+  };
 }

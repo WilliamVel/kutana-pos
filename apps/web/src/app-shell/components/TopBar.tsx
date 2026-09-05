@@ -1,34 +1,99 @@
+import { useState } from "react";
 import { SCREENS, type ScreenId } from "../screens.js";
 import styles from "./TopBar.module.css";
 
 export interface TopBarProps {
   readonly currentScreen: ScreenId;
   readonly onNavigate: (screen: ScreenId) => void;
+  readonly onLogout: () => void;
 }
 
 /**
- * Purely presentational: the KUTANA logo plus the screen tabs. The tab buttons
- * keep the exact visible text of the pre-shell <nav> so existing
- * accessible-name lookups (unit + E2E) keep working.
+ * Main app navigation. Desktop keeps the tab bar visible; small screens expose
+ * the same navigation and account actions behind a hamburger button.
  */
-export function TopBar({ currentScreen, onNavigate }: TopBarProps): JSX.Element {
+export function TopBar({ currentScreen, onNavigate, onLogout }: TopBarProps): JSX.Element {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+
+  const navigate = (screen: ScreenId): void => {
+    onNavigate(screen);
+    setIsMenuOpen(false);
+  };
+
+  const logout = (): void => {
+    setIsAccountOpen(false);
+    setIsMenuOpen(false);
+    onLogout();
+  };
+
   return (
     <header className={styles.bar}>
-      <h1 className={styles.wordmark}>
-        <img className={styles.logo} src="/LOGOkutana.svg" alt="KUTANA" />
-      </h1>
-      <nav className={styles.tabs}>
+      <div className={styles.brandRow}>
+        <h1 className={styles.wordmark}>
+          <img className={styles.logo} src="/LOGOkutana.svg" alt="KUTANA" />
+        </h1>
+        <button
+          type="button"
+          className={styles.menuButton}
+          aria-label="Abrir menú de navegación"
+          aria-controls="main-navigation"
+          aria-expanded={isMenuOpen}
+          onClick={() => setIsMenuOpen((open) => !open)}
+        >
+          <span aria-hidden="true">☰</span>
+        </button>
+      </div>
+
+      <nav id="main-navigation" className={`${styles.tabs} ${isMenuOpen ? styles.tabsOpen : ""}`}>
         {SCREENS.map((screen) => (
           <button
             key={screen.id}
             type="button"
             className={styles.tab}
             aria-current={screen.id === currentScreen ? "page" : undefined}
-            onClick={() => onNavigate(screen.id)}
+            onClick={() => navigate(screen.id)}
           >
             {screen.tabLabel}
           </button>
         ))}
+
+        <div className={styles.accountMenu}>
+          <button
+            type="button"
+            className={styles.accountButton}
+            aria-expanded={isAccountOpen}
+            aria-controls="account-actions"
+            onClick={() => setIsAccountOpen((open) => !open)}
+          >
+            <span className={styles.accountAvatar} aria-hidden="true">
+              OP
+            </span>
+            <span className={styles.accountCopy}>
+              <span className={styles.accountEyebrow}>Cuenta</span>
+              <span className={styles.accountName}>Operador</span>
+            </span>
+            <span className={styles.accountChevron} aria-hidden="true">
+              ▾
+            </span>
+          </button>
+          {isAccountOpen ? (
+            <div id="account-actions" className={styles.accountActions}>
+              <div className={styles.accountSummary}>
+                <span className={styles.accountAvatarLarge} aria-hidden="true">
+                  OP
+                </span>
+                <div>
+                  <p className={styles.accountStatus}>Sesión activa</p>
+                  <p className={styles.accountHint}>Ingreso de operador habilitado</p>
+                </div>
+              </div>
+              <button type="button" className={styles.logoutButton} onClick={logout}>
+                Cerrar sesión
+              </button>
+            </div>
+          ) : null}
+        </div>
       </nav>
     </header>
   );

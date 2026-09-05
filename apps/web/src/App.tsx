@@ -64,7 +64,7 @@ export function App(): JSX.Element {
             onPaymentComplete={resetCenter}
           />
           <Button variant="secondary" onClick={resetCenter}>
-            Back to order
+            Volver al pedido
           </Button>
         </>
       );
@@ -80,7 +80,7 @@ export function App(): JSX.Element {
             }}
           />
           <Button variant="secondary" onClick={resetCenter}>
-            Back to order
+            Volver al pedido
           </Button>
         </>
       );
@@ -90,7 +90,7 @@ export function App(): JSX.Element {
           <OrderTicketPanelContainer tableId={selectedTableId} />
           <ButtonRow>
             <Button variant="secondary" onClick={() => setCenterView("assignment")}>
-              Manage accounts
+              Administrar cuentas
             </Button>
             <Button
               onClick={() => {
@@ -99,7 +99,7 @@ export function App(): JSX.Element {
                 setCenterView("payment");
               }}
             >
-              Pay table balance
+              Cobrar saldo de mesa
             </Button>
           </ButtonRow>
         </>
@@ -112,7 +112,19 @@ export function App(): JSX.Element {
   }
 
   return (
-    <AppShell topBar={<TopBar currentScreen={screen} onNavigate={navigate} />}>
+    <AppShell
+      topBar={
+        <TopBar
+          currentScreen={screen}
+          onNavigate={navigate}
+          onLogout={() => {
+            setIsAuthenticated(false);
+            setScreen("inventory");
+            resetCenter();
+          }}
+        />
+      }
+    >
       {screen === "inventory" ? <InventoryListContainer /> : null}
 
       {screen === "new-product" ? (
@@ -146,7 +158,7 @@ export function App(): JSX.Element {
             </>
           }
           center={center}
-          emptyCenter="Select an order to see its payable accounts."
+          emptyCenter="Selecciona un pedido para ver sus cuentas a cobrar."
           railHidden={centerView !== "account"}
           rail={
             selectedTableId && centerView === "account" ? (
@@ -154,8 +166,8 @@ export function App(): JSX.Element {
             ) : (
               <p>
                 {selectedTableId
-                  ? "Finish or leave payment to add more items."
-                  : "Select an order to add items."}
+                  ? "Termina o sal del cobro para agregar más ítems."
+                  : "Selecciona un pedido para agregar ítems."}
               </p>
             )
           }

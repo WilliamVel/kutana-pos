@@ -15,6 +15,9 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    include: ["src/**/*.test.ts"],
+    // Adapter suites share one PostgreSQL database and truncate it in beforeEach.
+    // Keep test files serial so those resets cannot race across workers.
+    fileParallelism: false,
+    include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
   },
 });

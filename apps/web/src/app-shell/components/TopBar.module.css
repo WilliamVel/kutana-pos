@@ -8,11 +8,17 @@
   box-shadow: var(--shadow-sm);
 }
 
+.brandRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+}
+
 .wordmark {
   margin: 0;
   display: flex;
   align-items: center;
-  flex: 0 0 auto;
 }
 
 .logo {
@@ -21,13 +27,28 @@
   height: auto;
 }
 
-.tabs {
-  display: flex;
-  gap: var(--space-1);
-  flex-wrap: wrap;
+.menuButton {
+  display: none;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 1.35rem;
+  line-height: 1;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
 }
 
-.tab {
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.tab,
+.logoutButton {
   border: none;
   background: transparent;
   color: var(--text-secondary);
@@ -38,7 +59,8 @@
   cursor: pointer;
 }
 
-.tab:hover {
+.tab:hover,
+.logoutButton:hover {
   background: var(--surface-sunken);
   color: var(--text-primary);
 }
@@ -47,4 +69,169 @@
   background: var(--surface-sunken);
   color: var(--text-primary);
   box-shadow: inset 0 -2px 0 0 var(--accent-emphasis);
+}
+
+.accountMenu {
+  position: relative;
+  margin-left: auto;
+}
+
+.accountButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  background: linear-gradient(135deg, var(--surface-raised), var(--surface-sunken));
+  color: var(--text-primary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+
+.accountButton:hover,
+.accountButton[aria-expanded="true"] {
+  border-color: var(--accent-emphasis);
+  box-shadow: var(--shadow-md);
+}
+
+.accountAvatar,
+.accountAvatarLarge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--accent-emphasis);
+  color: var(--surface-raised);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.accountAvatar {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.75rem;
+}
+
+.accountAvatarLarge {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+}
+
+.accountCopy {
+  display: grid;
+  gap: 0.1rem;
+  text-align: left;
+}
+
+.accountEyebrow {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.accountName {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.accountChevron {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.accountActions {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  min-width: 17rem;
+  padding: var(--space-2);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+}
+
+.accountSummary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.accountStatus,
+.accountHint {
+  margin: 0;
+}
+
+.accountStatus {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.accountHint {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.logoutButton {
+  width: 100%;
+  margin-top: var(--space-2);
+  text-align: left;
+}
+
+@media (max-width: 48rem) {
+  .bar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .brandRow {
+    width: 100%;
+  }
+
+  .menuButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tabs {
+    display: none;
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .tabsOpen {
+    display: flex;
+  }
+
+  .tab,
+  .accountButton {
+    width: 100%;
+    text-align: left;
+  }
+
+  .accountMenu {
+    width: 100%;
+  }
+
+  .accountActions {
+    position: static;
+    margin-top: var(--space-1);
+    box-shadow: none;
+  }
 }

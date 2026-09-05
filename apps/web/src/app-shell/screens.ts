@@ -12,9 +12,9 @@ export interface ScreenMeta {
 }
 
 export const SCREENS: readonly ScreenMeta[] = [
-  { id: "inventory", tabLabel: "Inventory" },
-  { id: "new-product", tabLabel: "Add product" },
-  { id: "register", tabLabel: "Register" },
-  { id: "customers", tabLabel: "Customers" },
-  { id: "pending-debts", tabLabel: "Pending debts" },
+  { id: "inventory", tabLabel: "Inventario" },
+  { id: "new-product", tabLabel: "Agregar producto" },
+  { id: "register", tabLabel: "Caja" },
+  { id: "customers", tabLabel: "Clientes" },
+  { id: "pending-debts", tabLabel: "Deudas pendientes" },
 ];

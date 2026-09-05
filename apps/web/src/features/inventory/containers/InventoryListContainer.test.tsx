@@ -18,6 +18,6 @@ describe("InventoryListContainer", () => {
     // The Pilsener 500/750/1000 all share one keg (30000ml seeded) — the
     // draft-beer rows must show millilitres, never a "unit" count.
     await waitFor(() => expect(screen.getAllByText("30000ml").length).toBeGreaterThan(0));
-    expect(screen.getByText("48 units")).toBeInTheDocument(); // bottled stout
+    expect(screen.getByText("48 unidades")).toBeInTheDocument(); // bottled stout
   });
 });

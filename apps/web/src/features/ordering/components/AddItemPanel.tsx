@@ -24,7 +24,7 @@ export interface AddItemPanelProps {
   readonly onDismissConflict?: () => void;
 }
 
-const ALL_TAB = "All";
+const ALL_TAB = "Todos";
 
 /**
  * Purely presentational: props in, markup out, no port access. The
@@ -59,19 +59,19 @@ export function AddItemPanel({
   });
 
   return (
-    <section className={styles.panel} aria-label="Add items to order">
-      <h2>Quick add items</h2>
+    <section className={styles.panel} aria-label="Agregar productos a la orden">
+      <h2>Agregar productos</h2>
 
       <input
         type="search"
         className={styles.search}
-        aria-label="Search products"
-        placeholder="Search products"
+        aria-label="Buscar productos"
+        placeholder="Buscar productos"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
 
-      <div className={styles.tabs} role="tablist" aria-label="Product categories">
+      <div className={styles.tabs} role="tablist" aria-label="Categorías de productos">
         {tabs.map((tab) => (
           <button
             key={tab}
@@ -91,14 +91,14 @@ export function AddItemPanel({
           <p>{conflictMessage}</p>
           {onDismissConflict ? (
             <Button variant="secondary" onClick={onDismissConflict}>
-              Got it — try again
+              Entendido — intentar de nuevo
             </Button>
           ) : null}
         </div>
       ) : null}
 
       {visible.length === 0 ? (
-        <p className={styles.noMatch}>No products match.</p>
+        <p className={styles.noMatch}>No hay productos que coincidan.</p>
       ) : (
         <ul className={styles.grid}>
           {visible.map((product) => (
@@ -120,7 +120,7 @@ export function AddItemPanel({
               <button
                 type="button"
                 className={styles.add}
-                aria-label={`Add ${product.name}`}
+                aria-label={`Agregar ${product.name}`}
                 disabled={disabled}
                 onClick={() => onAdd(product.id, 1)}
               >

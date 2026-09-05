@@ -86,8 +86,8 @@ function formatCentsToDollarsInput(cents: number | null): string {
  * `requiresTendered` flag says so.
  */
 export function RegisterPaymentPanel({
-  title = "Payment",
-  subtitle = "Choose how this balance is being paid.",
+  title = "Pago",
+  subtitle = "Elegí cómo se va a pagar este saldo.",
   lines,
   subtotalCents,
   taxCents,
@@ -108,9 +108,9 @@ export function RegisterPaymentPanel({
   const showTenderedInput = selectedMethod?.requiresTendered ?? false;
 
   return (
-    <section className={styles.panel} aria-label="Register payment">
+    <section className={styles.panel} aria-label="Registrar pago">
       <header className={styles.header}>
-        <p className={styles.eyebrow}>Checkout</p>
+        <p className={styles.eyebrow}>Cobro</p>
         <h2>{title}</h2>
         <p>{subtitle}</p>
       </header>
@@ -135,7 +135,7 @@ export function RegisterPaymentPanel({
           <PriceTag cents={subtotalCents} />
         </div>
         <div className={styles.totalRow}>
-          <span>Tax</span>
+          <span>Impuestos</span>
           <PriceTag cents={taxCents} />
         </div>
         <div className={styles.totalRow}>
@@ -143,20 +143,20 @@ export function RegisterPaymentPanel({
           <PriceTag cents={totalCents} />
         </div>
         <div className={`${styles.totalRow} ${styles.remaining}`}>
-          <span>Remaining balance</span>
+          <span>Saldo restante</span>
           <PriceTag cents={remainingBalanceCents} />
         </div>
       </div>
 
       <Input
-        label="Amount to pay now"
+        label="Monto a pagar ahora"
         type="number"
         value={formatCentsToDollarsInput(amountToPayCents)}
         onChange={(value) => onAmountToPayChange(parseDollarsToCents(value))}
       />
 
       <fieldset className={styles.methodFieldset}>
-        <legend>Payment method</legend>
+        <legend>Método de pago</legend>
         <div className={styles.methods}>
           {methods.map((method) => {
             const selected = method.code === selectedMethodCode;
@@ -170,7 +170,7 @@ export function RegisterPaymentPanel({
                 />
                 <span>
                   <strong>{method.label}</strong>
-                  <small aria-hidden="true">{method.requiresTendered ? "Cash tendered + change" : "No cash tender required"}</small>
+                  <small aria-hidden="true">{method.requiresTendered ? "Efectivo recibido + vuelto" : "No requiere efectivo recibido"}</small>
                 </span>
               </label>
             );
@@ -180,7 +180,7 @@ export function RegisterPaymentPanel({
 
       {showTenderedInput ? (
         <Input
-          label="Amount tendered"
+          label="Efectivo recibido"
           type="number"
           value={formatCentsToDollarsInput(tenderedCents)}
           onChange={(value) => onTenderedChange(parseDollarsToCents(value))}
@@ -189,13 +189,13 @@ export function RegisterPaymentPanel({
 
       {changeDueCents !== null ? (
         <div className={styles.change}>
-          <span>Change due</span>
+          <span>Vuelto</span>
           <PriceTag cents={changeDueCents} />
         </div>
       ) : null}
 
       <Button onClick={onConfirmPayment} disabled={!canConfirm}>
-        Confirm payment
+        Confirmar pago
       </Button>
     </section>
   );

@@ -25,7 +25,7 @@ export function computeStockDisplay(product: Product, stockItem: StockItem | nul
         ? "low-stock"
         : "in-stock";
 
-  const label = product.stockKind === "volume" ? `${quantity}ml` : `${quantity} units`;
+  const label = product.stockKind === "volume" ? `${quantity}ml` : `${quantity} unidades`;
 
   return { status, label };
 }

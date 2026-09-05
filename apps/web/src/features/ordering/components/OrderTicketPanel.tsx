@@ -53,14 +53,14 @@ export function OrderTicketPanel({
   onRemoveLine,
 }: OrderTicketPanelProps): JSX.Element {
   return (
-    <section className={styles.panel} aria-label={`Order account summary for ${tableLabel}`}>
+    <section className={styles.panel} aria-label={`Resumen de orden para ${tableLabel}`}>
       <div className={styles.header}>
         <h2>{tableLabel}</h2>
         <StatusPill status={status} />
       </div>
 
       {lines.length === 0 ? (
-        <p className={styles.empty}>No items on this order yet.</p>
+        <p className={styles.empty}>Todavía no hay productos en esta orden.</p>
       ) : (
         <div className={styles.lines}>
           {lines.map((line) => (
@@ -88,7 +88,7 @@ export function OrderTicketPanel({
           <PriceTag cents={subtotalCents} />
         </div>
         <div className={styles.totalRow}>
-          <span>Tax</span>
+          <span>Impuestos</span>
           <PriceTag cents={taxCents} />
         </div>
         <div className={`${styles.totalRow} ${styles.grandTotal}`}>

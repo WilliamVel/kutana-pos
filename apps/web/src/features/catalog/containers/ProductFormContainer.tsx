@@ -77,7 +77,7 @@ export function ProductFormContainer({
   async function handleSubmit(values: ProductFormValues): Promise<void> {
     const existingWithSku = await products.findBySku(values.sku);
     if (existingWithSku && existingWithSku.id !== existingProduct?.id) {
-      setErrors({ sku: "SKU already in use" });
+      setErrors({ sku: "El SKU ya está en uso" });
       return;
     }
     setErrors({});
@@ -142,7 +142,7 @@ export function ProductFormContainer({
       initialValues={toFormValues(existingProduct)}
       onSubmit={(values) => void handleSubmit(values)}
       onCancel={onCancel}
-      submitLabel={existingProduct ? "Save changes" : "Create product"}
+      submitLabel={existingProduct ? "Guardar cambios" : "Crear producto"}
       errors={errors}
     />
   );

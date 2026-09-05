@@ -5,31 +5,31 @@ import { StatusPill } from "./StatusPill.js";
 describe("StatusPill", () => {
   it("renders the in-stock stock status with its label", () => {
     render(<StatusPill status="in-stock" />);
-    expect(screen.getByText("In stock")).toBeInTheDocument();
+    expect(screen.getByText("Con stock")).toBeInTheDocument();
   });
 
   it("renders the low-stock stock status", () => {
     render(<StatusPill status="low-stock" />);
-    expect(screen.getByText("Low stock")).toBeInTheDocument();
+    expect(screen.getByText("Stock bajo")).toBeInTheDocument();
   });
 
   it("renders the out-of-stock stock status", () => {
     render(<StatusPill status="out-of-stock" />);
-    expect(screen.getByText("Out of stock")).toBeInTheDocument();
+    expect(screen.getByText("Sin stock")).toBeInTheDocument();
   });
 
   it("renders the active order status", () => {
     render(<StatusPill status="active" />);
-    expect(screen.getByText("Active")).toBeInTheDocument();
+    expect(screen.getByText("Activa")).toBeInTheDocument();
   });
 
   it("renders the needs-check order status", () => {
     render(<StatusPill status="needs-check" />);
-    expect(screen.getByText("Needs check")).toBeInTheDocument();
+    expect(screen.getByText("Requiere revisión")).toBeInTheDocument();
   });
 
   it("renders the paid order status", () => {
     render(<StatusPill status="paid" />);
-    expect(screen.getByText("Paid")).toBeInTheDocument();
+    expect(screen.getByText("Pagada")).toBeInTheDocument();
   });
 });

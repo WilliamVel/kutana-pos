@@ -1,13 +1,14 @@
 import { Module } from "@nestjs/common";
 import { AppController } from "./app.controller.js";
 import { AppService } from "./app.service.js";
+import { BillingCoreModule } from "./billing/billing-core.module.js";
+import { CatalogInventoryModule } from "./catalog/catalog-inventory.module.js";
+import { PostgresModule } from "./infrastructure/postgres/postgres.module.js";
+import { OrderingModule } from "./ordering/ordering.module.js";
 
-/**
- * Root application module. Domain modules (catalog, inventory, ordering,
- * billing, payments, reporting) are added in later phases.
- */
+/** Root application module; domain modules are added in later milestones. */
 @Module({
-  imports: [],
+  imports: [PostgresModule, BillingCoreModule, OrderingModule, CatalogInventoryModule],
   controllers: [AppController],
   providers: [AppService],
 })

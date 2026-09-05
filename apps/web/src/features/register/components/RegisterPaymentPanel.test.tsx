@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import { RegisterPaymentPanel, type RegisterPaymentMethodOption } from "./RegisterPaymentPanel.js";
 
 const METHODS: RegisterPaymentMethodOption[] = [
-  { code: "CASH", label: "Cash", requiresTendered: true },
-  { code: "BANK_TRANSFER", label: "Bank Transfer", requiresTendered: false },
-  { code: "QR_PAYMENT", label: "QR Payment", requiresTendered: false },
+  { code: "CASH", label: "Efectivo", requiresTendered: true },
+  { code: "BANK_TRANSFER", label: "Transferencia bancaria", requiresTendered: false },
+  { code: "QR_PAYMENT", label: "Pago QR", requiresTendered: false },
 ];
 
 function renderPanel(overrides: Partial<React.ComponentProps<typeof RegisterPaymentPanel>> = {}) {
@@ -45,18 +45,18 @@ describe("RegisterPaymentPanel", () => {
   it("lists every method from the registry — CASH, BANK_TRANSFER, QR_PAYMENT — and never a card option", () => {
     renderPanel();
 
-    expect(screen.getByRole("radio", { name: "Cash" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Bank Transfer" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "QR Payment" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Efectivo" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Transferencia bancaria" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Pago QR" })).toBeInTheDocument();
     expect(screen.queryByText(/card/i)).not.toBeInTheDocument();
   });
 
   it("shows the tendered-amount input only for a method whose registry entry requires it", () => {
     renderPanel({ selectedMethodCode: "CASH" });
-    expect(screen.getByLabelText("Amount tendered")).toBeInTheDocument();
+    expect(screen.getByLabelText("Efectivo recibido")).toBeInTheDocument();
 
     renderPanel({ selectedMethodCode: "BANK_TRANSFER" });
-    expect(screen.queryAllByLabelText("Amount tendered")).toHaveLength(1); // still just the CASH render above
+    expect(screen.queryAllByLabelText("Efectivo recibido")).toHaveLength(1); // still just the CASH render above
   });
 
   it("does not show tendered input when the selected method does not require it", () => {
@@ -79,7 +79,7 @@ describe("RegisterPaymentPanel", () => {
         canConfirm
       />,
     );
-    expect(screen.queryByLabelText("Amount tendered")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Efectivo recibido")).not.toBeInTheDocument();
   });
 
   it("displays the computed change due when provided", () => {
@@ -90,26 +90,26 @@ describe("RegisterPaymentPanel", () => {
   it("calls onSelectMethod when a different method is chosen", () => {
     const onSelectMethod = vi.fn();
     renderPanel({ onSelectMethod });
-    fireEvent.click(screen.getByRole("radio", { name: "QR Payment" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Pago QR" }));
     expect(onSelectMethod).toHaveBeenCalledWith("QR_PAYMENT");
   });
 
   it("calls onTenderedChange as the cashier types the tendered amount", () => {
     const onTenderedChange = vi.fn();
     renderPanel({ onTenderedChange });
-    fireEvent.change(screen.getByLabelText("Amount tendered"), { target: { value: "10.00" } });
+    fireEvent.change(screen.getByLabelText("Efectivo recibido"), { target: { value: "10.00" } });
     expect(onTenderedChange).toHaveBeenCalledWith(1000);
   });
 
   it("disables the confirm-payment button until canConfirm is true", () => {
     renderPanel({ canConfirm: false });
-    expect(screen.getByRole("button", { name: "Confirm payment" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Confirmar pago" })).toBeDisabled();
   });
 
   it("calls onConfirmPayment when confirm is pressed and enabled", () => {
     const onConfirmPayment = vi.fn();
     renderPanel({ canConfirm: true, onConfirmPayment });
-    fireEvent.click(screen.getByRole("button", { name: "Confirm payment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar pago" }));
     expect(onConfirmPayment).toHaveBeenCalledOnce();
   });
 
@@ -117,7 +117,7 @@ describe("RegisterPaymentPanel", () => {
     const onAmountToPayChange = vi.fn();
     renderPanel({ remainingBalanceCents: 1500, amountToPayCents: 1500, onAmountToPayChange });
 
-    fireEvent.change(screen.getByLabelText("Amount to pay now"), { target: { value: "10.00" } });
+    fireEvent.change(screen.getByLabelText("Monto a pagar ahora"), { target: { value: "10.00" } });
 
     expect(onAmountToPayChange).toHaveBeenCalledWith(1000);
   });

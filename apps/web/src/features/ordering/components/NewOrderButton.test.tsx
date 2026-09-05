@@ -12,7 +12,7 @@ describe("NewOrderButton", () => {
     render(<NewOrderButton freeTables={FREE} onSelectTable={vi.fn()} />);
     expect(screen.queryByText("Table 4")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "New order" }));
+    fireEvent.click(screen.getByRole("button", { name: "Nueva orden" }));
     expect(screen.getByText("Table 4")).toBeInTheDocument();
     expect(screen.getByText("Table 5")).toBeInTheDocument();
   });
@@ -21,15 +21,26 @@ describe("NewOrderButton", () => {
     const onSelectTable = vi.fn();
     render(<NewOrderButton freeTables={FREE} onSelectTable={onSelectTable} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "New order" }));
+    fireEvent.click(screen.getByRole("button", { name: "Nueva orden" }));
     fireEvent.click(screen.getByRole("button", { name: "Table 5" }));
 
     expect(onSelectTable).toHaveBeenCalledWith("table-5");
   });
 
   it("shows an empty note when no tables are free", () => {
-    render(<NewOrderButton freeTables={[]} onSelectTable={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "New order" }));
-    expect(screen.getByText("No free tables right now.")).toBeInTheDocument();
+    render(<NewOrderButton freeTables={[]} onSelectTable={vi.fn()} onCreateTable={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Nueva orden" }));
+    expect(screen.getByText("No hay mesas libres ahora.")).toBeInTheDocument();
+  });
+
+  it("creates a table from a custom label", () => {
+    const onCreateTable = vi.fn();
+    render(<NewOrderButton freeTables={FREE} onSelectTable={vi.fn()} onCreateTable={onCreateTable} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Nueva orden" }));
+    fireEvent.change(screen.getByLabelText("Nombre de mesa"), { target: { value: "Barra" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear mesa" }));
+
+    expect(onCreateTable).toHaveBeenCalledWith("Barra");
   });
 });

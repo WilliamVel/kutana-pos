@@ -20,7 +20,11 @@ import {
 
 function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
   return {
-    orders: { findByTable: async () => null, listAll: async () => [], save: async (order) => order } as Ports["orders"],
+    orders: {
+      findByTable: async () => null,
+      listAll: async () => [],
+      save: async (order) => order,
+    } as Ports["orders"],
     tables: {
       listAll: async () => [],
       findById: async () => null,
@@ -43,6 +47,7 @@ function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
       listPendingFreeName: async () => [],
       listAllocationsByOrder: async () => [],
       save: async (account) => account,
+      delete: async () => {},
     } as Ports["personalAccounts"],
     customerDebts: {
       listByCustomer: async () => [],
@@ -112,8 +117,12 @@ describe("PortsProvider", () => {
           <span data-testid="tables">{String(useTables() === ports.tables)}</span>
           <span data-testid="tickets">{String(useTickets() === ports.tickets)}</span>
           <span data-testid="customers">{String(useCustomers() === ports.customers)}</span>
-          <span data-testid="personalAccounts">{String(usePersonalAccounts() === ports.personalAccounts)}</span>
-          <span data-testid="customerDebts">{String(useCustomerDebts() === ports.customerDebts)}</span>
+          <span data-testid="personalAccounts">
+            {String(usePersonalAccounts() === ports.personalAccounts)}
+          </span>
+          <span data-testid="customerDebts">
+            {String(useCustomerDebts() === ports.customerDebts)}
+          </span>
           <span data-testid="payments">{String(usePayments() === ports.payments)}</span>
           <span data-testid="products">{String(useProducts() === ports.products)}</span>
           <span data-testid="categories">{String(useCategories() === ports.categories)}</span>

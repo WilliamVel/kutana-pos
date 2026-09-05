@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ConflictError } from "@kutana/shared/errors/conflict-error.js";
 import { createOrder } from "@kutana/shared/ordering/model/order.js";
-import { occupyTable, type Table } from "@kutana/shared/ordering/model/table.js";
+import { createTable, occupyTable, type Table } from "@kutana/shared/ordering/model/table.js";
 import { useOrderEvents, useOrders, useTables } from "../../../composition/PortsProvider.js";
 import { NewOrderButton } from "../components/NewOrderButton.js";
 
@@ -61,6 +61,11 @@ export function NewOrderContainer({ onCreated }: NewOrderContainerProps): JSX.El
     }
   }
 
+  async function createTableAndOrder(label: string): Promise<void> {
+    const savedTable = await tables.save(createTable({ label }), 0);
+    await createOrderForTable(savedTable);
+  }
+
   return (
     <NewOrderButton
       freeTables={freeTables.map((table) => ({ id: table.id, label: table.label }))}
@@ -68,6 +73,7 @@ export function NewOrderContainer({ onCreated }: NewOrderContainerProps): JSX.El
         const table = freeTables.find((candidate) => candidate.id === tableId);
         if (table) void createOrderForTable(table);
       }}
+      onCreateTable={(label) => void createTableAndOrder(label)}
       message={message}
     />
   );

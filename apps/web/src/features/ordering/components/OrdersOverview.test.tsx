@@ -26,10 +26,10 @@ describe("OrdersOverview", () => {
     render(<OrdersOverview rows={ROWS} selectedTableId={null} onSelectTable={vi.fn()} />);
 
     expect(screen.getByText("Table 1")).toBeInTheDocument();
-    expect(screen.getByText("2 items")).toBeInTheDocument();
+    expect(screen.getByText("2 productos")).toBeInTheDocument();
     expect(screen.getByText("$13.50")).toBeInTheDocument();
     expect(screen.getByText("Table 2")).toBeInTheDocument();
-    expect(screen.getByText("4 items")).toBeInTheDocument();
+    expect(screen.getByText("4 productos")).toBeInTheDocument();
     expect(screen.getByText("$22.00")).toBeInTheDocument();
   });
 
@@ -54,6 +54,6 @@ describe("OrdersOverview", () => {
 
   it("shows an empty state when there are no open orders", () => {
     render(<OrdersOverview rows={[]} selectedTableId={null} onSelectTable={vi.fn()} />);
-    expect(screen.getByText("No open orders.")).toBeInTheDocument();
+    expect(screen.getByText("No hay órdenes abiertas.")).toBeInTheDocument();
   });
 });

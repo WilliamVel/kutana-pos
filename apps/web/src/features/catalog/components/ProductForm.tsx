@@ -77,6 +77,8 @@ export function ProductForm({
   const stockKindFieldId = useId();
   const categoryFieldId = useId();
   const pourSizeFieldId = useId();
+  const activeFieldId = useId();
+  const errorCount = Object.keys(errors).length;
 
   function update<K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]): void {
     setValues((current) => ({ ...current, [key]: value }));
@@ -88,131 +90,224 @@ export function ProductForm({
   }
 
   return (
-    <form aria-label="Product form" role="form" className={styles.form} onSubmit={handleSubmit}>
-      <Input label="Name" value={values.name} onChange={(value) => update("name", value)} />
+    <form
+      aria-label="Formulario de producto"
+      role="form"
+      className={styles.form}
+      onSubmit={handleSubmit}
+    >
+      <header className={styles.header}>
+        <p className={styles.eyebrow}>Configuración del catálogo</p>
+        <div>
+          <h2>{submitLabel === "Crear producto" ? "Agregar producto" : "Editar producto"}</h2>
+          <p>Primero cargá los datos de venta y después definí cómo impacta en el stock.</p>
+        </div>
+      </header>
 
-      <div className={styles.selectField}>
-        <label className={styles.label} htmlFor={categoryFieldId}>
-          Category
-        </label>
-        <select
-          id={categoryFieldId}
-          className={styles.select}
-          value={values.categoryId}
-          onChange={(event) => update("categoryId", event.target.value)}
-        >
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {errorCount > 0 ? (
+        <div className={styles.errorSummary} role="alert" aria-live="polite">
+          Revisá {errorCount === 1 ? "1 campo" : `${errorCount} campos`} e intentá de nuevo.
+        </div>
+      ) : null}
 
-      <div className={styles.row}>
+      <section className={styles.card} aria-labelledby="product-identity-heading">
+        <div className={styles.sectionHeader}>
+          <p className={styles.step}>Paso 1</p>
+          <div>
+            <h3 id="product-identity-heading">Identidad del producto</h3>
+            <p>Nombre, categoría y códigos que usa la caja.</p>
+          </div>
+        </div>
+
         <Input
-          label="SKU"
-          value={values.sku}
-          onChange={(value) => update("sku", value)}
-          error={errors.sku}
+          label="Nombre"
+          name="product-name"
+          autoComplete="off"
+          value={values.name}
+          onChange={(value) => update("name", value)}
+          placeholder="Lager de la casa…"
         />
-        <Input
-          label="Barcode"
-          value={values.barcode}
-          onChange={(value) => update("barcode", value)}
-        />
-      </div>
 
-      <div className={styles.selectField}>
-        <label className={styles.label} htmlFor={stockKindFieldId}>
-          Stock kind
-        </label>
-        <select
-          id={stockKindFieldId}
-          className={styles.select}
-          value={values.stockKind}
-          onChange={(event) => update("stockKind", event.target.value as StockKind)}
-        >
-          <option value="unit">Unit (bottles, food)</option>
-          <option value="volume">Volume (draft beer, ml)</option>
-        </select>
-      </div>
-
-      {values.stockKind === "volume" ? (
         <div className={styles.selectField}>
-          <label className={styles.label} htmlFor={pourSizeFieldId}>
-            Pour size (ml)
+          <label className={styles.label} htmlFor={categoryFieldId}>
+            Categoría
           </label>
           <select
-            id={pourSizeFieldId}
+            id={categoryFieldId}
+            name="product-category"
+            autoComplete="off"
             className={styles.select}
-            value={values.pourSizeMl ?? ""}
-            onChange={(event) => update("pourSizeMl", Number(event.target.value) as PourSize)}
+            value={values.categoryId}
+            onChange={(event) => update("categoryId", event.target.value)}
           >
-            {POUR_SIZES.map((size) => (
-              <option key={size} value={size}>
-                {size}ml
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
               </option>
             ))}
           </select>
         </div>
-      ) : null}
 
-      <Input
-        label="Description"
-        value={values.description}
-        onChange={(value) => update("description", value)}
-        multiline
-        placeholder="Optional details..."
-      />
+        <div className={styles.row}>
+          <Input
+            label="SKU"
+            name="product-sku"
+            autoComplete="off"
+            value={values.sku}
+            onChange={(value) => update("sku", value)}
+            error={errors.sku}
+            placeholder="DRAFT-LAGER-500…"
+          />
+          <Input
+            label="Código de barras"
+            name="product-barcode"
+            autoComplete="off"
+            inputMode="numeric"
+            value={values.barcode}
+            onChange={(value) => update("barcode", value)}
+            placeholder="7501234567890…"
+          />
+        </div>
+      </section>
 
-      <div className={styles.row}>
-        <Input
-          label="Retail price (USD)"
-          value={formatCentsToDollarsInput(values.retailPriceCents)}
-          onChange={(value) => update("retailPriceCents", parseDollarsToCents(value))}
-        />
-        <Input
-          label="Cost price (USD)"
-          value={
-            values.costPriceCents === null ? "" : formatCentsToDollarsInput(values.costPriceCents)
-          }
-          onChange={(value) =>
-            update("costPriceCents", value === "" ? null : parseDollarsToCents(value))
-          }
-        />
-      </div>
+      <section className={styles.card} aria-labelledby="product-pricing-heading">
+        <div className={styles.sectionHeader}>
+          <p className={styles.step}>Paso 2</p>
+          <div>
+            <h3 id="product-pricing-heading">Precios y notas</h3>
+            <p>El precio de venta es obligatorio; el costo y las notas son opcionales.</p>
+          </div>
+        </div>
 
-      <div className={styles.row}>
-        <Input
-          label="Initial stock quantity"
-          type="number"
-          value={String(values.initialStockQuantity)}
-          onChange={(value) => update("initialStockQuantity", Number(value) || 0)}
-        />
-        <Input
-          label="Low-stock alert level"
-          type="number"
-          value={values.lowStockLevel === null ? "" : String(values.lowStockLevel)}
-          onChange={(value) => update("lowStockLevel", value === "" ? null : Number(value) || 0)}
-        />
-      </div>
+        <div className={styles.row}>
+          <Input
+            label="Precio de venta (USD)"
+            name="product-retail-price"
+            autoComplete="off"
+            inputMode="decimal"
+            value={formatCentsToDollarsInput(values.retailPriceCents)}
+            onChange={(value) => update("retailPriceCents", parseDollarsToCents(value))}
+            placeholder="6.50…"
+          />
+          <Input
+            label="Costo (USD)"
+            name="product-cost-price"
+            autoComplete="off"
+            inputMode="decimal"
+            value={
+              values.costPriceCents === null ? "" : formatCentsToDollarsInput(values.costPriceCents)
+            }
+            onChange={(value) =>
+              update("costPriceCents", value === "" ? null : parseDollarsToCents(value))
+            }
+            placeholder="4.25…"
+          />
+        </div>
 
-      <label className={styles.checkboxField}>
-        <input
-          type="checkbox"
-          checked={values.active}
-          onChange={(event) => update("active", event.target.checked)}
+        <Input
+          label="Descripción"
+          name="product-description"
+          autoComplete="off"
+          value={values.description}
+          onChange={(value) => update("description", value)}
+          multiline
+          placeholder="Detalles opcionales…"
         />
-        Active
-      </label>
+      </section>
+
+      <section className={styles.card} aria-labelledby="product-stock-heading">
+        <div className={styles.sectionHeader}>
+          <p className={styles.step}>Paso 3</p>
+          <div>
+            <h3 id="product-stock-heading">Comportamiento de stock</h3>
+            <p>Usá stock por unidad para botellas o comida, y por volumen para cerveza tirada.</p>
+          </div>
+        </div>
+
+        <div className={styles.selectField}>
+          <label className={styles.label} htmlFor={stockKindFieldId}>
+            Tipo de stock
+          </label>
+          <select
+            id={stockKindFieldId}
+            name="product-stock-kind"
+            autoComplete="off"
+            className={styles.select}
+            value={values.stockKind}
+            onChange={(event) => update("stockKind", event.target.value as StockKind)}
+          >
+            <option value="unit">Unidad (botellas, comida)</option>
+            <option value="volume">Volumen (cerveza tirada, ml)</option>
+          </select>
+        </div>
+
+        {values.stockKind === "volume" ? (
+          <div className={styles.selectField}>
+            <label className={styles.label} htmlFor={pourSizeFieldId}>
+              Medida del vaso (ml)
+            </label>
+            <select
+              id={pourSizeFieldId}
+              name="product-pour-size"
+              autoComplete="off"
+              className={styles.select}
+              value={values.pourSizeMl ?? ""}
+              onChange={(event) => update("pourSizeMl", Number(event.target.value) as PourSize)}
+            >
+              {POUR_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {size}ml
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+
+        <div className={styles.row}>
+          <Input
+            label="Cantidad inicial de stock"
+            name="product-initial-stock"
+            autoComplete="off"
+            inputMode="numeric"
+            type="number"
+            value={String(values.initialStockQuantity)}
+            onChange={(value) => update("initialStockQuantity", Number(value) || 0)}
+            placeholder="20…"
+          />
+          <Input
+            label="Alerta de stock bajo"
+            name="product-low-stock-level"
+            autoComplete="off"
+            inputMode="numeric"
+            type="number"
+            value={values.lowStockLevel === null ? "" : String(values.lowStockLevel)}
+            onChange={(value) => update("lowStockLevel", value === "" ? null : Number(value) || 0)}
+            placeholder="5…"
+          />
+        </div>
+
+        <label className={styles.checkboxField} htmlFor={activeFieldId}>
+          <input
+            id={activeFieldId}
+            name="product-active"
+            type="checkbox"
+            aria-label="Activo"
+            checked={values.active}
+            onChange={(event) => update("active", event.target.checked)}
+          />
+          <span>
+            <strong>Activo</strong>
+            <small>Mostrar este producto en los flujos de pedido.</small>
+          </span>
+        </label>
+      </section>
 
       <div className={styles.actions}>
         <Button type="submit" onClick={() => {}}>
           {submitLabel}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
+          Cancelar
         </Button>
       </div>
     </form>

@@ -31,7 +31,7 @@ export function OrdersOverview({
   onSelectTable,
 }: OrdersOverviewProps): JSX.Element {
   if (rows.length === 0) {
-    return <p className={styles.empty}>No open orders.</p>;
+    return <p className={styles.empty}>No hay órdenes abiertas.</p>;
   }
 
   return (
@@ -46,7 +46,7 @@ export function OrdersOverview({
         >
           <span>
             <strong>{row.tableLabel}</strong>
-            <div className={styles.meta}>{row.itemCount} items</div>
+            <div className={styles.meta}>{row.itemCount} productos</div>
           </span>
           <StatusPill status={row.status} />
           <PriceTag cents={row.totalCents} />

@@ -7,11 +7,15 @@ describe("CustomerForm", () => {
     const onSubmit = vi.fn();
     render(<CustomerForm onSubmit={onSubmit} disabled={false} message={null} />);
 
-    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Ada Lovelace" } });
-    fireEvent.change(screen.getByLabelText("Phone"), { target: { value: "555-0101" } });
+    fireEvent.change(screen.getByLabelText("Nombre visible"), {
+      target: { value: "Ada Lovelace" },
+    });
+    fireEvent.change(screen.getByLabelText("Teléfono"), { target: { value: "555-0101" } });
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "ada@example.com" } });
-    fireEvent.change(screen.getByLabelText("Notes"), { target: { value: "Prefers table near the bar" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create customer" }));
+    fireEvent.change(screen.getByLabelText("Notas"), {
+      target: { value: "Prefers table near the bar" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Crear cliente" }));
 
     expect(onSubmit).toHaveBeenCalledWith({
       displayName: "Ada Lovelace",
@@ -24,10 +28,10 @@ describe("CustomerForm", () => {
   it("keeps create disabled until a display name is present", () => {
     render(<CustomerForm onSubmit={vi.fn()} disabled={false} message={null} />);
 
-    expect(screen.getByRole("button", { name: "Create customer" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Crear cliente" })).toBeDisabled();
 
-    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Lina M." } });
+    fireEvent.change(screen.getByLabelText("Nombre visible"), { target: { value: "Lina M." } });
 
-    expect(screen.getByRole("button", { name: "Create customer" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Crear cliente" })).toBeEnabled();
   });
 });
