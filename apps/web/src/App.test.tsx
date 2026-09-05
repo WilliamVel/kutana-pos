@@ -48,7 +48,7 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Operador"), { target: { value: "Mina" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
-    fireEvent.click(screen.getByRole("button", { name: "Cuenta" }));
+    fireEvent.click(screen.getByRole("button", { name: /Cuenta\s+Operador/ }));
     fireEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
 
     expect(screen.getByRole("heading", { name: "Ingreso de operador" })).toBeInTheDocument();

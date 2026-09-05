@@ -1,9 +1,15 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { discoverMigrations } from "./migration-runner.js";
 
+const migrationDirectory = existsSync(join(process.cwd(), "migrations"))
+  ? join(process.cwd(), "migrations")
+  : join(process.cwd(), "apps/api/migrations");
+
 describe("migration discovery", () => {
   it("returns numbered SQL migrations in deterministic order", () => {
-    expect(discoverMigrations("migrations").map((migration) => migration.name)).toEqual([
+    expect(discoverMigrations(migrationDirectory).map((migration) => migration.name)).toEqual([
       "001_initial_schema.sql",
       "002_stock_movement_ref_id_text.sql",
       "003_catalog_inventory_reference_ids_text.sql",

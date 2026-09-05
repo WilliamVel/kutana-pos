@@ -86,16 +86,16 @@ describe("InventoryList", () => {
   it("renders pagination controls and calls onPageChange", () => {
     const props = renderList({ page: 2, pageCount: 5 });
     expect(screen.getByText("Página 2 de 5")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
+    fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
     expect(props.onPageChange).toHaveBeenCalledWith(3);
-    fireEvent.click(screen.getByRole("button", { name: "Página anterior" }));
+    fireEvent.click(screen.getByRole("button", { name: "Anterior" }));
     expect(props.onPageChange).toHaveBeenCalledWith(1);
   });
 
   it("disables Previous on the first page and Next on the last page", () => {
     renderList({ page: 1, pageCount: 1 });
-    expect(screen.getByRole("button", { name: "Página anterior" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Página siguiente" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Anterior" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Siguiente" })).toBeDisabled();
   });
 
   it("shows an empty state when there are no rows", () => {
