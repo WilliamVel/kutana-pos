@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Pool } from "pg";
@@ -21,7 +22,9 @@ import { PostgresPersonalAccountRepository } from "./personal-account-repository
 import { PostgresTicketRepository } from "./ticket-repository.js";
 
 const databaseAvailable = Boolean(process.env.DATABASE_URL);
-const migrationDirectory = join(process.cwd(), "migrations");
+const migrationDirectory = existsSync(join(process.cwd(), "migrations"))
+  ? join(process.cwd(), "migrations")
+  : join(process.cwd(), "apps/api/migrations");
 const productId = "00000000-0000-0000-0000-000000000001";
 
 const orderIds = [

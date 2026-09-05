@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { Pool } from "pg";
 import { beforeAll, beforeEach, afterAll, describe, expect, it } from "vitest";
@@ -10,7 +11,9 @@ import { postgresConfig } from "../../../infrastructure/postgres/postgres-config
 import { migrate } from "../../../persistence/migration-runner.js";
 
 const databaseAvailable = Boolean(process.env.DATABASE_URL);
-const migrationDirectory = join(process.cwd(), "migrations");
+const migrationDirectory = existsSync(join(process.cwd(), "migrations"))
+  ? join(process.cwd(), "migrations")
+  : join(process.cwd(), "apps/api/migrations");
 
 describe.skipIf(!databaseAvailable)("PostgreSQL catalog and inventory adapters", () => {
   const pool = new Pool(postgresConfig());
