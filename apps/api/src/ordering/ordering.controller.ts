@@ -1,6 +1,9 @@
-import { Body, Controller, Get, Param, Put, Query } from "@nestjs/common";
+import { Body, Controller, Get, Param, Put, Query, Sse } from "@nestjs/common";
 import type { Order } from "@kutana/shared/ordering/model/order.js";
 import type { Table } from "@kutana/shared/ordering/model/table.js";
+import type { Observable } from "rxjs";
+import type { SseOrderEventMessage } from "./order-events.service.js";
+import { OrderEventsService } from "./order-events.service.js";
 import { PostgresOrderRepository } from "./adapters/postgres/order-repository.js";
 import { PostgresTableRepository } from "./adapters/postgres/table-repository.js";
 
@@ -19,6 +22,7 @@ export class OrderingController {
   constructor(
     private readonly orders: PostgresOrderRepository,
     private readonly tables: PostgresTableRepository,
+    private readonly events: OrderEventsService,
   ) {}
 
   @Get("tables")
@@ -45,7 +49,22 @@ export class OrderingController {
   }
 
   @Put("orders/:id")
-  saveOrder(@Param("id") id: string, @Body() body: SaveOrderDto): Promise<Order> {
-    return this.orders.save({ ...body.order, id }, body.expectedVersion);
+  async saveOrder(@Param("id") id: string, @Body() body: SaveOrderDto): Promise<Order> {
+    const savedOrder = await this.orders.save({ ...body.order, id }, body.expectedVersion);
+    this.events.publish({
+      type: savedOrder.status === "paid" || savedOrder.status === "closed_with_pending" ? "order.closed" : "order.updated",
+      orderId: savedOrder.id,
+      tableId: savedOrder.tableId,
+      version: savedOrder.version,
+      at: new Date().toISOString(),
+      payload: savedOrder,
+    });
+
+    return savedOrder;
+  }
+
+  @Sse("orders/:id/events")
+  orderEvents(@Param("id") id: string): Observable<SseOrderEventMessage> {
+    return this.events.eventsForOrder(id);
   }
 }

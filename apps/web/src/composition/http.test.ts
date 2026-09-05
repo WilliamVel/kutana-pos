@@ -27,6 +27,21 @@ function createFetch(): { readonly fetchImpl: typeof fetch; readonly calls: Fetc
   return { fetchImpl, calls };
 }
 
+class FakeEventSource {
+  static instances: FakeEventSource[] = [];
+
+  onmessage: ((event: MessageEvent<string>) => void) | null = null;
+  readonly close = vi.fn();
+
+  constructor(readonly url: string) {
+    FakeEventSource.instances.push(this);
+  }
+
+  emit(event: unknown): void {
+    this.onmessage?.({ data: JSON.stringify(event) } as MessageEvent<string>);
+  }
+}
+
 describe("buildHttpPorts", () => {
   it("returns a complete Ports object backed by the supplied HTTP client options", async () => {
     const { fetchImpl, calls } = createFetch();
@@ -56,9 +71,14 @@ describe("buildHttpPorts", () => {
     ]);
   });
 
-  it("uses the v1 payment method registry and local same-tab order events", () => {
+  it("uses the v1 payment method registry and SSE-backed same-tab order events", () => {
+    FakeEventSource.instances = [];
     const { fetchImpl } = createFetch();
-    const ports = buildHttpPorts({ baseUrl: BASE_URL, fetchImpl });
+    const ports = buildHttpPorts({
+      baseUrl: BASE_URL,
+      fetchImpl,
+      EventSourceImpl: FakeEventSource,
+    });
     const listener = vi.fn();
     const order = { id: "order-1", tableId: "table-1", version: 1 } as Order;
 
@@ -76,6 +96,9 @@ describe("buildHttpPorts", () => {
 
     expect(listener).toHaveBeenCalledOnce();
     expect(fetchImpl).not.toHaveBeenCalled();
+    expect(FakeEventSource.instances.map((source) => source.url)).toEqual([
+      `${BASE_URL}/ordering/orders/order-1/events`,
+    ]);
 
     unsubscribe();
   });

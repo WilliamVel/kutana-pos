@@ -3,39 +3,98 @@ import type {
   OrderEvents,
   Unsubscribe,
 } from "@kutana/shared/ordering/ports/order-events.js";
+import type { HttpClientOptions } from "./http-client.js";
+import { defaultApiBaseUrl, encodePathSegment } from "./http-client.js";
 
 type Listener = (event: OrderEvent) => void;
+type EventSourceConstructor = new (url: string) => Pick<EventSource, "close" | "onmessage">;
+
+export interface HttpOrderEventsOptions extends HttpClientOptions {
+  readonly EventSourceImpl?: EventSourceConstructor;
+}
+
+interface SubscriptionState {
+  readonly listeners: Set<Listener>;
+  readonly source: Pick<EventSource, "close" | "onmessage"> | null;
+}
 
 /**
- * Browser-safe local event bus for HTTP composition until the backend exposes a
- * WebSocket/SSE order-events adapter. Repository state still lives behind the
- * HTTP repositories; this adapter only preserves same-tab publish/subscribe UI
- * behavior after local saves.
+ * SSE-backed order-events adapter. It preserves same-tab fanout for local
+ * publishes while subscribing to backend post-commit order snapshots for other
+ * tabs/devices. The adapter never reads or owns repository state.
  */
-export class LocalOrderEvents implements OrderEvents {
-  private readonly listenersByOrder = new Map<string, Set<Listener>>();
+export class HttpOrderEvents implements OrderEvents {
+  private readonly baseUrl: string;
+  private readonly EventSourceImpl?: EventSourceConstructor;
+  private readonly subscriptionsByOrder = new Map<string, SubscriptionState>();
+  private readonly locallyPublishedKeys = new Set<string>();
+
+  constructor(options: HttpOrderEventsOptions = {}) {
+    this.baseUrl = normalizeBaseUrl(options.baseUrl ?? defaultApiBaseUrl());
+    this.EventSourceImpl = options.EventSourceImpl ?? globalThis.EventSource;
+  }
 
   subscribe(orderId: string, callback: Listener): Unsubscribe {
-    const listeners = this.listenersByOrder.get(orderId) ?? new Set<Listener>();
-    listeners.add(callback);
-    this.listenersByOrder.set(orderId, listeners);
+    const state = this.subscriptionsByOrder.get(orderId) ?? this.openSubscription(orderId);
+    state.listeners.add(callback);
+    this.subscriptionsByOrder.set(orderId, state);
 
     return () => {
-      listeners.delete(callback);
-      if (listeners.size === 0) {
-        this.listenersByOrder.delete(orderId);
+      state.listeners.delete(callback);
+      if (state.listeners.size === 0) {
+        state.source?.close();
+        this.subscriptionsByOrder.delete(orderId);
       }
     };
   }
 
   publish(event: OrderEvent): void {
-    const listeners = this.listenersByOrder.get(event.orderId);
-    if (!listeners) {
-      return;
+    if (this.deliver(event)) {
+      this.locallyPublishedKeys.add(eventKey(event));
+    }
+  }
+
+  private openSubscription(orderId: string): SubscriptionState {
+    const source = this.EventSourceImpl
+      ? new this.EventSourceImpl(this.eventsUrl(orderId))
+      : null;
+
+    if (source) {
+      source.onmessage = (message) => {
+        const event = JSON.parse(message.data) as OrderEvent;
+        const key = eventKey(event);
+        if (this.locallyPublishedKeys.delete(key)) {
+          return;
+        }
+
+        this.deliver(event);
+      };
+    }
+
+    return { listeners: new Set<Listener>(), source };
+  }
+
+  private deliver(event: OrderEvent): boolean {
+    const listeners = this.subscriptionsByOrder.get(event.orderId)?.listeners;
+    if (!listeners || listeners.size === 0) {
+      return false;
     }
 
     for (const listener of listeners) {
       listener(event);
     }
+    return true;
   }
+
+  private eventsUrl(orderId: string): string {
+    return `${this.baseUrl}/ordering/orders/${encodePathSegment(orderId)}/events`;
+  }
+}
+
+function eventKey(event: OrderEvent): string {
+  return `${event.orderId}:${event.type}:${event.version}`;
+}
+
+function normalizeBaseUrl(baseUrl: string): string {
+  return baseUrl.replace(/\/+$/, "");
 }

@@ -7,6 +7,7 @@ import { PostgresPool } from "../infrastructure/postgres/postgres-pool.js";
 import { PostgresOrderRepository } from "./adapters/postgres/order-repository.js";
 import { PostgresTableRepository } from "./adapters/postgres/table-repository.js";
 import { OrderingController } from "./ordering.controller.js";
+import { OrderEventsService } from "./order-events.service.js";
 import { OrderingModule } from "./ordering.module.js";
 
 const table: Table = {
@@ -40,14 +41,20 @@ describe("OrderingController", () => {
       findById: vi.fn(),
       save: vi.fn(),
     };
+    const orderEvents = {
+      publish: vi.fn(),
+      eventsForOrder: vi.fn(),
+    };
 
     return {
       controller: new OrderingController(
         orders as unknown as PostgresOrderRepository,
         tables as unknown as PostgresTableRepository,
+        orderEvents as unknown as OrderEventsService,
       ),
       orders,
       tables,
+      orderEvents,
     };
   }
 
@@ -96,6 +103,39 @@ describe("OrderingController", () => {
     await controller.saveOrder("order-route", { order, expectedVersion: 5 });
 
     expect(orders.save).toHaveBeenCalledWith({ ...order, id: "order-route" }, 5);
+  });
+
+  it("publishes the saved order snapshot only after the save resolves", async () => {
+    const { controller, orders, orderEvents } = controllerWithMocks();
+    const savedOrder = { ...order, id: "order-route", version: 6 };
+    orders.save.mockResolvedValue(savedOrder);
+
+    await expect(
+      controller.saveOrder("order-route", { order, expectedVersion: 5 }),
+    ).resolves.toEqual(savedOrder);
+
+    expect(orderEvents.publish).toHaveBeenCalledOnce();
+    expect(orderEvents.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "order.updated",
+        orderId: "order-route",
+        tableId: savedOrder.tableId,
+        version: 6,
+        payload: savedOrder,
+      }),
+    );
+    expect(orders.save.mock.invocationCallOrder[0]!).toBeLessThan(
+      orderEvents.publish.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it("exposes an SSE stream for order events by order id", () => {
+    const { controller, orderEvents } = controllerWithMocks();
+    const stream = {};
+    orderEvents.eventsForOrder.mockReturnValue(stream);
+
+    expect(controller.orderEvents("order-1")).toBe(stream);
+    expect(orderEvents.eventsForOrder).toHaveBeenCalledWith("order-1");
   });
 
   it("compiles the ordering module with an overridden Postgres pool", async () => {
