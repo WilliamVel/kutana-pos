@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { Pool, PoolClient } from "pg";
+import type { Pool } from "pg";
 import { ConflictError } from "@kutana/shared/errors/conflict-error.js";
 import type { StockItem } from "@kutana/shared/inventory/model/stock-item.js";
 import type { StockMovement } from "@kutana/shared/inventory/model/stock-movement.js";

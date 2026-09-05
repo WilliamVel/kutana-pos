@@ -55,9 +55,7 @@ export class HttpOrderEvents implements OrderEvents {
   }
 
   private openSubscription(orderId: string): SubscriptionState {
-    const source = this.EventSourceImpl
-      ? new this.EventSourceImpl(this.eventsUrl(orderId))
-      : null;
+    const source = this.EventSourceImpl ? new this.EventSourceImpl(this.eventsUrl(orderId)) : null;
 
     if (source) {
       source.onmessage = (message) => {

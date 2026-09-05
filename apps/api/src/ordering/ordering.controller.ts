@@ -52,7 +52,10 @@ export class OrderingController {
   async saveOrder(@Param("id") id: string, @Body() body: SaveOrderDto): Promise<Order> {
     const savedOrder = await this.orders.save({ ...body.order, id }, body.expectedVersion);
     this.events.publish({
-      type: savedOrder.status === "paid" || savedOrder.status === "closed_with_pending" ? "order.closed" : "order.updated",
+      type:
+        savedOrder.status === "paid" || savedOrder.status === "closed_with_pending"
+          ? "order.closed"
+          : "order.updated",
       orderId: savedOrder.id,
       tableId: savedOrder.tableId,
       version: savedOrder.version,
