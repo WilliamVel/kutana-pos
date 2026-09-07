@@ -26,12 +26,14 @@ interface SubscriptionState {
 export class HttpOrderEvents implements OrderEvents {
   private readonly baseUrl: string;
   private readonly EventSourceImpl?: EventSourceConstructor;
+  private readonly getBearerToken?: () => string | null;
   private readonly subscriptionsByOrder = new Map<string, SubscriptionState>();
   private readonly locallyPublishedKeys = new Set<string>();
 
   constructor(options: HttpOrderEventsOptions = {}) {
     this.baseUrl = normalizeBaseUrl(options.baseUrl ?? defaultApiBaseUrl());
     this.EventSourceImpl = options.EventSourceImpl ?? globalThis.EventSource;
+    this.getBearerToken = options.getBearerToken;
   }
 
   subscribe(orderId: string, callback: Listener): Unsubscribe {
@@ -85,7 +87,12 @@ export class HttpOrderEvents implements OrderEvents {
   }
 
   private eventsUrl(orderId: string): string {
-    return `${this.baseUrl}/ordering/orders/${encodePathSegment(orderId)}/events`;
+    const url = new URL(`${this.baseUrl}/ordering/orders/${encodePathSegment(orderId)}/events`);
+    const token = this.getBearerToken?.();
+    if (token) {
+      url.searchParams.set("access_token", token);
+    }
+    return url.toString();
   }
 }
 

@@ -1,25 +1,37 @@
+import type { AuthSession } from "@kutana/shared/auth/model/auth-session.js";
 import { FormEvent, useState } from "react";
+import { useAuth } from "../../../composition/PortsProvider.js";
 import { Button } from "../../../design-system/atoms/Button.js";
 import { Input } from "../../../design-system/atoms/Input.js";
 import styles from "./LoginPanel.module.css";
 
 export interface LoginPanelProps {
-  readonly onLogin: () => void;
+  readonly onLogin: (session: AuthSession) => void;
 }
 
-/**
- * Local-only login gate for the demo shell. It does not authenticate against a
- * backend yet; it only separates the operator entry point from the POS screens.
- */
+/** Authenticates an operator through the composed auth port (mock or HTTP). */
 export function LoginPanel({ onLogin }: LoginPanelProps): JSX.Element {
+  const auth = useAuth();
   const [operator, setOperator] = useState("");
   const [pin, setPin] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const canSubmit = operator.trim().length > 0 && pin.trim().length > 0;
+  const canSubmit = operator.trim().length > 0 && pin.trim().length > 0 && !isSubmitting;
 
-  const submit = (event: FormEvent<HTMLFormElement>): void => {
+  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    if (canSubmit) onLogin();
+    if (!canSubmit) return;
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      onLogin(await auth.login({ operator, pin }));
+    } catch {
+      setError("Operador o PIN inválido.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -41,8 +53,9 @@ export function LoginPanel({ onLogin }: LoginPanelProps): JSX.Element {
             placeholder="Tu nombre…"
           />
           <Input label="PIN" value={pin} onChange={setPin} type="password" placeholder="••••" />
+          {error ? <p role="alert">{error}</p> : null}
           <Button type="submit" disabled={!canSubmit} onClick={() => undefined}>
-            Ingresar
+            {isSubmitting ? "Ingresando…" : "Ingresar"}
           </Button>
         </form>
       </section>

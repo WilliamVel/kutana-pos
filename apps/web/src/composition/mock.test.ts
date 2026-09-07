@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MockAuthService } from "../adapters/mock/auth-service.js";
 import { MockOrderRepository } from "../adapters/mock/order-repository.js";
 import { MockTableRepository } from "../adapters/mock/table-repository.js";
 import { MockCustomerDebtRepository } from "../adapters/mock/customer-debt-repository.js";
@@ -16,6 +17,7 @@ describe("buildMockPorts", () => {
   it("wires every port to its milestone-1 mock adapter implementation", () => {
     const ports = buildMockPorts();
 
+    expect(ports.auth).toBeInstanceOf(MockAuthService);
     expect(ports.orders).toBeInstanceOf(MockOrderRepository);
     expect(ports.tables).toBeInstanceOf(MockTableRepository);
     expect(ports.tickets).toBeInstanceOf(MockTicketRepository);
@@ -34,6 +36,19 @@ describe("buildMockPorts", () => {
 
     expect(ports.methods.length).toBeGreaterThan(0);
     expect(ports.methods.map((entry) => entry.label)).toContain("Cash");
+  });
+
+  it("does not accept arbitrary mock credentials silently", async () => {
+    const ports = buildMockPorts();
+
+    expect(ports.auth).toBeDefined();
+    await expect(ports.auth?.login({ operator: "Mina", pin: "1234" })).resolves.toMatchObject({
+      operatorId: "operator-mina",
+      displayName: "Mina",
+    });
+    await expect(ports.auth?.login({ operator: "Mina", pin: "9999" })).rejects.toThrow(
+      "Invalid operator credentials",
+    );
   });
 
   it("returns a fresh set of adapters on every call, so tests never leak state across instances", () => {

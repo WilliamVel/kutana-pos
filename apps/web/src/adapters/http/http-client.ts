@@ -1,12 +1,14 @@
 export interface HttpClientOptions {
   readonly baseUrl?: string;
   readonly fetchImpl?: typeof fetch;
+  readonly getBearerToken?: () => string | null;
 }
 
 export interface HttpRequestOptions {
   readonly method?: string;
   readonly body?: unknown;
   readonly query?: Record<string, string | number | boolean | null | undefined>;
+  readonly auth?: boolean;
 }
 
 export class HttpError extends Error {
@@ -14,7 +16,12 @@ export class HttpError extends Error {
   readonly statusText: string;
   readonly responseBody: string | null;
 
-  constructor(input: { status: number; statusText: string; responseBody: string | null; url: string }) {
+  constructor(input: {
+    status: number;
+    statusText: string;
+    responseBody: string | null;
+    url: string;
+  }) {
     const details = input.responseBody?.trim() || input.statusText || "HTTP request failed";
     super(`HTTP ${input.status} ${details} for ${input.url}`);
     this.name = "HttpError";
@@ -27,10 +34,18 @@ export class HttpError extends Error {
 export class HttpClient {
   private readonly baseUrl: string;
   private readonly fetchImpl: typeof fetch;
+  private bearerToken: string | null;
+  private readonly getBearerToken?: () => string | null;
 
   constructor(options: HttpClientOptions = {}) {
     this.baseUrl = normalizeBaseUrl(options.baseUrl ?? defaultApiBaseUrl());
     this.fetchImpl = options.fetchImpl ?? fetch;
+    this.bearerToken = null;
+    this.getBearerToken = options.getBearerToken;
+  }
+
+  setBearerToken(token: string | null): void {
+    this.bearerToken = token;
   }
 
   async request<T>(path: string, options: HttpRequestOptions = {}): Promise<T> {
@@ -44,6 +59,11 @@ export class HttpClient {
     if (options.body !== undefined) {
       headers.set("Content-Type", "application/json");
       init.body = JSON.stringify(options.body);
+    }
+
+    const token = this.getBearerToken?.() ?? this.bearerToken;
+    if (options.auth !== false && token) {
+      headers.set("Authorization", `Bearer ${token}`);
     }
 
     const response = await this.fetchImpl(url, init);
@@ -78,11 +98,7 @@ export function encodePathSegment(segment: string): string {
   return encodeURIComponent(segment);
 }
 
-function buildUrl(
-  baseUrl: string,
-  path: string,
-  query: HttpRequestOptions["query"] = {},
-): string {
+function buildUrl(baseUrl: string, path: string, query: HttpRequestOptions["query"] = {}): string {
   const pathname = path.startsWith("/") ? path : `/${path}`;
   const url = new URL(`${baseUrl}${pathname}`);
 

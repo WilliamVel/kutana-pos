@@ -1,4 +1,5 @@
 import { KUTANA_V1_PAYMENT_METHODS } from "@kutana/shared/payments/model/payment-method-registry.seed.js";
+import { HttpAuthService } from "../adapters/http/auth-service.js";
 import { HttpCategoryRepository } from "../adapters/http/category-repository.js";
 import { HttpCustomerDebtRepository } from "../adapters/http/customer-debt-repository.js";
 import { HttpCustomerRepository } from "../adapters/http/customer-repository.js";
@@ -20,18 +21,25 @@ import type { Ports } from "./ports.js";
 export type HttpPortsOptions = HttpClientOptions & HttpOrderEventsOptions;
 
 export function buildHttpPorts(options: HttpPortsOptions = {}): Ports {
+  const auth = new HttpAuthService(options);
+  const authenticatedOptions: HttpPortsOptions = {
+    ...options,
+    getBearerToken: () => auth.currentSession()?.token ?? options.getBearerToken?.() ?? null,
+  };
+
   return {
-    orders: new HttpOrderRepository(options),
-    tables: new HttpTableRepository(options),
-    tickets: new HttpTicketRepository(options),
-    customers: new HttpCustomerRepository(options),
-    personalAccounts: new HttpPersonalAccountRepository(options),
-    customerDebts: new HttpCustomerDebtRepository(options),
-    payments: new HttpPaymentRepository(options),
-    products: new HttpProductRepository(options),
-    categories: new HttpCategoryRepository(options),
-    stock: new HttpStockRepository(options),
+    auth,
+    orders: new HttpOrderRepository(authenticatedOptions),
+    tables: new HttpTableRepository(authenticatedOptions),
+    tickets: new HttpTicketRepository(authenticatedOptions),
+    customers: new HttpCustomerRepository(authenticatedOptions),
+    personalAccounts: new HttpPersonalAccountRepository(authenticatedOptions),
+    customerDebts: new HttpCustomerDebtRepository(authenticatedOptions),
+    payments: new HttpPaymentRepository(authenticatedOptions),
+    products: new HttpProductRepository(authenticatedOptions),
+    categories: new HttpCategoryRepository(authenticatedOptions),
+    stock: new HttpStockRepository(authenticatedOptions),
     methods: KUTANA_V1_PAYMENT_METHODS,
-    events: new HttpOrderEvents(options),
+    events: new HttpOrderEvents(authenticatedOptions),
   };
 }

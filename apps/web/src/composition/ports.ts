@@ -1,3 +1,4 @@
+import type { AuthService } from "@kutana/shared/auth/ports/auth-service.js";
 import type { OrderRepository } from "@kutana/shared/ordering/ports/order-repository.js";
 import type { OrderEvents } from "@kutana/shared/ordering/ports/order-events.js";
 import type { TableRepository } from "@kutana/shared/ordering/ports/table-repository.js";
@@ -27,6 +28,7 @@ import type { StockRepository } from "@kutana/shared/inventory/ports/stock-repos
  * owns it.
  */
 export interface Ports {
+  readonly auth?: AuthService;
   readonly orders: OrderRepository;
   readonly tables: TableRepository;
   /**
