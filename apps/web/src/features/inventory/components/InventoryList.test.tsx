@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { InventoryList, type InventoryRow } from "./InventoryList.js";
 
@@ -41,6 +41,7 @@ function renderList(overrides: Partial<React.ComponentProps<typeof InventoryList
     page: 1,
     pageCount: 1,
     onPageChange: vi.fn(),
+    onEditProduct: vi.fn(),
     ...overrides,
   };
   render(<InventoryList {...props} />);
@@ -81,6 +82,17 @@ describe("InventoryList", () => {
     const props = renderList();
     fireEvent.change(screen.getByLabelText("Estado de stock"), { target: { value: "low-stock" } });
     expect(props.onStockStatusFilterChange).toHaveBeenCalledWith("low-stock");
+  });
+
+  it("calls onEditProduct with the selected row id", () => {
+    const props = renderList();
+
+    const row = screen.getByRole("row", {
+      name: /KUTANA Pilsener 500ml DRAFT-PILS-500 Draft Beer/,
+    });
+    fireEvent.click(within(row).getByRole("button", { name: "Editar" }));
+
+    expect(props.onEditProduct).toHaveBeenCalledWith("product-pilsener-500");
   });
 
   it("renders pagination controls and calls onPageChange", () => {

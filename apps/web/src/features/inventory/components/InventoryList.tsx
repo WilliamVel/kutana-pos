@@ -35,6 +35,7 @@ export interface InventoryListProps {
   readonly page: number;
   readonly pageCount: number;
   readonly onPageChange: (page: number) => void;
+  readonly onEditProduct?: (productId: string) => void;
 }
 
 /**
@@ -55,6 +56,7 @@ export function InventoryList({
   page,
   pageCount,
   onPageChange,
+  onEditProduct,
 }: InventoryListProps): JSX.Element {
   const categoryFieldId = useId();
   const stockFieldId = useId();
@@ -151,6 +153,7 @@ export function InventoryList({
                 <th>Categoría</th>
                 <th>Precio</th>
                 <th>Stock</th>
+                {onEditProduct ? <th>Acciones</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -190,6 +193,13 @@ export function InventoryList({
                       <span>{row.stockLabel}</span>
                     </div>
                   </td>
+                  {onEditProduct ? (
+                    <td className={styles.actionCell}>
+                      <Button variant="secondary" onClick={() => onEditProduct(row.id)}>
+                        Editar
+                      </Button>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

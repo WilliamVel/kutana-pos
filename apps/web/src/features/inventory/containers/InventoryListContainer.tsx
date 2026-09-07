@@ -8,13 +8,19 @@ import { computeStockDisplay, type StockDisplayStatus } from "../stock-display.j
 
 const PAGE_SIZE = 10;
 
+export interface InventoryListContainerProps {
+  readonly onEditProduct?: (product: Product) => void;
+}
+
 /**
  * Owns port access and all filter/search/pagination STATE. Holds no markup
  * complexity of its own — it fetches data via the composition hooks, then
  * hands fully-formed, already-formatted `InventoryRow[]` to the purely
  * presentational `InventoryList`.
  */
-export function InventoryListContainer(): JSX.Element {
+export function InventoryListContainer({
+  onEditProduct,
+}: InventoryListContainerProps = {}): JSX.Element {
   const products = useProducts();
   const categories = useCategories();
   const stock = useStock();
@@ -69,6 +75,11 @@ export function InventoryListContainer(): JSX.Element {
   const categoryNameById = useMemo(
     () => new Map(allCategories.map((category) => [category.id, category.name])),
     [allCategories],
+  );
+
+  const productById = useMemo(
+    () => new Map(allProducts.map((product) => [product.id, product])),
+    [allProducts],
   );
 
   const filteredRows = useMemo<InventoryRow[]>(() => {
@@ -135,6 +146,14 @@ export function InventoryListContainer(): JSX.Element {
       page={clampedPage}
       pageCount={pageCount}
       onPageChange={setPage}
+      onEditProduct={
+        onEditProduct
+          ? (productId) => {
+              const product = productById.get(productId);
+              if (product) onEditProduct(product);
+            }
+          : undefined
+      }
     />
   );
 }

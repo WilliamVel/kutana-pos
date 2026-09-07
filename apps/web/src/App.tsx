@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { AuthSession } from "@kutana/shared/auth/model/auth-session.js";
+import type { Product } from "@kutana/shared/catalog/model/product.js";
 import { AppShell } from "./app-shell/components/AppShell.js";
 import { TopBar } from "./app-shell/components/TopBar.js";
 import type { ScreenId } from "./app-shell/screens.js";
@@ -39,6 +40,7 @@ export function App(): JSX.Element {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [centerView, setCenterView] = useState<CenterView>("account");
   const [ordersReloadKey, setOrdersReloadKey] = useState(0);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const resetCenter = (): void => {
     setCenterView("account");
@@ -48,6 +50,7 @@ export function App(): JSX.Element {
 
   const navigate = (next: ScreenId): void => {
     if (next === "register") resetCenter();
+    setEditingProduct(null);
     setScreen(next);
   };
 
@@ -125,18 +128,33 @@ export function App(): JSX.Element {
             auth.logout();
             setSession(null);
             setScreen("inventory");
+            setEditingProduct(null);
             resetCenter();
           }}
         />
       }
     >
-      {screen === "inventory" ? <InventoryListContainer /> : null}
+      {screen === "inventory" ? (
+        <InventoryListContainer
+          onEditProduct={(product) => {
+            setEditingProduct(product);
+            setScreen("new-product");
+          }}
+        />
+      ) : null}
 
       {screen === "new-product" ? (
         <Panel>
           <ProductFormContainer
-            onSaved={() => setScreen("inventory")}
-            onCancel={() => setScreen("inventory")}
+            existingProduct={editingProduct ?? undefined}
+            onSaved={() => {
+              setEditingProduct(null);
+              setScreen("inventory");
+            }}
+            onCancel={() => {
+              setEditingProduct(null);
+              setScreen("inventory");
+            }}
           />
         </Panel>
       ) : null}

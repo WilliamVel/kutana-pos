@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { App } from "./App.js";
 import { PortsProvider } from "./composition/PortsProvider.js";
@@ -61,6 +61,34 @@ describe("App", () => {
 
     expect(screen.getByRole("heading", { name: "Clientes" })).toBeInTheDocument();
     expect(screen.getByRole("form", { name: "Formulario de cliente" })).toBeInTheDocument();
+  });
+
+  it("edits an existing product from the inventory screen", async () => {
+    render(
+      <PortsProvider value={buildMockPorts()}>
+        <App />
+      </PortsProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Operador"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
+
+    await waitFor(() => expect(screen.getByText("Blonde Ale 330ml")).toBeInTheDocument());
+    const row = screen.getByRole("row", {
+      name: /Blonde Ale 330ml MENU-BLONDE-ALE-330 Cervezas/,
+    });
+    fireEvent.click(within(row).getByRole("button", { name: "Editar" }));
+
+    await waitFor(() => expect(screen.getByDisplayValue("Blonde Ale 330ml")).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText("Nombre"), {
+      target: { value: "Blonde Ale 330ml Editada" },
+    });
+    fireEvent.change(screen.getByLabelText("Precio de venta (USD)"), { target: { value: "3.25" } });
+    fireEvent.submit(screen.getByRole("form"));
+
+    await waitFor(() => expect(screen.getByText("Blonde Ale 330ml Editada")).toBeInTheDocument());
+    expect(screen.getByText("$3.25")).toBeInTheDocument();
   });
 
   it("logs out from the account menu", async () => {

@@ -162,6 +162,11 @@
   align-items: center;
 }
 
+.actionCell {
+  text-align: right;
+  white-space: nowrap;
+}
+
 .image {
   display: grid;
   width: 3rem;
