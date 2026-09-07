@@ -58,15 +58,20 @@ describe("buildMockPorts", () => {
     expect(first.orders).not.toBe(second.orders);
   });
 
-  it("seeds the mock repositories with the demo fixtures so the UI has data on first render", async () => {
+  it("seeds the PDF catalog categories and products while leaving stock items empty", async () => {
     const ports = buildMockPorts();
 
     const seededOrder = await ports.orders.findByTable("table-1");
     expect(seededOrder).not.toBeNull();
     expect(seededOrder?.id).toBe("order-open-1");
 
-    const seededProduct = await ports.products.findById("product-pilsener-500");
-    expect(seededProduct).not.toBeNull();
+    await expect(ports.products.findBySku("MENU-BLONDE-ALE-330")).resolves.toMatchObject({
+      name: "Blonde Ale 330ml",
+      pourSizeMl: 330,
+      priceCents: 300,
+      stockItemId: null,
+    });
+    await expect(ports.stock.findById("stock-pilsener-keg")).resolves.toBeNull();
 
     const seededTables = await ports.tables.listAll();
     expect(seededTables.map((table) => table.id).sort()).toEqual([
@@ -79,6 +84,13 @@ describe("buildMockPorts", () => {
     ]);
 
     const seededCategories = await ports.categories.listAll();
-    expect(seededCategories.map((category) => category.name)).toContain("Draft Beer");
+    expect(seededCategories.map((category) => category.name)).toEqual([
+      "Cervezas",
+      "Gaseosas",
+      "Bebidas",
+      "Entradas",
+      "Pizzas",
+      "Especialidades",
+    ]);
   });
 });

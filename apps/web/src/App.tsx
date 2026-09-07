@@ -8,6 +8,7 @@ import { Button } from "./design-system/atoms/Button.js";
 import { ButtonRow } from "./design-system/molecules/ButtonRow.js";
 import { Panel } from "./design-system/molecules/Panel.js";
 import { LoginPanel } from "./features/auth/components/LoginPanel.js";
+import { CategoryManagementContainer } from "./features/catalog/containers/CategoryManagementContainer.js";
 import { ProductFormContainer } from "./features/catalog/containers/ProductFormContainer.js";
 import { InventoryListContainer } from "./features/inventory/containers/InventoryListContainer.js";
 import { RegisterWorkspace } from "./features/ordering/components/RegisterWorkspace.js";
@@ -139,6 +140,8 @@ export function App(): JSX.Element {
           />
         </Panel>
       ) : null}
+
+      {screen === "categories" ? <CategoryManagementContainer /> : null}
 
       {screen === "customers" ? <CustomerManagementContainer /> : null}
 

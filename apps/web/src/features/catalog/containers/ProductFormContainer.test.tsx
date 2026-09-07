@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { createProduct } from "@kutana/shared/catalog/model/product.js";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../../composition/mock.js";
 import { ProductFormContainer } from "./ProductFormContainer.js";
@@ -15,7 +16,7 @@ describe("ProductFormContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Cervezas")).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "House Lager" } });
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "SKU-NEW-1" } });
@@ -41,7 +42,7 @@ describe("ProductFormContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Cervezas")).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "House Lager" } });
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "SKU-NEW-2" } });
@@ -62,6 +63,18 @@ describe("ProductFormContainer", () => {
   it("rejects a duplicate SKU with a field-level error, without calling onSaved", async () => {
     const ports = buildMockPorts();
     const onSaved = vi.fn();
+    await ports.products.save(
+      createProduct({
+        id: "product-existing",
+        name: "Existing Pilsener",
+        categoryId: "11111111-1111-4111-8111-111111111111",
+        sku: "DRAFT-PILS-500",
+        priceCents: 500,
+        taxRateBp: 1200,
+        stockKind: "unit",
+      }),
+      0,
+    );
 
     render(
       <PortsProvider value={ports}>
@@ -69,7 +82,7 @@ describe("ProductFormContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Cervezas")).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Duplicate" } });
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "DRAFT-PILS-500" } });

@@ -25,6 +25,25 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Inventario" })).toBeInTheDocument();
   });
 
+  it("opens category management from the top bar", async () => {
+    render(
+      <PortsProvider value={buildMockPorts()}>
+        <App />
+      </PortsProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Operador"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Categorías" })).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Categorías" }));
+
+    expect(screen.getByRole("heading", { name: "Categorías" })).toBeInTheDocument();
+    expect(await screen.findByRole("form", { name: "Editar Cervezas" })).toBeInTheDocument();
+  });
+
   it("opens customer management from the top bar", async () => {
     render(
       <PortsProvider value={buildMockPorts()}>

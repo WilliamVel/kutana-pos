@@ -78,6 +78,7 @@ describe("ProductForm", () => {
 
     fireEvent.change(screen.getByLabelText("Tipo de stock"), { target: { value: "volume" } });
     expect(screen.getByLabelText("Medida del vaso (ml)")).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "330ml" })).toBeInTheDocument();
   });
 
   it("toggles the active switch", () => {

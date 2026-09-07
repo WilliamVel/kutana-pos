@@ -1,0 +1,43 @@
+.screen {
+  display: grid;
+  gap: 1rem;
+}
+
+.header,
+.card,
+.row {
+  border: 1px solid var(--color-border, #d9dee8);
+  border-radius: 1rem;
+  background: var(--color-surface, #fff);
+  padding: 1rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.25rem;
+  color: var(--color-muted, #5f6b7a);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.card form,
+.row form,
+.card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.list {
+  display: grid;
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.message {
+  margin: 0;
+  color: var(--color-success, #18794e);
+  font-weight: 700;
+}

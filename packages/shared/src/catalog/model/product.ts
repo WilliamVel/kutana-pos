@@ -3,7 +3,7 @@ import { ValidationError } from "../../errors/domain-error.js";
 export type StockKind = "unit" | "volume";
 
 /** Valid draft-beer pour sizes, in millilitres. Each size is priced independently. */
-export type PourSize = 500 | 750 | 1000;
+export type PourSize = 330 | 500 | 750 | 1000;
 
 export interface Product {
   readonly id: string;

@@ -14,13 +14,13 @@ describe("AddItemContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("KUTANA Pilsener 1L")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Blonde Ale 1000ml")).toBeInTheDocument());
 
     const before = await ports.orders.findByTable("table-2");
     const beforeCount = before?.lineItems.length ?? 0;
 
-    const row = screen.getByText("KUTANA Pilsener 1L").closest("li");
-    if (!row) throw new Error("expected a catalog row for KUTANA Pilsener 1L");
+    const row = screen.getByText("Blonde Ale 1000ml").closest("li");
+    if (!row) throw new Error("expected a catalog row for Blonde Ale 1000ml");
     fireEvent.click(within(row).getByRole("button", { name: /^Agregar / }));
 
     await waitFor(async () => {
@@ -30,8 +30,8 @@ describe("AddItemContainer", () => {
 
     const after = await ports.orders.findByTable("table-2");
     const added = after?.lineItems.at(-1);
-    expect(added?.nameSnapshot).toBe("KUTANA Pilsener 1L");
-    expect(added?.unitPriceCents).toBe(620);
+    expect(added?.nameSnapshot).toBe("Blonde Ale 1000ml");
+    expect(added?.unitPriceCents).toBe(800);
     expect(added?.quantity).toBe(1);
   });
 

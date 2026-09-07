@@ -1,4 +1,7 @@
-import { createStockMovement } from "@kutana/shared/inventory/model/stock-movement.js";
+import {
+  KUTANA_MENU_CATEGORIES,
+  KUTANA_MENU_PRODUCTS,
+} from "@kutana/shared/catalog/model/kutana-menu.seed.js";
 import { KUTANA_V1_PAYMENT_METHODS } from "@kutana/shared/payments/model/payment-method-registry.seed.js";
 import { MockAuthService } from "../adapters/mock/auth-service.js";
 import { MockCategoryRepository } from "../adapters/mock/category-repository.js";
@@ -18,9 +21,9 @@ import type { Ports } from "./ports.js";
 /**
  * Milestone-1 wiring: builds a fresh `Ports` bag backed entirely by the
  * in-memory mock adapters from `apps/web/src/adapters/mock/`, pre-loaded
- * with the demo seed fixtures. This is the ONLY function `main.tsx` needs
- * to call today; `buildHttpPorts()` (milestone 2) will have the identical
- * `(): Ports` signature.
+ * with the PDF menu catalog plus the ordering/table demo fixtures. This is
+ * the ONLY function `main.tsx` needs to call today; `buildHttpPorts()`
+ * (milestone 2) has the identical `(): Ports` signature.
  *
  * Every call returns brand-new adapter instances — callers must not share
  * a single `Ports` object across independent tests or independent demo
@@ -42,9 +45,8 @@ export function buildMockPorts(): Ports {
   const stock = new MockStockRepository();
   const events = new MockOrderEvents();
 
-  seedProducts(products, fixtures.products);
-  seedCategories(categories, fixtures);
-  seedStock(stock, fixtures.stockItems);
+  seedCategories(categories);
+  seedProducts(products);
   seedOrders(orders, fixtures);
   seedTables(tables, fixtures);
 
@@ -65,12 +67,15 @@ export function buildMockPorts(): Ports {
   };
 }
 
-function seedCategories(
-  repository: MockCategoryRepository,
-  fixtures: ReturnType<typeof buildSeedFixtures>,
-): void {
-  for (const category of fixtures.categories) {
+function seedCategories(repository: MockCategoryRepository): void {
+  for (const category of KUTANA_MENU_CATEGORIES) {
     void repository.save(category);
+  }
+}
+
+function seedProducts(repository: MockProductRepository): void {
+  for (const product of KUTANA_MENU_PRODUCTS) {
+    void repository.save(product, 0);
   }
 }
 
@@ -80,35 +85,6 @@ function seedTables(
 ): void {
   for (const table of fixtures.tables) {
     void repository.save(table, 0);
-  }
-}
-
-function seedProducts(
-  repository: MockProductRepository,
-  products: ReturnType<typeof buildSeedFixtures>["products"],
-): void {
-  for (const product of products) {
-    // Fixtures are already valid `Product` aggregates at version 1; saving
-    // with expectedVersion 0 is the mock adapter's "insert" path (no stored
-    // row yet to conflict with).
-    void repository.save(product, 0);
-  }
-}
-
-function seedStock(
-  repository: MockStockRepository,
-  stockItems: ReturnType<typeof buildSeedFixtures>["stockItems"],
-): void {
-  for (const item of stockItems) {
-    const seedMovement = createStockMovement({
-      stockItemId: item.id,
-      delta: 0,
-      reason: "adjustment",
-      refType: "seed",
-      refId: item.id,
-      occurredAt: new Date(0).toISOString(),
-    });
-    void repository.recordMovement(item, seedMovement, 0);
   }
 }
 

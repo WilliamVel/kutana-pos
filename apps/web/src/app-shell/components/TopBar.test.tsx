@@ -11,6 +11,7 @@ describe("TopBar", () => {
     for (const label of [
       "Inventario",
       "Agregar producto",
+      "Categorías",
       "Caja",
       "Clientes",
       "Deudas pendientes",

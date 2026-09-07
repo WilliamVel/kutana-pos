@@ -35,7 +35,7 @@ export interface ProductFormProps {
   readonly errors?: Partial<Record<keyof ProductFormValues, string>>;
 }
 
-const POUR_SIZES: PourSize[] = [500, 750, 1000];
+const POUR_SIZES: PourSize[] = [330, 500, 750, 1000];
 
 /**
  * Parses a "6.50"-style dollar string into integer cents using only integer

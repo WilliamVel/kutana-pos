@@ -5,7 +5,7 @@ import { buildMockPorts } from "../../../composition/mock.js";
 import { InventoryListContainer } from "./InventoryListContainer.js";
 
 describe("InventoryListContainer", () => {
-  it("loads real seed products from the mock ProductRepository and renders KUTANA volume stock correctly", async () => {
+  it("starts with the PDF product catalog and empty stock references", async () => {
     const ports = buildMockPorts();
     render(
       <PortsProvider value={ports}>
@@ -13,11 +13,11 @@ describe("InventoryListContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Cervezas")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Blonde Ale 330ml")).toBeInTheDocument());
 
-    // The Pilsener 500/750/1000 all share one keg (30000ml seeded) — the
-    // draft-beer rows must show millilitres, never a "unit" count.
-    await waitFor(() => expect(screen.getAllByText("30000ml").length).toBeGreaterThan(0));
-    expect(screen.getByText("48 unidades")).toBeInTheDocument(); // bottled stout
+    expect(screen.getByText("10")).toBeInTheDocument();
+    expect(screen.getByText("Productos visibles")).toBeInTheDocument();
+    expect(screen.getAllByText("0ml").length).toBeGreaterThan(0);
   });
 });

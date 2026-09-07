@@ -109,18 +109,18 @@ describe("Product", () => {
     ).toThrow();
   });
 
-  it("accepts a volume-kind product with a pour size and stock item reference", () => {
+  it("accepts a volume-kind product with a 330ml pour size and stock item reference", () => {
     const product = createProduct({
-      sku: "DRAFT-500",
-      name: "Draft 500ml",
+      sku: "DRAFT-330",
+      name: "Draft 330ml",
       categoryId: "cat-1",
       priceCents: 300,
       taxRateBp: 1200,
       stockKind: "volume",
-      pourSizeMl: 500,
+      pourSizeMl: 330,
       stockItemId: "keg-1",
     });
-    expect(product.pourSizeMl).toBe(500);
+    expect(product.pourSizeMl).toBe(330);
     expect(product.stockItemId).toBe("keg-1");
   });
 
