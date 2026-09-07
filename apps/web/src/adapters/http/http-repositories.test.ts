@@ -376,3 +376,16 @@ describe("HTTP repositories", () => {
     expect(parseJsonBody(calls[2]!)).toEqual({ stockItem, movement, expectedVersion: 3 });
   });
 });
+
+describe("HttpClient auth", () => {
+  it("attaches a bearer token from client options unless auth is disabled", async () => {
+    const { fetchImpl, calls } = createFetch([jsonResponse({ ok: true }), jsonResponse({ ok: true })]);
+    const client = new HttpClient({ baseUrl: BASE_URL, fetchImpl, getBearerToken: () => "token-1" });
+
+    await client.request("/protected");
+    await client.request("/auth/login", { method: "POST", body: {}, auth: false });
+
+    expect((calls[0]?.init.headers as Headers).get("Authorization")).toBe("Bearer token-1");
+    expect((calls[1]?.init.headers as Headers).get("Authorization")).toBeNull();
+  });
+});

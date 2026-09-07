@@ -1,5 +1,6 @@
 import { createStockMovement } from "@kutana/shared/inventory/model/stock-movement.js";
 import { KUTANA_V1_PAYMENT_METHODS } from "@kutana/shared/payments/model/payment-method-registry.seed.js";
+import { MockAuthService } from "../adapters/mock/auth-service.js";
 import { MockCategoryRepository } from "../adapters/mock/category-repository.js";
 import { MockCustomerDebtRepository } from "../adapters/mock/customer-debt-repository.js";
 import { MockCustomerRepository } from "../adapters/mock/customer-repository.js";
@@ -28,6 +29,7 @@ import type { Ports } from "./ports.js";
 export function buildMockPorts(): Ports {
   const fixtures = buildSeedFixtures();
 
+  const auth = new MockAuthService();
   const orders = new MockOrderRepository();
   const tables = new MockTableRepository();
   const tickets = new MockTicketRepository();
@@ -47,6 +49,7 @@ export function buildMockPorts(): Ports {
   seedTables(tables, fixtures);
 
   return {
+    auth,
     orders,
     tables,
     tickets,

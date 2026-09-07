@@ -1,7 +1,9 @@
 import { useState } from "react";
+import type { AuthSession } from "@kutana/shared/auth/model/auth-session.js";
 import { AppShell } from "./app-shell/components/AppShell.js";
 import { TopBar } from "./app-shell/components/TopBar.js";
 import type { ScreenId } from "./app-shell/screens.js";
+import { useAuth } from "./composition/PortsProvider.js";
 import { Button } from "./design-system/atoms/Button.js";
 import { ButtonRow } from "./design-system/molecules/ButtonRow.js";
 import { Panel } from "./design-system/molecules/Panel.js";
@@ -28,7 +30,8 @@ type CenterView = "account" | "payment" | "assignment";
  * container that wires its own ports.
  */
 export function App(): JSX.Element {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const auth = useAuth();
+  const [session, setSession] = useState<AuthSession | null>(() => auth.currentSession());
   const [screen, setScreen] = useState<ScreenId>("inventory");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
@@ -107,8 +110,8 @@ export function App(): JSX.Element {
     }
   }
 
-  if (!isAuthenticated) {
-    return <LoginPanel onLogin={() => setIsAuthenticated(true)} />;
+  if (!session) {
+    return <LoginPanel onLogin={setSession} />;
   }
 
   return (
@@ -118,7 +121,8 @@ export function App(): JSX.Element {
           currentScreen={screen}
           onNavigate={navigate}
           onLogout={() => {
-            setIsAuthenticated(false);
+            auth.logout();
+            setSession(null);
             setScreen("inventory");
             resetCenter();
           }}

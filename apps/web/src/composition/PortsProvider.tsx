@@ -1,4 +1,5 @@
 import { createContext, useContext, type ReactNode } from "react";
+import type { AuthService } from "@kutana/shared/auth/ports/auth-service.js";
 import type { Ports } from "./ports.js";
 
 /**
@@ -39,6 +40,12 @@ export function usePorts(): Ports {
     );
   }
   return ports;
+}
+
+export function useAuth(): AuthService {
+  const auth = usePorts().auth;
+  if (!auth) throw new Error("Auth port is not configured on <PortsProvider>.");
+  return auth;
 }
 
 export function useOrders(): Ports["orders"] {

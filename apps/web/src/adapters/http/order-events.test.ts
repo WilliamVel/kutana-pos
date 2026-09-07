@@ -61,6 +61,7 @@ describe("HttpOrderEvents", () => {
     const events = new HttpOrderEvents({
       baseUrl: "http://api.example.test/",
       EventSourceImpl: FakeEventSource,
+      getBearerToken: () => "session-token",
     });
     const listener = vi.fn();
     const event = orderEvent({ orderId: "order/1" });
@@ -69,7 +70,7 @@ describe("HttpOrderEvents", () => {
     FakeEventSource.instances[0]?.emit(event);
 
     expect(FakeEventSource.instances.map((source) => source.url)).toEqual([
-      "http://api.example.test/ordering/orders/order%2F1/events",
+      "http://api.example.test/ordering/orders/order%2F1/events?access_token=session-token",
     ]);
     expect(listener).toHaveBeenCalledWith(event);
   });
