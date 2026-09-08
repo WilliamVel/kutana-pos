@@ -19,6 +19,19 @@ export function CustomerManagementContainer(): JSX.Element {
     void load();
   }, [load]);
 
+  const deleteCustomer = (customerId: string): void => {
+    void (async () => {
+      setBusy(true);
+      try {
+        await customersPort.delete(customerId);
+        setMessage("Cliente eliminado.");
+        await load();
+      } finally {
+        setBusy(false);
+      }
+    })();
+  };
+
   const create = (values: CustomerFormValues): void => {
     void (async () => {
       setBusy(true);
@@ -42,7 +55,7 @@ export function CustomerManagementContainer(): JSX.Element {
   return (
     <div className={styles.screen}>
       <CustomerForm onSubmit={create} disabled={busy} message={message} />
-      <CustomerList customers={customers} />
+      <CustomerList customers={customers} onDeleteCustomer={deleteCustomer} />
     </div>
   );
 }

@@ -19,4 +19,10 @@ export class MockCustomerRepository implements CustomerRepository {
       return customer;
     });
   }
+
+  async delete(id: string): Promise<void> {
+    return simulateLatency(() => {
+      this.customersById.delete(id);
+    });
+  }
 }

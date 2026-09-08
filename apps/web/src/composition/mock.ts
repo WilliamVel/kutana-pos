@@ -1,7 +1,3 @@
-import {
-  KUTANA_MENU_CATEGORIES,
-  KUTANA_MENU_PRODUCTS,
-} from "@kutana/shared/catalog/model/kutana-menu.seed.js";
 import { KUTANA_V1_PAYMENT_METHODS } from "@kutana/shared/payments/model/payment-method-registry.seed.js";
 import { MockAuthService } from "../adapters/mock/auth-service.js";
 import { MockCategoryRepository } from "../adapters/mock/category-repository.js";
@@ -21,9 +17,9 @@ import type { Ports } from "./ports.js";
 /**
  * Milestone-1 wiring: builds a fresh `Ports` bag backed entirely by the
  * in-memory mock adapters from `apps/web/src/adapters/mock/`, pre-loaded
- * with the PDF menu catalog plus the ordering/table demo fixtures. This is
- * the ONLY function `main.tsx` needs to call today; `buildHttpPorts()`
- * (milestone 2) has the identical `(): Ports` signature.
+ * with catalog category plus ordering/table demo fixtures. This is the ONLY
+ * function `main.tsx` needs to call today; `buildHttpPorts()` (milestone 2)
+ * has the identical `(): Ports` signature.
  *
  * Every call returns brand-new adapter instances — callers must not share
  * a single `Ports` object across independent tests or independent demo
@@ -45,8 +41,7 @@ export function buildMockPorts(): Ports {
   const stock = new MockStockRepository();
   const events = new MockOrderEvents();
 
-  seedCategories(categories);
-  seedProducts(products);
+  seedCategories(categories, fixtures);
   seedOrders(orders, fixtures);
   seedTables(tables, fixtures);
 
@@ -67,15 +62,12 @@ export function buildMockPorts(): Ports {
   };
 }
 
-function seedCategories(repository: MockCategoryRepository): void {
-  for (const category of KUTANA_MENU_CATEGORIES) {
+function seedCategories(
+  repository: MockCategoryRepository,
+  fixtures: ReturnType<typeof buildSeedFixtures>,
+): void {
+  for (const category of fixtures.categories) {
     void repository.save(category);
-  }
-}
-
-function seedProducts(repository: MockProductRepository): void {
-  for (const product of KUTANA_MENU_PRODUCTS) {
-    void repository.save(product, 0);
   }
 }
 

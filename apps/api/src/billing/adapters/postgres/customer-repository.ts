@@ -69,4 +69,8 @@ export class PostgresCustomerRepository implements CustomerRepository {
     );
     return mapCustomer(result.rows[0]!);
   }
+
+  async delete(id: string): Promise<void> {
+    await this.pool.query("DELETE FROM customers WHERE id = $1", [id]);
+  }
 }

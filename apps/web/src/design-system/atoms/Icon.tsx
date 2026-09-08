@@ -3,6 +3,7 @@ export type IconName =
   | "warning"
   | "check"
   | "close"
+  | "trash"
   | "receipt"
   | "arrow-right"
   | "arrow-left";
@@ -16,7 +17,7 @@ export interface IconProps {
 
 /**
  * Minimal glyph atom. A small inline SVG set is enough for v1 (beer/warning/
- * check/close/receipt); a full icon library is not in scope for this PR.
+ * check/close/trash/receipt); a full icon library is not in scope for this PR.
  * Purely presentational: props in, markup out, no port access.
  */
 export function Icon({ name, label, size = 20 }: IconProps): JSX.Element {
@@ -49,6 +50,15 @@ function IconGlyph({ name }: { name: IconName }): JSX.Element {
       return <path d="m4 12 6 6L20 6" strokeWidth={2} />;
     case "close":
       return <path d="M6 6 18 18M18 6 6 18" strokeWidth={2} />;
+    case "trash":
+      return (
+        <path
+          d="M4 7h16m-10 4v6m4-6v6M9 7V4h6v3m-8 0 1 14h8l1-14"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      );
     case "receipt":
       return <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" strokeWidth={2} />;
     case "arrow-right":

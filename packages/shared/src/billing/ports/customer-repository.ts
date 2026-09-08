@@ -5,4 +5,5 @@ export interface CustomerRepository {
   findById(id: string): Promise<Customer | null>;
   listAll(): Promise<Customer[]>;
   save(customer: Customer): Promise<Customer>;
+  delete(id: string): Promise<void>;
 }

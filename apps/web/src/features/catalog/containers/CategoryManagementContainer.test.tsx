@@ -5,7 +5,7 @@ import { buildMockPorts } from "../../../composition/mock.js";
 import { CategoryManagementContainer } from "./CategoryManagementContainer.js";
 
 describe("CategoryManagementContainer", () => {
-  it("loads PDF categories through CategoryRepository and creates a new category", async () => {
+  it("loads mock categories through CategoryRepository and creates a new category", async () => {
     const ports = buildMockPorts();
     render(
       <PortsProvider value={ports}>
@@ -16,7 +16,7 @@ describe("CategoryManagementContainer", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "Categorías" })).toBeInTheDocument(),
     );
-    expect(await screen.findByRole("form", { name: "Editar Cervezas" })).toBeInTheDocument();
+    expect(await screen.findByRole("form", { name: "Editar Draft Beer" })).toBeInTheDocument();
 
     const createForm = screen.getByRole("form", { name: "Crear categoría" });
     fireEvent.change(within(createForm).getByLabelText("Nombre"), { target: { value: "Postres" } });
@@ -36,15 +36,15 @@ describe("CategoryManagementContainer", () => {
       </PortsProvider>,
     );
 
-    const form = await screen.findByRole("form", { name: "Editar Cervezas" });
+    const form = await screen.findByRole("form", { name: "Editar Draft Beer" });
     fireEvent.change(within(form).getByLabelText("Nombre"), {
-      target: { value: "Cervezas artesanales" },
+      target: { value: "Draft Beer Updated" },
     });
     fireEvent.change(within(form).getByLabelText("Orden"), { target: { value: "9" } });
     fireEvent.submit(form);
 
     await waitFor(() => expect(screen.getByText("Categoría guardada.")).toBeInTheDocument());
-    const saved = await ports.categories.findById("11111111-1111-4111-8111-111111111111");
-    expect(saved).toMatchObject({ name: "Cervezas artesanales", sortOrder: 9 });
+    const saved = await ports.categories.findById("category-draft-beer");
+    expect(saved).toMatchObject({ name: "Draft Beer Updated", sortOrder: 9 });
   });
 });

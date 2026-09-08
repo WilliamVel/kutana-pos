@@ -40,6 +40,7 @@ function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
       findById: async () => null,
       listAll: async () => [],
       save: async (customer) => customer,
+      delete: async () => {},
     } as Ports["customers"],
     personalAccounts: {
       findById: async () => null,

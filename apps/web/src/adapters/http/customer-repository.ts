@@ -23,4 +23,10 @@ export class HttpCustomerRepository implements CustomerRepository {
       body: customer,
     });
   }
+
+  delete(id: string): Promise<void> {
+    return this.http.request<void>(`/billing/customers/${encodePathSegment(id)}`, {
+      method: "DELETE",
+    });
+  }
 }

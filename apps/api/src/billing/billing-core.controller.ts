@@ -64,6 +64,11 @@ export class BillingCoreController {
     return this.customers.save({ ...body, id });
   }
 
+  @Delete("customers/:id")
+  deleteCustomer(@Param("id") id: string): Promise<void> {
+    return this.customers.delete(id);
+  }
+
   @Get("customers/:customerId/debts")
   listCustomerDebtsByCustomer(@Param("customerId") customerId: string): Promise<CustomerDebtEntry[]> {
     return this.customerDebts.listByCustomer(customerId);

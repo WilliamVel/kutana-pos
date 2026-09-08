@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
+import { buildHttpPorts } from "../../../composition/http.js";
 import { buildMockPorts } from "../../../composition/mock.js";
 import { LoginPanel } from "./LoginPanel.js";
 
@@ -17,10 +18,22 @@ describe("LoginPanel", () => {
     expect(screen.getByRole("button", { name: "Ingresar" })).toBeDisabled();
   });
 
-  it("calls onLogin after the operator enters valid credentials", async () => {
+  it("posts credentials through the HTTP auth port when the operator clicks sign in", async () => {
     const onLogin = vi.fn();
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          operatorId: "operator-mina",
+          displayName: "Mina",
+          token: "signed-token",
+          expiresAt: "2026-01-01T00:15:00.000Z",
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      ),
+    ) as unknown as typeof fetch;
+
     render(
-      <PortsProvider value={buildMockPorts()}>
+      <PortsProvider value={buildHttpPorts({ baseUrl: "http://localhost:3000", fetchImpl })}>
         <LoginPanel onLogin={onLogin} />
       </PortsProvider>,
     );
@@ -29,6 +42,14 @@ describe("LoginPanel", () => {
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
 
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(1));
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "http://localhost:3000/auth/login",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ operator: "Mina", pin: "1234" }),
+      }),
+    );
     await waitFor(() => expect(onLogin).toHaveBeenCalledTimes(1));
   });
 

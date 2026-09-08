@@ -49,8 +49,39 @@
   background: var(--surface-sunken);
 }
 
+.rowHeader {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
 .row strong {
   overflow-wrap: anywhere;
+}
+
+.iconButton {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.iconButton:hover,
+.iconButton:focus-visible {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.iconButton:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .notes {

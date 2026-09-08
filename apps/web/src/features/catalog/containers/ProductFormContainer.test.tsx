@@ -16,7 +16,7 @@ describe("ProductFormContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Cervezas")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "House Lager" } });
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "SKU-NEW-1" } });
@@ -42,7 +42,7 @@ describe("ProductFormContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Cervezas")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "House Lager" } });
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "SKU-NEW-2" } });
@@ -60,6 +60,78 @@ describe("ProductFormContainer", () => {
     expect(stored?.costPriceCents).toBe(150);
   });
 
+  it("saves an existing product using the latest repository version", async () => {
+    const ports = buildMockPorts();
+    const onSaved = vi.fn();
+    const original = await ports.products.save(
+      createProduct({
+        id: "product-editable",
+        name: "Original Lager",
+        categoryId: "category-draft-beer",
+        sku: "EDIT-LAGER",
+        priceCents: 300,
+        taxRateBp: 1200,
+        stockKind: "unit",
+      }),
+      0,
+    );
+    await ports.products.save({ ...original, name: "Repository Lager" }, original.version);
+
+    render(
+      <PortsProvider value={ports}>
+        <ProductFormContainer existingProduct={original} onSaved={onSaved} onCancel={vi.fn()} />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Edited Lager" } });
+    fireEvent.submit(screen.getByRole("form"));
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+    expect(onSaved.mock.calls[0]![0]).toMatchObject({
+      name: "Edited Lager",
+      version: 3,
+    });
+  });
+
+  it("creates and links stock when editing quantity on an existing product without stock", async () => {
+    const ports = buildMockPorts();
+    const onSaved = vi.fn();
+    const original = await ports.products.save(
+      createProduct({
+        id: "product-stockless",
+        name: "Stockless Lager",
+        categoryId: "category-draft-beer",
+        sku: "STOCKLESS-LAGER",
+        priceCents: 300,
+        taxRateBp: 1200,
+        stockKind: "unit",
+        stockItemId: null,
+      }),
+      0,
+    );
+
+    render(
+      <PortsProvider value={ports}>
+        <ProductFormContainer existingProduct={original} onSaved={onSaved} onCancel={vi.fn()} />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText("Cantidad inicial de stock"), { target: { value: "42" } });
+    fireEvent.submit(screen.getByRole("form"));
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+    const saved = onSaved.mock.calls[0]![0];
+    expect(saved.stockItemId).toEqual(expect.any(String));
+    await expect(ports.stock.findById(saved.stockItemId)).resolves.toMatchObject({
+      quantity: 42,
+      unit: "ea",
+    });
+  });
+
   it("rejects a duplicate SKU with a field-level error, without calling onSaved", async () => {
     const ports = buildMockPorts();
     const onSaved = vi.fn();
@@ -67,7 +139,7 @@ describe("ProductFormContainer", () => {
       createProduct({
         id: "product-existing",
         name: "Existing Pilsener",
-        categoryId: "11111111-1111-4111-8111-111111111111",
+        categoryId: "category-draft-beer",
         sku: "DRAFT-PILS-500",
         priceCents: 500,
         taxRateBp: 1200,
@@ -82,7 +154,7 @@ describe("ProductFormContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Cervezas")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Duplicate" } });
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "DRAFT-PILS-500" } });

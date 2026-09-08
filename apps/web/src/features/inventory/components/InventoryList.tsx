@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { Button } from "../../../design-system/atoms/Button.js";
+import { Icon } from "../../../design-system/atoms/Icon.js";
 import { PriceTag } from "../../../design-system/molecules/PriceTag.js";
 import { StatusPill } from "../../../design-system/molecules/StatusPill.js";
 import type { StockDisplayStatus } from "../stock-display.js";
@@ -36,6 +37,7 @@ export interface InventoryListProps {
   readonly pageCount: number;
   readonly onPageChange: (page: number) => void;
   readonly onEditProduct?: (productId: string) => void;
+  readonly onDeleteProduct?: (productId: string) => void;
 }
 
 /**
@@ -57,6 +59,7 @@ export function InventoryList({
   pageCount,
   onPageChange,
   onEditProduct,
+  onDeleteProduct,
 }: InventoryListProps): JSX.Element {
   const categoryFieldId = useId();
   const stockFieldId = useId();
@@ -153,7 +156,7 @@ export function InventoryList({
                 <th>Categoría</th>
                 <th>Precio</th>
                 <th>Stock</th>
-                {onEditProduct ? <th>Acciones</th> : null}
+                {onEditProduct || onDeleteProduct ? <th>Acciones</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -193,11 +196,26 @@ export function InventoryList({
                       <span>{row.stockLabel}</span>
                     </div>
                   </td>
-                  {onEditProduct ? (
+                  {onEditProduct || onDeleteProduct ? (
                     <td className={styles.actionCell}>
-                      <Button variant="secondary" onClick={() => onEditProduct(row.id)}>
-                        Editar
-                      </Button>
+                      <div className={styles.actions}>
+                        {onEditProduct ? (
+                          <Button variant="secondary" onClick={() => onEditProduct(row.id)}>
+                            Editar
+                          </Button>
+                        ) : null}
+                        {onDeleteProduct ? (
+                          <button
+                            type="button"
+                            className={styles.iconButton}
+                            aria-label={`Eliminar producto ${row.name}`}
+                            title="Eliminar producto"
+                            onClick={() => onDeleteProduct(row.id)}
+                          >
+                            <Icon name="trash" size={18} />
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                   ) : null}
                 </tr>

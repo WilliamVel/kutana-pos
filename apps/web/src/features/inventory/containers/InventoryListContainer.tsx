@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Category } from "@kutana/shared/catalog/model/category.js";
-import type { Product } from "@kutana/shared/catalog/model/product.js";
+import { withActive, type Product } from "@kutana/shared/catalog/model/product.js";
 import type { StockItem } from "@kutana/shared/inventory/model/stock-item.js";
 import { useCategories, useProducts, useStock } from "../../../composition/PortsProvider.js";
 import { InventoryList, type InventoryRow } from "../components/InventoryList.js";
@@ -82,6 +82,16 @@ export function InventoryListContainer({
     [allProducts],
   );
 
+  const deleteProduct = (productId: string): void => {
+    const product = productById.get(productId);
+    if (!product) return;
+
+    void (async () => {
+      const saved = await products.save(withActive(product, false), product.version);
+      setAllProducts((current) => current.filter((item) => item.id !== saved.id));
+    })();
+  };
+
   const filteredRows = useMemo<InventoryRow[]>(() => {
     const query = searchQuery.trim().toLowerCase();
 
@@ -154,6 +164,7 @@ export function InventoryListContainer({
             }
           : undefined
       }
+      onDeleteProduct={deleteProduct}
     />
   );
 }

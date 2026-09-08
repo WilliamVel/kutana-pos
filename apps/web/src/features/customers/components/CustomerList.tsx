@@ -1,11 +1,13 @@
 import type { Customer } from "@kutana/shared/billing/model/personal-account.js";
+import { Icon } from "../../../design-system/atoms/Icon.js";
 import styles from "./CustomerList.module.css";
 
 export interface CustomerListProps {
   readonly customers: readonly Customer[];
+  readonly onDeleteCustomer?: (customerId: string) => void;
 }
 
-export function CustomerList({ customers }: CustomerListProps): JSX.Element {
+export function CustomerList({ customers, onDeleteCustomer }: CustomerListProps): JSX.Element {
   return (
     <section aria-label="Lista de clientes" className={styles.card}>
       <div className={styles.header}>
@@ -25,11 +27,24 @@ export function CustomerList({ customers }: CustomerListProps): JSX.Element {
             aria-label={`Cliente ${customer.displayName}`}
             className={styles.row}
           >
-            <div>
-              <strong>{customer.displayName}</strong>
-              <p>
-                {customer.phone || "Sin teléfono"} · {customer.email || "Sin email"}
-              </p>
+            <div className={styles.rowHeader}>
+              <div>
+                <strong>{customer.displayName}</strong>
+                <p>
+                  {customer.phone || "Sin teléfono"} · {customer.email || "Sin email"}
+                </p>
+              </div>
+              {onDeleteCustomer ? (
+                <button
+                  type="button"
+                  className={styles.iconButton}
+                  aria-label={`Eliminar cliente ${customer.displayName}`}
+                  title="Eliminar cliente"
+                  onClick={() => onDeleteCustomer(customer.id)}
+                >
+                  <Icon name="trash" size={18} />
+                </button>
+              ) : null}
             </div>
             {customer.notes ? <p className={styles.notes}>{customer.notes}</p> : null}
           </article>

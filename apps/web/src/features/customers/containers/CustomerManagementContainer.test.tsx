@@ -27,4 +27,29 @@ describe("CustomerManagementContainer", () => {
       (await ports.customers.listAll()).some((customer) => customer.displayName === "Ada Lovelace"),
     ).toBe(true);
   });
+
+  it("deletes a customer from the saved list using the trash icon", async () => {
+    const ports = buildMockPorts();
+    await ports.customers.save({
+      id: "customer-delete",
+      displayName: "Cliente Temporal",
+      phone: null,
+      email: null,
+      notes: null,
+      createdAt: "2025-01-01T00:00:00.000Z",
+      updatedAt: "2025-01-01T00:00:00.000Z",
+    });
+
+    render(
+      <PortsProvider value={ports}>
+        <CustomerManagementContainer />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Cliente Temporal")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar cliente Cliente Temporal" }));
+
+    await waitFor(() => expect(screen.queryByText("Cliente Temporal")).not.toBeInTheDocument());
+    await expect(ports.customers.findById("customer-delete")).resolves.toBeNull();
+  });
 });

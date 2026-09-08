@@ -13,11 +13,10 @@ if (!rootElement) {
   throw new Error("Root element not found");
 }
 
-// THE swap point (design.md "The Milestone-1 -> Milestone-2 Swap"): the
-// only line in the whole app that decides which adapter set backs every
-// port. `buildHttpPorts()` is a stub until apps/api exists — see
-// composition/http.ts.
-const ports = import.meta.env.VITE_ADAPTER === "http" ? buildHttpPorts() : buildMockPorts();
+// THE swap point: HTTP is the default runtime because catalog/auth/order data
+// now lives behind apps/api. Use VITE_ADAPTER=mock only for isolated local UI
+// demos/tests that intentionally avoid the backend.
+const ports = import.meta.env.VITE_ADAPTER === "mock" ? buildMockPorts() : buildHttpPorts();
 
 createRoot(rootElement).render(
   <StrictMode>

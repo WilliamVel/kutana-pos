@@ -20,6 +20,7 @@ describe("migration discovery", () => {
       "008_customer_debt_ledger_shape.sql",
       "009_payment_reference_ids_text.sql",
       "010_allow_330ml_pour_size.sql",
+      "011_seed_kutana_menu_catalog.sql",
     ]);
   });
 });

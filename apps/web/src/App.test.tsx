@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { createProduct } from "@kutana/shared/catalog/model/product.js";
 import { App } from "./App.js";
 import { PortsProvider } from "./composition/PortsProvider.js";
 import { buildMockPorts } from "./composition/mock.js";
@@ -41,7 +42,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Categorías" }));
 
     expect(screen.getByRole("heading", { name: "Categorías" })).toBeInTheDocument();
-    expect(await screen.findByRole("form", { name: "Editar Cervezas" })).toBeInTheDocument();
+    expect(await screen.findByRole("form", { name: "Editar Draft Beer" })).toBeInTheDocument();
   });
 
   it("opens customer management from the top bar", async () => {
@@ -64,8 +65,23 @@ describe("App", () => {
   });
 
   it("edits an existing product from the inventory screen", async () => {
+    const ports = buildMockPorts();
+    await ports.products.save(
+      createProduct({
+        id: "product-editable-app",
+        name: "Blonde Ale 330ml",
+        categoryId: "category-draft-beer",
+        sku: "MENU-BLONDE-ALE-330",
+        priceCents: 300,
+        taxRateBp: 1200,
+        stockKind: "volume",
+        pourSizeMl: 330,
+      }),
+      0,
+    );
+
     render(
-      <PortsProvider value={buildMockPorts()}>
+      <PortsProvider value={ports}>
         <App />
       </PortsProvider>,
     );
@@ -76,7 +92,7 @@ describe("App", () => {
 
     await waitFor(() => expect(screen.getByText("Blonde Ale 330ml")).toBeInTheDocument());
     const row = screen.getByRole("row", {
-      name: /Blonde Ale 330ml MENU-BLONDE-ALE-330 Cervezas/,
+      name: /Blonde Ale 330ml MENU-BLONDE-ALE-330 Draft Beer/,
     });
     fireEvent.click(within(row).getByRole("button", { name: "Editar" }));
 

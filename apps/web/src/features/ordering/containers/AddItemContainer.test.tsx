@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { createProduct } from "@kutana/shared/catalog/model/product.js";
 import { markPaid } from "@kutana/shared/ordering/model/order.js";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../../composition/mock.js";
@@ -8,6 +9,7 @@ import { AddItemContainer } from "./AddItemContainer.js";
 describe("AddItemContainer", () => {
   it("adds the chosen product and quantity as a new line item on the table's order", async () => {
     const ports = buildMockPorts();
+    await seedOrderableProduct(ports);
     render(
       <PortsProvider value={ports}>
         <AddItemContainer tableId="table-2" />
@@ -37,6 +39,7 @@ describe("AddItemContainer", () => {
 
   it("disables the panel when the order is already paid", async () => {
     const ports = buildMockPorts();
+    await seedOrderableProduct(ports);
     const current = await ports.orders.findByTable("table-3"); // seeded as needs_check
     if (!current) throw new Error("expected a seeded order for table-3");
     await ports.orders.save(markPaid(current), current.version);
@@ -55,3 +58,19 @@ describe("AddItemContainer", () => {
     }
   });
 });
+
+async function seedOrderableProduct(ports: ReturnType<typeof buildMockPorts>): Promise<void> {
+  await ports.products.save(
+    createProduct({
+      id: "product-blonde-1000",
+      name: "Blonde Ale 1000ml",
+      categoryId: "category-draft-beer",
+      sku: "MENU-BLONDE-ALE-1000",
+      priceCents: 800,
+      taxRateBp: 1200,
+      stockKind: "volume",
+      pourSizeMl: 1000,
+    }),
+    0,
+  );
+}

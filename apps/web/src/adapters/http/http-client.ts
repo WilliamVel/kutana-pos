@@ -39,7 +39,7 @@ export class HttpClient {
 
   constructor(options: HttpClientOptions = {}) {
     this.baseUrl = normalizeBaseUrl(options.baseUrl ?? defaultApiBaseUrl());
-    this.fetchImpl = options.fetchImpl ?? fetch;
+    this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
     this.bearerToken = null;
     this.getBearerToken = options.getBearerToken;
   }
@@ -66,12 +66,42 @@ export class HttpClient {
       headers.set("Authorization", `Bearer ${token}`);
     }
 
-    const response = await this.fetchImpl(url, init);
+    console.info("[HttpClient] Request", {
+      method: init.method,
+      url,
+      hasBody: options.body !== undefined,
+      auth: options.auth !== false,
+      hasBearerToken: Boolean(token),
+    });
+
+    let response: Response;
+    try {
+      response = await this.fetchImpl(url, init);
+    } catch (error) {
+      console.error("[HttpClient] Network error", { method: init.method, url, error });
+      throw error;
+    }
+
+    console.info("[HttpClient] Response", {
+      method: init.method,
+      url,
+      status: response.status,
+      ok: response.ok,
+    });
+
     if (!response.ok) {
+      const responseBody = await response.text().catch(() => null);
+      console.error("[HttpClient] HTTP error", {
+        method: init.method,
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        responseBody,
+      });
       throw new HttpError({
         status: response.status,
         statusText: response.statusText,
-        responseBody: await response.text().catch(() => null),
+        responseBody,
         url,
       });
     }
