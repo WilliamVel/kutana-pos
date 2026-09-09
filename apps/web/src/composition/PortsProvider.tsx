@@ -1,5 +1,6 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { AuthService } from "@kutana/shared/auth/ports/auth-service.js";
+import type { PaymentMethodRegistry } from "@kutana/shared/payments/model/payment-method-registry.js";
 import type { Ports } from "./ports.js";
 
 /**
@@ -36,7 +37,7 @@ export function usePorts(): Ports {
   if (!ports) {
     throw new Error(
       "usePorts() was called outside a <PortsProvider>. Wrap the component tree " +
-        "with <PortsProvider value={buildMockPorts() /* or buildHttpPorts() */}>.",
+        "with <PortsProvider value={buildHttpPorts()}> in runtime or test ports in tests.",
     );
   }
   return ports;
@@ -89,8 +90,25 @@ export function useStock(): Ports["stock"] {
   return usePorts().stock;
 }
 
-export function usePaymentMethods(): Ports["methods"] {
-  return usePorts().methods;
+export function usePaymentMethods(): PaymentMethodRegistry {
+  const paymentMethods = usePorts().paymentMethods;
+  const [methods, setMethods] = useState<PaymentMethodRegistry>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load(): Promise<void> {
+      const list = await paymentMethods.listAll();
+      if (!cancelled) setMethods(list);
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [paymentMethods]);
+
+  return methods;
 }
 
 export function useOrderEvents(): Ports["events"] {

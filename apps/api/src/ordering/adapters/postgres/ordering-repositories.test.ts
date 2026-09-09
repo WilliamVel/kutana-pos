@@ -68,6 +68,17 @@ describe.skipIf(!databaseAvailable)("PostgreSQL ordering adapters", () => {
     });
   });
 
+  it("removes existing line items without mutating the remaining items", async () => {
+    const order = createOrder({ id: "order-remove-line", tableId: "table-1" });
+    const first = createLineItem({ id: "line-remove-first", orderId: order.id, productId: "00000000-0000-0000-0000-000000000001", nameSnapshot: "Coffee", unitPriceCents: 300, quantity: 1, taxRateBp: 0, createdAt: "2025-01-01T00:01:00.000Z" });
+    const second = createLineItem({ id: "line-remove-second", orderId: order.id, productId: "00000000-0000-0000-0000-000000000001", nameSnapshot: "Coffee", unitPriceCents: 300, quantity: 1, taxRateBp: 0, createdAt: "2025-01-01T00:02:00.000Z" });
+    const saved = await orders.save({ ...order, lineItems: [first, second] }, order.version);
+
+    const afterRemoval = await orders.save({ ...saved, lineItems: [second] }, saved.version);
+
+    expect(afterRemoval.lineItems).toEqual([second]);
+  });
+
   it("does not mutate existing line items", async () => {
     const order = createOrder({ id: "order-immutable", tableId: "table-1" });
     const item = createLineItem({ id: "line-immutable", orderId: order.id, productId: "00000000-0000-0000-0000-000000000001", nameSnapshot: "Coffee", unitPriceCents: 300, quantity: 1, taxRateBp: 0 });

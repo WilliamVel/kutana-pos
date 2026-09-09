@@ -1,3 +1,4 @@
+import { createUuid } from "@kutana/shared/platform/uuid.js";
 import { useCallback, useEffect, useState } from "react";
 import { accountBalance, createCustomer, type AccountLineAllocation, type Customer, type PersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
 import { createCustomerDebtEntry, customerDebtBalance } from "@kutana/shared/billing/model/customer-debt-ledger.js";
@@ -62,7 +63,7 @@ export function PendingDebtsContainer(): JSX.Element {
     const method = methods.find((candidate) => candidate.active) ?? methods[0];
     if (!method) throw new Error("No hay un método de pago activo configurado");
     return paymentsPort.record({
-      id: crypto.randomUUID(),
+      id: createUuid(),
       target,
       methodCode: method.code,
       amountCents,

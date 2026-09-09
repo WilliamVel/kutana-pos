@@ -109,7 +109,11 @@ export function OrderTicketPanelContainer({
 
   async function handleRemoveLine(lineId: string): Promise<void> {
     const current = await orders.findByTable(tableId);
-    if (!current) return;
+    if (!current) {
+      return;
+    }
+
+    const target = current.lineItems.find((line) => line.id === lineId);
 
     const next = removeLineItem(current, lineId);
     try {

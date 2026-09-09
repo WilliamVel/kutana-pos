@@ -66,38 +66,15 @@ export class HttpClient {
       headers.set("Authorization", `Bearer ${token}`);
     }
 
-    console.info("[HttpClient] Request", {
-      method: init.method,
-      url,
-      hasBody: options.body !== undefined,
-      auth: options.auth !== false,
-      hasBearerToken: Boolean(token),
-    });
-
     let response: Response;
     try {
       response = await this.fetchImpl(url, init);
     } catch (error) {
-      console.error("[HttpClient] Network error", { method: init.method, url, error });
       throw error;
     }
 
-    console.info("[HttpClient] Response", {
-      method: init.method,
-      url,
-      status: response.status,
-      ok: response.ok,
-    });
-
     if (!response.ok) {
       const responseBody = await response.text().catch(() => null);
-      console.error("[HttpClient] HTTP error", {
-        method: init.method,
-        url,
-        status: response.status,
-        statusText: response.statusText,
-        responseBody,
-      });
       throw new HttpError({
         status: response.status,
         statusText: response.statusText,
@@ -121,7 +98,16 @@ export class HttpClient {
 
 export function defaultApiBaseUrl(): string {
   const env = import.meta.env as { readonly VITE_API_BASE_URL?: string | undefined };
-  return env.VITE_API_BASE_URL ?? "http://localhost:3000";
+  if (env.VITE_API_BASE_URL) {
+    return env.VITE_API_BASE_URL;
+  }
+
+  const location = globalThis.location;
+  if (location?.hostname && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+    return `${location.protocol}//${location.hostname}:3000`;
+  }
+
+  return "http://localhost:3000";
 }
 
 export function encodePathSegment(segment: string): string {

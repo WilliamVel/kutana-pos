@@ -7,7 +7,7 @@ import type { CustomerRepository } from "@kutana/shared/billing/ports/customer-r
 import type { PersonalAccountRepository } from "@kutana/shared/billing/ports/personal-account-repository.js";
 import type { TicketRepository } from "@kutana/shared/billing/ports/ticket-repository.js";
 import type { PaymentRepository } from "@kutana/shared/payments/ports/payment-repository.js";
-import type { PaymentMethodRegistry } from "@kutana/shared/payments/model/payment-method-registry.js";
+import type { PaymentMethodRepository } from "@kutana/shared/payments/ports/payment-method-repository.js";
 import type { ProductRepository } from "@kutana/shared/catalog/ports/product-repository.js";
 import type { CategoryRepository } from "@kutana/shared/catalog/ports/category-repository.js";
 import type { StockRepository } from "@kutana/shared/inventory/ports/stock-repository.js";
@@ -21,11 +21,8 @@ import type { StockRepository } from "@kutana/shared/inventory/ports/stock-repos
  * ONE line in `main.tsx` that selects which builder runs — no component,
  * container, or hook changes.
  *
- * `methods` is the payment-method registry data (see
- * `payments/model/payment-method-registry.ts` — a registry, never a
- * hardcoded domain enum), not a repository; it has no adapter variant to
- * swap because it is the same seed data at both milestones until a backend
- * owns it.
+ * Payment methods are data served through a repository so runtime screens
+ * read them from the backend/database just like catalog categories.
  */
 export interface Ports {
   readonly auth?: AuthService;
@@ -40,9 +37,9 @@ export interface Ports {
   readonly personalAccounts: PersonalAccountRepository;
   readonly customerDebts: CustomerDebtRepository;
   readonly payments: PaymentRepository;
+  readonly paymentMethods: PaymentMethodRepository;
   readonly products: ProductRepository;
   readonly categories: CategoryRepository;
   readonly stock: StockRepository;
-  readonly methods: PaymentMethodRegistry;
   readonly events: OrderEvents;
 }

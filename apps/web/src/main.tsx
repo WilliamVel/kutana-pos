@@ -6,17 +6,15 @@ import "./styles/global.css";
 import { App } from "./App.js";
 import { PortsProvider } from "./composition/PortsProvider.js";
 import { buildHttpPorts } from "./composition/http.js";
-import { buildMockPorts } from "./composition/mock.js";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
   throw new Error("Root element not found");
 }
 
-// THE swap point: HTTP is the default runtime because catalog/auth/order data
-// now lives behind apps/api. Use VITE_ADAPTER=mock only for isolated local UI
-// demos/tests that intentionally avoid the backend.
-const ports = import.meta.env.VITE_ADAPTER === "mock" ? buildMockPorts() : buildHttpPorts();
+// Runtime data comes from apps/api/Postgres. Mock ports are reserved for tests
+// and are not selectable in the production/dev app bundle.
+const ports = buildHttpPorts();
 
 createRoot(rootElement).render(
   <StrictMode>

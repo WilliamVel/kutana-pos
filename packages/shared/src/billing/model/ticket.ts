@@ -1,3 +1,4 @@
+import { createUuid } from "../../platform/uuid.js";
 /**
  * @deprecated Milestone-1 compatibility model. `PersonalAccount` is the payable
  * unit for new account assignment and pending-debt flows.
@@ -14,7 +15,7 @@ export interface Ticket {
 
 export function createTicket(input: { orderId: string; label: string; id?: string }): Ticket {
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     orderId: input.orderId,
     label: input.label,
     status: "open",

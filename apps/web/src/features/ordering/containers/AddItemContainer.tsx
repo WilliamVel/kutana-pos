@@ -18,7 +18,7 @@ export interface AddItemContainerProps {
  * Wires `AddItemPanel` to the catalog and ordering ports. Mirrors the
  * future `POST /orders/:orderId/line-items` endpoint: the caller supplies
  * only a productId + quantity, and name/price/tax/pour-size are snapshotted
- * from the current `Product` at write time. Follows the codebase's
+ * from the catalog loaded from the database. Follows the codebase's
  * read -> apply-domain-fn -> save -> catch-`ConflictError` seam; there is
  * no new repository method.
  */
@@ -50,6 +50,8 @@ export function AddItemContainer({ tableId }: AddItemContainerProps): JSX.Elemen
             name: product.name,
             priceCents: product.priceCents,
             categoryName: category.name,
+            taxRateBp: product.taxRateBp,
+            pourSizeMl: product.pourSizeMl,
             imageUrl: product.imageUrl,
           })),
         ),
@@ -70,9 +72,14 @@ export function AddItemContainer({ tableId }: AddItemContainerProps): JSX.Elemen
 
   async function handleAdd(productId: string, quantity: number): Promise<void> {
     const current = await orders.findByTable(tableId);
-    if (!current) return;
-    const product = await products.findById(productId);
-    if (!product) return;
+    if (!current) {
+      return;
+    }
+
+    const product = catalog.find((candidate) => candidate.id === productId);
+    if (!product) {
+      return;
+    }
 
     const next = addLineItem(current, {
       productId,

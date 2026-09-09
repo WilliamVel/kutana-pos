@@ -1,3 +1,4 @@
+import { createUuid } from "../../platform/uuid.js";
 export interface Category {
   readonly id: string;
   readonly name: string;
@@ -6,7 +7,7 @@ export interface Category {
 
 export function createCategory(input: { name: string; sortOrder: number; id?: string }): Category {
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     name: input.name,
     sortOrder: input.sortOrder,
   };

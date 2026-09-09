@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { addLineItem } from "@kutana/shared/ordering/services/line-item-service.js";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
@@ -43,6 +43,22 @@ describe("OrderTicketPanelContainer", () => {
 
     expect(screen.getAllByText("KUTANA Pilsener 500ml")).toHaveLength(1);
     expect(screen.getByText("x3")).toBeInTheDocument();
+  });
+
+  it("removes a product from the table order using the trash action", async () => {
+    const ports = buildMockPorts();
+    render(
+      <PortsProvider value={ports}>
+        <OrderTicketPanelContainer tableId="table-1" />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Loaded Nachos")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Quitar producto Loaded Nachos" }));
+
+    await waitFor(() => expect(screen.queryByText("Loaded Nachos")).not.toBeInTheDocument());
+    const order = await ports.orders.findByTable("table-1");
+    expect(order?.lineItems.some((line) => line.nameSnapshot === "Loaded Nachos")).toBe(false);
   });
 
   it("updates live when OrderEvents publishes a change from another device (waiter -> register realtime)", async () => {

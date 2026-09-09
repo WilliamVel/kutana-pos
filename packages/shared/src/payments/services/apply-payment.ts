@@ -1,3 +1,4 @@
+import { createUuid } from "../../platform/uuid.js";
 import { ValidationError } from "../../errors/domain-error.js";
 import {
   requiresTendered,
@@ -46,7 +47,7 @@ export function applyPayment(
   }
 
   const payment: Payment = {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     target: input.target ?? { kind: "ticket", ticketId: input.ticketId },
     ticketId: input.ticketId,
     methodCode: input.methodCode,

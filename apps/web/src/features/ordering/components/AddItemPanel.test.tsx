@@ -8,8 +8,16 @@ const PRODUCTS: AddItemPanelProduct[] = [
     name: "KUTANA Pilsener 500ml",
     priceCents: 350,
     categoryName: "Draft Beer",
+    taxRateBp: 1200,
+    pourSizeMl: 500,
   },
-  { id: "product-nachos", name: "Loaded Nachos", priceCents: 650, categoryName: "Food" },
+  {
+    id: "product-nachos",
+    name: "Loaded Nachos",
+    priceCents: 650,
+    categoryName: "Food",
+    taxRateBp: 1200,
+  },
 ];
 
 describe("AddItemPanel", () => {

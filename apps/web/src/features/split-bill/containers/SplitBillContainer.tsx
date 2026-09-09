@@ -1,3 +1,4 @@
+import { createUuid } from "@kutana/shared/platform/uuid.js";
 import { useCallback, useEffect, useState } from "react";
 import { createCustomerDebtEntry } from "@kutana/shared/billing/model/customer-debt-ledger.js";
 import { closeOrderWithPersonalAccounts } from "@kutana/shared/billing/model/order-closure.js";
@@ -227,7 +228,7 @@ export function SplitBillContainer({
       const method = methods.find((candidate) => candidate.active) ?? methods[0];
       if (!account || !row || row.remainingCents <= 0 || !method) return;
       const payment: Payment = {
-        id: crypto.randomUUID(),
+        id: createUuid(),
         target: { kind: "personal_account", accountId },
         methodCode: method.code,
         amountCents: row.remainingCents,

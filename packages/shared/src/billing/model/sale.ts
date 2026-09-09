@@ -1,3 +1,4 @@
+import { createUuid } from "../../platform/uuid.js";
 /**
  * A completed Sale: immutable once created. `publicUuid` is the stable,
  * unique, public identifier persisted permanently as the future SRI
@@ -23,8 +24,8 @@ export function createSale(input: {
   publicUuid?: string;
 }): Sale {
   return {
-    id: input.id ?? crypto.randomUUID(),
-    publicUuid: input.publicUuid ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
+    publicUuid: input.publicUuid ?? createUuid(),
     orderId: input.orderId,
     completedAt: input.completedAt ?? new Date().toISOString(),
     totalCents: input.totalCents,

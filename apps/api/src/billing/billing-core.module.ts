@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { PostgresModule } from "../infrastructure/postgres/postgres.module.js";
 import { PaymentsController } from "../payments/payments.controller.js";
+import { PostgresPaymentMethodRepository } from "../payments/adapters/postgres/payment-method-repository.js";
 import { PostgresPaymentRepository } from "../payments/adapters/postgres/payment-repository.js";
 import { PostgresCustomerDebtRepository } from "./adapters/postgres/customer-debt-repository.js";
 import { PostgresCustomerRepository } from "./adapters/postgres/customer-repository.js";
@@ -17,6 +18,7 @@ import { BillingCoreController } from "./billing-core.controller.js";
     PostgresPersonalAccountRepository,
     PostgresCustomerDebtRepository,
     PostgresPaymentRepository,
+    PostgresPaymentMethodRepository,
   ],
 })
 export class BillingCoreModule {}

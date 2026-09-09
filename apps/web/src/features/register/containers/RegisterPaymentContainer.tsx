@@ -1,3 +1,4 @@
+import { createUuid } from "@kutana/shared/platform/uuid.js";
 import { useEffect, useState } from "react";
 import { createAllocation, type Allocation } from "@kutana/shared/billing/model/allocation.js";
 import {
@@ -97,6 +98,12 @@ export function RegisterPaymentContainer({
   );
   const [tenderedCents, setTenderedCents] = useState<number | null>(null);
   const [amountToPayCents, setAmountToPayCents] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!selectedMethodCode && methodRegistry[0]) {
+      setSelectedMethodCode(methodRegistry[0].code);
+    }
+  }, [methodRegistry, selectedMethodCode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -226,7 +233,7 @@ export function RegisterPaymentContainer({
 
     if (personalAccount) {
       const newPayment: Payment = {
-        id: crypto.randomUUID(),
+        id: createUuid(),
         target: { kind: "personal_account", accountId: personalAccount.id },
         methodCode: selectedMethod.code as PaymentMethodCode,
         amountCents: effectiveAmountToPayCents,

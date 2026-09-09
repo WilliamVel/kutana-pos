@@ -21,21 +21,13 @@ export function LoginPanel({ onLogin }: LoginPanelProps): JSX.Element {
 
   const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    console.info("[LoginPanel] Sign-in submit", {
-      operator: operator.trim(),
-      hasPin: pin.trim().length > 0,
-      canSubmit,
-    });
     if (!canSubmit) return;
 
     setIsSubmitting(true);
     setError(null);
     try {
-      console.info("[LoginPanel] Calling auth.login");
       onLogin(await auth.login({ operator, pin }));
-      console.info("[LoginPanel] auth.login succeeded");
     } catch (error) {
-      console.error("[LoginPanel] auth.login failed", error);
       setError("Operador o PIN inválido.");
     } finally {
       setIsSubmitting(false);

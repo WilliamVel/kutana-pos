@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { PaymentMethodRegistry } from "@kutana/shared/payments/model/payment-method-registry.js";
 import type { Ports } from "./ports.js";
 import {
   PortsProvider,
@@ -17,6 +18,10 @@ import {
   useTables,
   useTickets,
 } from "./PortsProvider.js";
+
+const TEST_METHODS: PaymentMethodRegistry = [
+  { code: "CASH" as PaymentMethodRegistry[number]["code"], label: "Cash", requiresTendered: true, active: true, sortOrder: 1 },
+];
 
 function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
   return {
@@ -79,7 +84,7 @@ function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
       listMovements: async () => [],
       recordMovement: async (item) => item,
     } as Ports["stock"],
-    methods: [],
+    paymentMethods: { listAll: async () => TEST_METHODS } as Ports["paymentMethods"],
     events: { subscribe: () => () => {}, publish: () => {} } as Ports["events"],
     ...overrides,
   };
@@ -109,7 +114,7 @@ describe("PortsProvider", () => {
     expect(seen).toBe(ports);
   });
 
-  it("exposes each port through its dedicated typed hook", () => {
+  it("exposes each port through its dedicated typed hook", async () => {
     const ports = makeFakePorts();
 
     function Probe(): JSX.Element {
@@ -129,7 +134,7 @@ describe("PortsProvider", () => {
           <span data-testid="products">{String(useProducts() === ports.products)}</span>
           <span data-testid="categories">{String(useCategories() === ports.categories)}</span>
           <span data-testid="stock">{String(useStock() === ports.stock)}</span>
-          <span data-testid="methods">{String(usePaymentMethods() === ports.methods)}</span>
+          <span data-testid="methods">{usePaymentMethods().length}</span>
           <span data-testid="events">{String(useOrderEvents() === ports.events)}</span>
         </>
       );
@@ -152,11 +157,11 @@ describe("PortsProvider", () => {
       "products",
       "categories",
       "stock",
-      "methods",
       "events",
     ]) {
       expect(screen.getByTestId(id).textContent).toBe("true");
     }
+    await waitFor(() => expect(screen.getByTestId("methods").textContent).toBe("1"));
   });
 
   it("throws a descriptive error when a hook is used outside PortsProvider", () => {

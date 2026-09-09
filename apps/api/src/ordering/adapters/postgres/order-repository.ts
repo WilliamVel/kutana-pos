@@ -102,15 +102,27 @@ export class PostgresOrderRepository implements OrderRepository {
         );
         saved = result.rows[0]!;
         const storedItems = await selectItems(client, order.id);
-        if (order.lineItems.length < storedItems.length || order.lineItems.some((item, index) => {
-          const stored = storedItems[index];
-          return stored ? !sameLineItem(item, stored) : false;
-        })) {
-          throw new Error(`Line items for order ${order.id} are immutable and may only be appended`);
-        }
-        for (const item of order.lineItems.slice(storedItems.length)) {
+        const storedItemsById = new Map(storedItems.map((item) => [item.id, item]));
+        const nextItemIds = new Set(order.lineItems.map((item) => item.id));
+
+        for (const item of order.lineItems) {
           if (item.orderId !== order.id) throw new Error(`Line item ${item.id} does not belong to order ${order.id}`);
+          const stored = storedItemsById.get(item.id);
+          if (stored) {
+            if (!sameLineItem(item, stored)) {
+              throw new Error(`Line items for order ${order.id} are immutable; remove or append instead of mutating`);
+            }
+            continue;
+          }
           await insertLineItem(client, item);
+        }
+
+        for (const stored of storedItems) {
+          if (!nextItemIds.has(stored.id)) {
+            await client.query("DELETE FROM account_line_allocations WHERE line_item_id = $1", [stored.id]);
+            await client.query("DELETE FROM allocations WHERE line_item_id = $1", [stored.id]);
+            await client.query("DELETE FROM line_items WHERE id = $1 AND order_id = $2", [stored.id, order.id]);
+          }
         }
       } else {
         const result = await client.query<OrderRow>(

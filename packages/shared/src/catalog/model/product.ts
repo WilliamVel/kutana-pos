@@ -1,3 +1,4 @@
+import { createUuid } from "../../platform/uuid.js";
 import { ValidationError } from "../../errors/domain-error.js";
 
 export type StockKind = "unit" | "volume";
@@ -66,7 +67,7 @@ export function createProduct(input: {
   }
 
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     sku: input.sku,
     barcode: input.barcode ?? null,
     name: input.name,

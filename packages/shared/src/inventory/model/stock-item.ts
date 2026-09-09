@@ -1,3 +1,4 @@
+import { createUuid } from "../../platform/uuid.js";
 export type StockUnit = "ea" | "ml";
 export type StockItemKind = "unit" | "volume";
 
@@ -27,7 +28,7 @@ export function createStockItem(input: {
   id?: string;
 }): StockItem {
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     name: input.name,
     kind: input.kind,
     unit: input.unit,

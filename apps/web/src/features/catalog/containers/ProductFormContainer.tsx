@@ -67,15 +67,12 @@ export function ProductFormContainer({
 
   useEffect(() => {
     let cancelled = false;
-    console.info("[ProductFormContainer] Loading categories");
     void categories
       .listAll()
       .then((list) => {
-        console.info("[ProductFormContainer] Categories loaded", { count: list.length });
         if (!cancelled) setCategoryOptions(list);
       })
       .catch((error: unknown) => {
-        console.error("[ProductFormContainer] Failed to load categories", error);
       });
     return () => {
       cancelled = true;
@@ -87,31 +84,16 @@ export function ProductFormContainer({
     setExistingStockItem(null);
 
     if (!existingProduct?.stockItemId) {
-      console.info("[ProductFormContainer] Existing product has no stock item", {
-        id: existingProduct?.id ?? null,
-      });
       return () => {
         cancelled = true;
       };
     }
-
-    console.info("[ProductFormContainer] Loading existing stock item", {
-      productId: existingProduct.id,
-      stockItemId: existingProduct.stockItemId,
-    });
     void stock
       .findById(existingProduct.stockItemId)
       .then((item) => {
-        console.info("[ProductFormContainer] Existing stock item loaded", {
-          stockItemId: existingProduct.stockItemId,
-          found: Boolean(item),
-          quantity: item?.quantity ?? null,
-          version: item?.version ?? null,
-        });
         if (!cancelled) setExistingStockItem(item);
       })
       .catch((error: unknown) => {
-        console.error("[ProductFormContainer] Failed to load existing stock item", error);
       });
 
     return () => {
@@ -120,31 +102,10 @@ export function ProductFormContainer({
   }, [existingProduct, stock]);
 
   async function handleSubmit(values: ProductFormValues): Promise<void> {
-    console.info("[ProductFormContainer] Submit", {
-      mode: existingProduct ? "edit" : "create",
-      id: existingProduct?.id ?? null,
-      sku: values.sku,
-      categoryId: values.categoryId,
-      stockKind: values.stockKind,
-      pourSizeMl: values.pourSizeMl,
-      initialStockQuantity: values.initialStockQuantity,
-      active: values.active,
-    });
 
     try {
-      console.info("[ProductFormContainer] Checking SKU", { sku: values.sku });
       const existingWithSku = await products.findBySku(values.sku);
-      console.info("[ProductFormContainer] SKU check result", {
-        requestedSku: values.sku,
-        foundId: existingWithSku?.id ?? null,
-        foundVersion: existingWithSku?.version ?? null,
-      });
       if (existingWithSku && existingWithSku.id !== existingProduct?.id) {
-        console.warn("[ProductFormContainer] Duplicate SKU blocked", {
-          requestedSku: values.sku,
-          foundId: existingWithSku.id,
-          editingId: existingProduct?.id ?? null,
-        });
         setErrors({ sku: "El SKU ya está en uso" });
         return;
       }
@@ -171,24 +132,10 @@ export function ProductFormContainer({
           stockItemId,
           active: values.active,
         };
-        console.info("[ProductFormContainer] Saving existing product", {
-          id: updated.id,
-          sku: updated.sku,
-          stockItemId: updated.stockItemId,
-          expectedVersion: currentProduct.version,
-        });
         const saved = await products.save(updated, currentProduct.version);
-        console.info("[ProductFormContainer] Product saved", {
-          id: saved.id,
-          sku: saved.sku,
-          version: saved.version,
-          stockItemId: saved.stockItemId,
-        });
         onSaved(saved);
         return;
       }
-
-      console.info("[ProductFormContainer] Creating stock item for new product");
       const stockItem = createStockItem({
         name: values.name,
         kind: values.stockKind,
@@ -202,9 +149,6 @@ export function ProductFormContainer({
         reason: "adjustment",
         refType: "product-created",
         refId: stockItem.id,
-      });
-      console.info("[ProductFormContainer] Recording initial stock movement", {
-        stockItemId: stockItem.id,
       });
       await stock.recordMovement(stockItem, seedMovement, 0);
 
@@ -222,19 +166,9 @@ export function ProductFormContainer({
         lowStockLevel: values.lowStockLevel,
         stockItemId: stockItem.id,
       });
-      console.info("[ProductFormContainer] Saving new product", {
-        id: newProduct.id,
-        sku: newProduct.sku,
-      });
       const saved = await products.save(newProduct, 0);
-      console.info("[ProductFormContainer] Product created", {
-        id: saved.id,
-        sku: saved.sku,
-        version: saved.version,
-      });
       onSaved(saved);
     } catch (error) {
-      console.error("[ProductFormContainer] Submit failed", error);
       setErrors({ sku: "No se pudo guardar. Revisá la consola." });
     }
   }
@@ -253,13 +187,6 @@ export function ProductFormContainer({
         lowStockLevel: values.lowStockLevel,
       };
       const delta = nextStockItem.quantity - existingStockItem.quantity;
-      console.info("[ProductFormContainer] Updating existing stock item", {
-        stockItemId: nextStockItem.id,
-        previousQuantity: existingStockItem.quantity,
-        nextQuantity: nextStockItem.quantity,
-        delta,
-        expectedVersion: existingStockItem.version,
-      });
       const savedStockItem = await stock.recordMovement(
         nextStockItem,
         createStockMovement({
@@ -276,10 +203,6 @@ export function ProductFormContainer({
     }
 
     if (values.initialStockQuantity <= 0 && values.lowStockLevel === null) {
-      console.info("[ProductFormContainer] Skipping stock item creation for existing product", {
-        id: currentProduct.id,
-        initialStockQuantity: values.initialStockQuantity,
-      });
       return currentProduct.stockItemId;
     }
 
@@ -289,11 +212,6 @@ export function ProductFormContainer({
       unit: values.stockKind === "volume" ? "ml" : "ea",
       quantity: values.initialStockQuantity,
       lowStockLevel: values.lowStockLevel,
-    });
-    console.info("[ProductFormContainer] Creating stock item for existing product", {
-      productId: currentProduct.id,
-      stockItemId: newStockItem.id,
-      quantity: newStockItem.quantity,
     });
     const savedStockItem = await stock.recordMovement(
       newStockItem,

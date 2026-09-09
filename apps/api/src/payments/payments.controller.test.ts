@@ -3,6 +3,7 @@ import { BadRequestException } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 import type { Payment } from "@kutana/shared/payments/model/payment.js";
 import type { PaymentMethodCode } from "@kutana/shared/payments/model/payment-method-registry.js";
+import { PostgresPaymentMethodRepository } from "./adapters/postgres/payment-method-repository.js";
 import { PostgresPaymentRepository } from "./adapters/postgres/payment-repository.js";
 import { PaymentsController } from "./payments.controller.js";
 
@@ -23,12 +24,30 @@ describe("PaymentsController", () => {
       listByTicket: vi.fn(),
       record: vi.fn(),
     };
+    const paymentMethods = {
+      listAll: vi.fn(),
+    };
 
     return {
-      controller: new PaymentsController(payments as unknown as PostgresPaymentRepository),
+      controller: new PaymentsController(
+        payments as unknown as PostgresPaymentRepository,
+        paymentMethods as unknown as PostgresPaymentMethodRepository,
+      ),
       payments,
+      paymentMethods,
     };
   }
+
+  it("delegates payment method listing", async () => {
+    const { controller, paymentMethods } = controllerWithMocks();
+    paymentMethods.listAll.mockResolvedValue([{ code: "CASH", label: "Cash", requiresTendered: true, active: true, sortOrder: 1 }]);
+
+    await expect(controller.listPaymentMethods()).resolves.toEqual([
+      { code: "CASH", label: "Cash", requiresTendered: true, active: true, sortOrder: 1 },
+    ]);
+
+    expect(paymentMethods.listAll).toHaveBeenCalledOnce();
+  });
 
   it("parses and delegates personal account target queries", async () => {
     const { controller, payments } = controllerWithMocks();

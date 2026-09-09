@@ -1,4 +1,3 @@
-import { KUTANA_V1_PAYMENT_METHODS } from "@kutana/shared/payments/model/payment-method-registry.seed.js";
 import { HttpAuthService } from "../adapters/http/auth-service.js";
 import { HttpCategoryRepository } from "../adapters/http/category-repository.js";
 import { HttpCustomerDebtRepository } from "../adapters/http/customer-debt-repository.js";
@@ -6,6 +5,7 @@ import { HttpCustomerRepository } from "../adapters/http/customer-repository.js"
 import type { HttpClientOptions } from "../adapters/http/http-client.js";
 import { HttpOrderEvents, type HttpOrderEventsOptions } from "../adapters/http/order-events.js";
 import { HttpOrderRepository } from "../adapters/http/order-repository.js";
+import { HttpPaymentMethodRepository } from "../adapters/http/payment-method-repository.js";
 import { HttpPaymentRepository } from "../adapters/http/payment-repository.js";
 import { HttpPersonalAccountRepository } from "../adapters/http/personal-account-repository.js";
 import { HttpProductRepository } from "../adapters/http/product-repository.js";
@@ -36,10 +36,10 @@ export function buildHttpPorts(options: HttpPortsOptions = {}): Ports {
     personalAccounts: new HttpPersonalAccountRepository(authenticatedOptions),
     customerDebts: new HttpCustomerDebtRepository(authenticatedOptions),
     payments: new HttpPaymentRepository(authenticatedOptions),
+    paymentMethods: new HttpPaymentMethodRepository(authenticatedOptions),
     products: new HttpProductRepository(authenticatedOptions),
     categories: new HttpCategoryRepository(authenticatedOptions),
     stock: new HttpStockRepository(authenticatedOptions),
-    methods: KUTANA_V1_PAYMENT_METHODS,
     events: new HttpOrderEvents(authenticatedOptions),
   };
 }

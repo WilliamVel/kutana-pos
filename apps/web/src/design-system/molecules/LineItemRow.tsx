@@ -43,10 +43,13 @@ export function LineItemRow({
           <button
             type="button"
             className={styles.remove}
-            aria-label={`Remove ${name}`}
-            onClick={onRemove}
+            aria-label={`Quitar producto ${name}`}
+            title="Quitar producto"
+            onClick={() => {
+              onRemove();
+            }}
           >
-            <Icon name="close" size={14} />
+            <Icon name="trash" size={14} />
           </button>
         ) : null}
       </div>

@@ -1,3 +1,4 @@
+import { createUuid } from "../../platform/uuid.js";
 /**
  * A LineItem belongs to an Order and is IMMUTABLE once created. Corrections
  * are appended as new adjustment lines (`isAdjustment: true`), never edited
@@ -43,7 +44,7 @@ export function createLineItem(input: {
   const subtotalCents = input.unitPriceCents * input.quantity;
   const taxCents = Math.round((subtotalCents * input.taxRateBp) / 10_000);
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     orderId: input.orderId,
     productId: input.productId,
     nameSnapshot: input.nameSnapshot,

@@ -1,5 +1,7 @@
 import { BadRequestException, Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import type { Payment, PaymentTarget } from "@kutana/shared/payments/model/payment.js";
+import type { PaymentMethodRegistry } from "@kutana/shared/payments/model/payment-method-registry.js";
+import { PostgresPaymentMethodRepository } from "./adapters/postgres/payment-method-repository.js";
 import { PostgresPaymentRepository } from "./adapters/postgres/payment-repository.js";
 
 interface PaymentsQuery {
@@ -11,7 +13,15 @@ interface PaymentsQuery {
 
 @Controller("payments")
 export class PaymentsController {
-  constructor(private readonly payments: PostgresPaymentRepository) {}
+  constructor(
+    private readonly payments: PostgresPaymentRepository,
+    private readonly paymentMethods: PostgresPaymentMethodRepository,
+  ) {}
+
+  @Get("methods")
+  listPaymentMethods(): Promise<PaymentMethodRegistry> {
+    return this.paymentMethods.listAll();
+  }
 
   @Get()
   listByTarget(@Query() query: PaymentsQuery): Promise<Payment[]> {

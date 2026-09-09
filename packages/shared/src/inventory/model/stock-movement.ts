@@ -1,3 +1,4 @@
+import { createUuid } from "../../platform/uuid.js";
 /**
  * Append-only stock ledger entry. Never updated after creation.
  * `reason` is deliberately a TEXT-shaped string, not a closed union, so new
@@ -27,7 +28,7 @@ export function createStockMovement(input: {
   occurredAt?: string;
 }): StockMovement {
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     stockItemId: input.stockItemId,
     delta: input.delta,
     reason: input.reason,

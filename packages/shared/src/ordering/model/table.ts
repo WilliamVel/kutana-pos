@@ -1,3 +1,4 @@
+import { createUuid } from "../../platform/uuid.js";
 export type TableStatus = "free" | "active" | "needs_check" | "paid";
 
 export interface Table {
@@ -10,7 +11,7 @@ export interface Table {
 
 export function createTable(input: { label: string; id?: string }): Table {
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     label: input.label,
     status: "free",
     currentOrderId: null,

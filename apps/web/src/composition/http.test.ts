@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { KUTANA_V1_PAYMENT_METHODS } from "@kutana/shared/payments/model/payment-method-registry.seed.js";
 import type { Order } from "@kutana/shared/ordering/model/order.js";
 import { buildHttpPorts } from "./http.js";
 
@@ -53,8 +52,8 @@ describe("buildHttpPorts", () => {
       "customerDebts",
       "customers",
       "events",
-      "methods",
       "orders",
+      "paymentMethods",
       "payments",
       "personalAccounts",
       "products",
@@ -72,7 +71,7 @@ describe("buildHttpPorts", () => {
     ]);
   });
 
-  it("uses the v1 payment method registry and SSE-backed same-tab order events", () => {
+  it("uses database-backed payment methods and SSE-backed same-tab order events", async () => {
     FakeEventSource.instances = [];
     const { fetchImpl } = createFetch();
     const ports = buildHttpPorts({
@@ -83,7 +82,8 @@ describe("buildHttpPorts", () => {
     const listener = vi.fn();
     const order = { id: "order-1", tableId: "table-1", version: 1 } as Order;
 
-    expect(ports.methods).toEqual(KUTANA_V1_PAYMENT_METHODS);
+    await expect(ports.paymentMethods.listAll()).resolves.toEqual([]);
+    expect(fetchImpl).toHaveBeenCalledWith(`${BASE_URL}/payments/methods`, expect.anything());
 
     const unsubscribe = ports.events.subscribe("order-1", listener);
     ports.events.publish({
@@ -96,7 +96,7 @@ describe("buildHttpPorts", () => {
     });
 
     expect(listener).toHaveBeenCalledOnce();
-    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(FakeEventSource.instances.map((source) => source.url)).toEqual([
       `${BASE_URL}/ordering/orders/order-1/events`,
     ]);

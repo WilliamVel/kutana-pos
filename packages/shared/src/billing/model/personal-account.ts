@@ -1,3 +1,4 @@
+import { createUuid } from "../../platform/uuid.js";
 import { ValidationError } from "../../errors/domain-error.js";
 import type { LineItem } from "../../ordering/model/line-item.js";
 
@@ -59,7 +60,7 @@ export function createCustomer(input: {
   }
   const now = input.now ?? new Date().toISOString();
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     displayName,
     phone: input.phone ?? null,
     email: input.email ?? null,
@@ -89,7 +90,7 @@ export function createPersonalAccount(input: {
   }
 
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     orderId: input.orderId,
     owner:
       customerId !== null ? { kind: "customer", customerId } : { kind: "free_name", freeName: freeName! },
@@ -113,7 +114,7 @@ export function createAccountLineAllocation(input: {
     throw new ValidationError("AccountLineAllocation quantity must be positive");
   }
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     accountId: input.accountId,
     lineItemId: input.lineItemId,
     quantity: input.quantity,

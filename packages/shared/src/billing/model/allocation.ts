@@ -1,3 +1,4 @@
+import { createUuid } from "../../platform/uuid.js";
 import { ValidationError } from "../../errors/domain-error.js";
 
 /**
@@ -36,7 +37,7 @@ export function createAllocation(input: {
     );
   }
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     lineItemId: input.lineItemId,
     ticketId: input.ticketId,
     shareBp,

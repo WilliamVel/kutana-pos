@@ -9,6 +9,8 @@ export interface AddItemPanelProduct {
   /** Integer cents. */
   readonly priceCents: number;
   readonly categoryName: string;
+  readonly taxRateBp: number;
+  readonly pourSizeMl?: number | null;
   /** Catalog image; null falls back to a CSS placeholder tile. */
   readonly imageUrl?: string | null;
 }
@@ -102,29 +104,31 @@ export function AddItemPanel({
       ) : (
         <ul className={styles.grid}>
           {visible.map((product) => (
-            <li key={product.id} className={styles.tile}>
-              {product.imageUrl ? (
-                <img
-                  className={styles.thumb}
-                  src={product.imageUrl}
-                  alt={product.name}
-                  loading="lazy"
-                />
-              ) : (
-                <div className={styles.placeholder} aria-hidden="true">
-                  {product.name.charAt(0)}
-                </div>
-              )}
-              <span className={styles.name}>{product.name}</span>
-              <PriceTag cents={product.priceCents} />
+            <li key={product.id}>
               <button
                 type="button"
-                className={styles.add}
+                className={styles.tile}
                 aria-label={`Agregar ${product.name}`}
                 disabled={disabled}
                 onClick={() => onAdd(product.id, 1)}
               >
-                +
+                {product.imageUrl ? (
+                  <img
+                    className={styles.thumb}
+                    src={product.imageUrl}
+                    alt=""
+                    loading="lazy"
+                  />
+                ) : (
+                  <span className={styles.placeholder} aria-hidden="true">
+                    {product.name.charAt(0)}
+                  </span>
+                )}
+                <span className={styles.name}>{product.name}</span>
+                <PriceTag cents={product.priceCents} />
+                <span className={styles.add} aria-hidden="true">
+                  + Agregar
+                </span>
               </button>
             </li>
           ))}

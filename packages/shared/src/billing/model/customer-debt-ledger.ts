@@ -1,3 +1,4 @@
+import { createUuid } from "../../platform/uuid.js";
 import { ValidationError } from "../../errors/domain-error.js";
 import type { PersonalAccount } from "./personal-account.js";
 
@@ -35,7 +36,7 @@ export function createCustomerDebtEntry(input: {
   }
 
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     customerId: input.customerId,
     kind: input.kind ?? (input.direction === "credit" ? "payment" : "pending_account"),
     direction: input.direction,

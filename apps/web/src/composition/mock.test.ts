@@ -5,6 +5,7 @@ import { MockTableRepository } from "../adapters/mock/table-repository.js";
 import { MockCustomerDebtRepository } from "../adapters/mock/customer-debt-repository.js";
 import { MockCustomerRepository } from "../adapters/mock/customer-repository.js";
 import { MockTicketRepository } from "../adapters/mock/ticket-repository.js";
+import { MockPaymentMethodRepository } from "../adapters/mock/payment-method-repository.js";
 import { MockPaymentRepository } from "../adapters/mock/payment-repository.js";
 import { MockPersonalAccountRepository } from "../adapters/mock/personal-account-repository.js";
 import { MockCategoryRepository } from "../adapters/mock/category-repository.js";
@@ -25,17 +26,19 @@ describe("buildMockPorts", () => {
     expect(ports.personalAccounts).toBeInstanceOf(MockPersonalAccountRepository);
     expect(ports.customerDebts).toBeInstanceOf(MockCustomerDebtRepository);
     expect(ports.payments).toBeInstanceOf(MockPaymentRepository);
+    expect(ports.paymentMethods).toBeInstanceOf(MockPaymentMethodRepository);
     expect(ports.products).toBeInstanceOf(MockProductRepository);
     expect(ports.categories).toBeInstanceOf(MockCategoryRepository);
     expect(ports.stock).toBeInstanceOf(MockStockRepository);
     expect(ports.events).toBeInstanceOf(MockOrderEvents);
   });
 
-  it("wires the payment method registry to the real v1 seed data, never an ad-hoc list", () => {
+  it("wires the payment method registry through a repository, never an ad-hoc list", async () => {
     const ports = buildMockPorts();
+    const methods = await ports.paymentMethods.listAll();
 
-    expect(ports.methods.length).toBeGreaterThan(0);
-    expect(ports.methods.map((entry) => entry.label)).toContain("Cash");
+    expect(methods.length).toBeGreaterThan(0);
+    expect(methods.map((entry) => entry.label)).toContain("Cash");
   });
 
   it("does not accept arbitrary mock credentials silently", async () => {

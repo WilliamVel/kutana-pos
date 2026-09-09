@@ -1,3 +1,4 @@
+import { createUuid } from "../../platform/uuid.js";
 import { ValidationError } from "../../errors/domain-error.js";
 import type { LineItem } from "./line-item.js";
 
@@ -27,7 +28,7 @@ export function createOrder(input: {
   openedAt?: string;
 }): Order {
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? createUuid(),
     tableId: input.tableId,
     status: "active",
     lineItems: [],
