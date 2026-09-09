@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "../../../design-system/atoms/Button.js";
+import { useDebouncedValue } from "../../../shared/useDebouncedValue.js";
 import { PriceTag } from "../../../design-system/molecules/PriceTag.js";
 import styles from "./AddItemPanel.module.css";
 
@@ -44,6 +45,7 @@ export function AddItemPanel({
   onDismissConflict,
 }: AddItemPanelProps): JSX.Element {
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(query);
   const [activeCategory, setActiveCategory] = useState<string>(ALL_TAB);
 
   const categoryNames =
@@ -52,7 +54,7 @@ export function AddItemPanel({
 
   // Client-side filter only. Real server-side search (`GET /products?q=`)
   // is a Milestone-2 concern; the container keeps passing the full list.
-  const needle = query.trim().toLowerCase();
+  const needle = debouncedQuery.trim().toLowerCase();
   const visible = products.filter((product) => {
     const matchesQuery = needle ? product.name.toLowerCase().includes(needle) : true;
     const matchesCategory =

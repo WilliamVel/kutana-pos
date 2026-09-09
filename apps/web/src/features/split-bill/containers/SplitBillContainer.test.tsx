@@ -132,6 +132,36 @@ describe("SplitBillContainer", () => {
     );
   });
 
+  it("removes a person from this split from step two without deleting the customer", async () => {
+    const ports = await renderContainer();
+
+    fireEvent.change(screen.getByLabelText("Cliente existente"), {
+      target: { value: "customer-ada" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Crear cuenta de cliente" }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("article", { name: /Saldo de cuenta de Ada Lovelace/ }),
+      ).toBeInTheDocument(),
+    );
+
+    const order = await ports.orders.findByTable("table-1");
+    const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
+    fireEvent.click(screen.getByRole("button", { name: "Seleccionar cuenta Ada Lovelace" }));
+    fireEvent.click(screen.getByRole("button", { name: "Quitar Ada Lovelace de esta división" }));
+
+    await waitFor(async () => expect(await ports.personalAccounts.findById(account.id)).toBeNull());
+    await expect(ports.customers.findById("customer-ada")).resolves.toMatchObject({
+      displayName: "Ada Lovelace",
+    });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("article", { name: /Saldo de cuenta de Ada Lovelace/ }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("Primero creá una cuenta.")).toBeInTheDocument();
+  });
+
   it("deletes a mistaken personal account and returns its items to unassigned", async () => {
     const ports = await renderContainer();
 

@@ -177,10 +177,15 @@ export function RegisterPaymentContainer({
     }];
   });
 
+  const isWholeTablePayment = !personalAccount && ticketId === undefined;
   const allocatedLineItemIds = ticket
     ? new Set(allocations.filter((allocation) => allocation.ticketId === ticket.id).map((a) => a.lineItemId))
     : new Set<string>();
-  const ticketLineItems = ticket ? order.lineItems.filter((line) => allocatedLineItemIds.has(line.id)) : [];
+  const ticketLineItems = ticket
+    ? isWholeTablePayment
+      ? order.lineItems
+      : order.lineItems.filter((line) => allocatedLineItemIds.has(line.id))
+    : [];
   const ticketLines: RegisterPaymentPanelLine[] = ticketLineItems.map((line) => ({
     id: line.id,
     name: line.nameSnapshot,
@@ -201,7 +206,9 @@ export function RegisterPaymentContainer({
       allocations: accountAllocations,
       payments: toAccountPayments(personalAccount.id, payments),
     }).totalCents
-    : ticketTotals(ticket!.id, order.lineItems, allocations).cents;
+    : isWholeTablePayment
+      ? ticketLines.reduce((sum, line) => sum + line.totalCents, 0)
+      : ticketTotals(ticket!.id, order.lineItems, allocations).cents;
   const alreadyPaidCents = paymentsTotal(payments);
   const remainingBalanceCents = Math.max(0, totalCents - alreadyPaidCents);
 
@@ -279,7 +286,16 @@ export function RegisterPaymentContainer({
     const newBalance = Math.max(0, totalCents - paymentsTotal(updatedPayments));
     if (newBalance === 0) {
       const paidTicket = withStatus(ticket, "paid");
-      const saved = await tickets.save(paidTicket, allocations, ticket.version);
+      const allocationsToSave = isWholeTablePayment
+        ? order!.lineItems.map(
+          (line) =>
+            allocations.find(
+              (allocation) =>
+                allocation.ticketId === ticket.id && allocation.lineItemId === line.id,
+            ) ?? createAllocation({ lineItemId: line.id, ticketId: ticket.id }),
+        )
+        : allocations;
+      const saved = await tickets.save(paidTicket, allocationsToSave, ticket.version);
       setTicket(saved);
       onPaymentComplete?.();
     }
@@ -287,8 +303,8 @@ export function RegisterPaymentContainer({
 
   return (
     <RegisterPaymentPanel
-      title={personalAccount ? `Cobrar a ${ownerLabel(personalAccount, customers)}` : "Cobrar saldo de mesa"}
-      subtitle={personalAccount ? "Cobrale a esta cuenta personal con el mismo flujo de pago." : "Cobrá el saldo actual de la mesa."}
+      title={personalAccount ? `Cobrar a ${ownerLabel(personalAccount, customers)}` : undefined}
+      subtitle={personalAccount ? "Cobrale a esta cuenta personal con el mismo flujo de pago." : undefined}
       lines={lines}
       subtotalCents={subtotalCents}
       taxCents={taxCents}

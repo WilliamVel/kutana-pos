@@ -94,6 +94,7 @@ describe("SplitBillView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Agregar" }));
     fireEvent.click(screen.getByRole("button", { name: "Cobrar" }));
     fireEvent.click(screen.getByRole("button", { name: "Dejar pendiente" }));
+    fireEvent.click(screen.getByRole("button", { name: "Quitar Juan P. de esta división" }));
     fireEvent.click(screen.getByRole("button", { name: "Eliminar" }));
     fireEvent.click(screen.getByRole("button", { name: "Revisar cierre de mesa" }));
 
@@ -129,6 +130,14 @@ describe("SplitBillView", () => {
       lineItemId: "",
       quantity: "1",
     });
+  });
+
+  it("shows an alert when there are no products to divide or pay", () => {
+    renderView({ lines: [] });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Para dividir la cuenta o cobrar debe existir al menos un producto para pagar.",
+    );
   });
 
   it("groups split-bill work into clear account sections", () => {

@@ -61,6 +61,31 @@ describe("OrderTicketPanelContainer", () => {
     expect(order?.lineItems.some((line) => line.nameSnapshot === "Loaded Nachos")).toBe(false);
   });
 
+  it("closes an order and frees the table when the last product is removed", async () => {
+    const ports = buildMockPorts();
+    render(
+      <PortsProvider value={ports}>
+        <OrderTicketPanelContainer tableId="table-1" />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Loaded Nachos")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Quitar producto Loaded Nachos" }));
+    await waitFor(() => expect(screen.queryByText("Loaded Nachos")).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Quitar producto KUTANA Pilsener 500ml" }));
+
+    await waitFor(async () => expect((await ports.orders.findByTable("table-1"))?.status).toBe("paid"));
+    await waitFor(async () =>
+      expect(await ports.tables.findById("table-1")).toMatchObject({
+        status: "free",
+        currentOrderId: null,
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("region", { name: "Resumen de orden para Table 1" })).not.toBeInTheDocument(),
+    );
+  });
+
   it("updates live when OrderEvents publishes a change from another device (waiter -> register realtime)", async () => {
     const ports = buildMockPorts();
     render(

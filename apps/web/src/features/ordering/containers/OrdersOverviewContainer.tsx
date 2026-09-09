@@ -16,8 +16,16 @@ const STATUS_MAP: Record<DomainOrderStatus, OrderStatus> = {
   closed_with_pending: "closed-with-pending",
 };
 
+function isActiveVisibleOrder(order: Order): boolean {
+  return (
+    order.lineItems.length > 0 &&
+    order.status !== "paid" &&
+    order.status !== "closed_with_pending"
+  );
+}
+
 function toRow(table: Table, order: Order | null): OrdersOverviewRow | null {
-  if (!order) return null;
+  if (!order || !isActiveVisibleOrder(order)) return null;
   return {
     tableId: table.id,
     tableLabel: table.label,

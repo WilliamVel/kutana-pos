@@ -7,7 +7,7 @@
   min-width: 0;
   min-height: 0;
   padding: var(--space-4);
-  overflow-y: auto;
+  overflow: visible;
   background: linear-gradient(180deg, var(--surface-raised), var(--surface-page));
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -38,14 +38,72 @@
   text-transform: uppercase;
 }
 
+.paymentGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  flex: 1 1 auto;
+  gap: var(--space-4);
+  min-height: 0;
+  overflow: visible;
+}
+
+.productsPane,
+.checkoutPane {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background-color: var(--surface-raised);
+}
+
+.productsPane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: min(40vh, 28rem);
+  overflow: hidden;
+}
+
+.checkoutPane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-self: start;
+  padding: var(--space-3);
+}
+
+.paneHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.paneHeader h3,
+.emptyLines {
+  margin: 0;
+}
+
+.paneHeader h3 {
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.paneHeader span,
+.emptyLines {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
 .lines {
   display: flex;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 0.5rem;
   min-height: 0;
-  max-height: 9rem;
-  padding-right: 0.25rem;
+  padding: var(--space-3);
   overflow-y: auto;
   scrollbar-width: thin;
 }
@@ -89,7 +147,7 @@
 
 .methods {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
   gap: 0.5rem;
 }
 
@@ -154,17 +212,15 @@
   color: var(--text-primary);
 }
 
-.panel > button {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
+.checkoutPane > button {
+  position: static;
   flex: 0 0 auto;
   width: 100%;
   min-width: 0;
   padding: var(--space-3) var(--space-4);
   font-size: 1rem;
   white-space: normal;
-  box-shadow: 0 -0.75rem 1rem color-mix(in srgb, var(--surface-page) 82%, transparent);
+  box-shadow: none;
 }
 
 @media (max-width: 64rem) {
@@ -172,7 +228,17 @@
     overflow: visible;
   }
 
+  .paymentGrid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    overflow: visible;
+  }
+
+  .productsPane {
+    height: min(40vh, 24rem);
+  }
+
   .lines {
-    max-height: 16rem;
+    min-height: 0;
   }
 }

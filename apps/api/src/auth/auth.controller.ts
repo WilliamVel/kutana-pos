@@ -1,10 +1,21 @@
-import type { AuthSession } from "@kutana/shared/auth/model/auth-session.js";
-import { Body, Controller, Post } from "@nestjs/common";
-import { AuthService } from "./auth.service.js";
+import type { AuthRole, AuthSession } from "@kutana/shared/auth/model/auth-session.js";
+import { Body, Controller, Delete, Get, NotFoundException, Param, Post } from "@nestjs/common";
+import { AuthService, type PublicUserRecord } from "./auth.service.js";
 import { Public } from "./public.decorator.js";
+import { RequireRole } from "./roles.decorator.js";
 
 interface LoginDto {
   readonly operator: string;
+  readonly pin: string;
+}
+
+interface RefreshDto {
+  readonly refreshToken?: string;
+}
+
+interface CreateUserDto {
+  readonly displayName: string;
+  readonly role: AuthRole;
   readonly pin: string;
 }
 
@@ -14,7 +25,33 @@ export class AuthController {
 
   @Public()
   @Post("login")
-  login(@Body() body: LoginDto): AuthSession {
+  login(@Body() body: LoginDto): Promise<AuthSession> {
     return this.authService.login(body);
+  }
+
+  @Public()
+  @Post("refresh")
+  refresh(@Body() body: RefreshDto): Promise<AuthSession> {
+    return this.authService.refresh(body.refreshToken);
+  }
+
+  @RequireRole("admin")
+  @Get("users")
+  listUsers(): Promise<readonly PublicUserRecord[]> {
+    return this.authService.listUsers();
+  }
+
+  @RequireRole("admin")
+  @Post("users")
+  createUser(@Body() body: CreateUserDto): Promise<PublicUserRecord> {
+    return this.authService.createUser(body);
+  }
+
+  @RequireRole("admin")
+  @Delete("users/:id")
+  async deactivateUser(@Param("id") id: string): Promise<PublicUserRecord> {
+    const user = await this.authService.deactivateUser(id);
+    if (!user) throw new NotFoundException("User not found");
+    return user;
   }
 }

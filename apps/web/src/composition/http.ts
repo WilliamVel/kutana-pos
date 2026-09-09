@@ -25,6 +25,7 @@ export function buildHttpPorts(options: HttpPortsOptions = {}): Ports {
   const authenticatedOptions: HttpPortsOptions = {
     ...options,
     getBearerToken: () => auth.currentSession()?.token ?? options.getBearerToken?.() ?? null,
+    refreshSession: async () => (await auth.refresh())?.token ?? null,
   };
 
   return {

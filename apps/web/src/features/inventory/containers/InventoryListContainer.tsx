@@ -3,6 +3,7 @@ import type { Category } from "@kutana/shared/catalog/model/category.js";
 import { withActive, type Product } from "@kutana/shared/catalog/model/product.js";
 import type { StockItem } from "@kutana/shared/inventory/model/stock-item.js";
 import { useCategories, useProducts, useStock } from "../../../composition/PortsProvider.js";
+import { useDebouncedValue } from "../../../shared/useDebouncedValue.js";
 import { InventoryList, type InventoryRow } from "../components/InventoryList.js";
 import { computeStockDisplay, type StockDisplayStatus } from "../stock-display.js";
 
@@ -35,6 +36,7 @@ export function InventoryListContainer({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [stockStatusFilter, setStockStatusFilter] = useState<StockDisplayStatus | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebouncedValue(searchQuery);
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -97,7 +99,7 @@ export function InventoryListContainer({
   };
 
   const filteredRows = useMemo<InventoryRow[]>(() => {
-    const query = searchQuery.trim().toLowerCase();
+    const query = debouncedSearchQuery.trim().toLowerCase();
 
     return allProducts
       .filter((product) => selectedCategoryId === null || product.categoryId === selectedCategoryId)
@@ -125,7 +127,7 @@ export function InventoryListContainer({
   }, [
     allProducts,
     selectedCategoryId,
-    searchQuery,
+    debouncedSearchQuery,
     stockById,
     categoryNameById,
     stockStatusFilter,

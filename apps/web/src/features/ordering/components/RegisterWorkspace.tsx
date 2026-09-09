@@ -15,6 +15,8 @@ export interface RegisterWorkspaceProps {
    * column is not starved by an idle column (payment / split sub-states).
    */
   readonly railHidden?: boolean;
+  /** Allows secondary center content to extend beyond the fixed workspace card. */
+  readonly centerOverflowVisible?: boolean;
 }
 
 /**
@@ -30,12 +32,13 @@ export function RegisterWorkspace({
   emptyCenter,
   rail,
   railHidden = false,
+  centerOverflowVisible = false,
 }: RegisterWorkspaceProps): JSX.Element {
   return (
     <div className={railHidden ? styles.workspaceFocused : styles.workspace}>
       <div className={styles.list}>{list}</div>
       {center ? (
-        <div className={styles.center}>{center}</div>
+        <div className={centerOverflowVisible ? `${styles.center} ${styles.centerOverflowVisible}` : styles.center}>{center}</div>
       ) : (
         <div className={styles.empty}>{emptyCenter}</div>
       )}

@@ -169,7 +169,7 @@
 
 .assignmentWorkspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.45fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.45fr);
   gap: var(--space-4);
   align-items: start;
 }
@@ -195,6 +195,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  min-width: 0;
   padding: var(--space-4);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
@@ -232,6 +233,7 @@
   background: var(--surface-raised);
   color: var(--text-primary);
   text-align: left;
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 
@@ -244,7 +246,9 @@
 .selectedAccountButton span,
 .accountButton small,
 .selectedAccountButton small {
+  min-width: 0;
   color: var(--text-secondary);
+  overflow-wrap: anywhere;
 }
 
 .removeAccountButton {
@@ -341,6 +345,7 @@
 
 .balanceGrid {
   display: grid;
+  min-width: 0;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
   margin: 0;

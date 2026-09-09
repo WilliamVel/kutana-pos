@@ -2,6 +2,7 @@ export interface HttpClientOptions {
   readonly baseUrl?: string;
   readonly fetchImpl?: typeof fetch;
   readonly getBearerToken?: () => string | null;
+  readonly refreshSession?: () => Promise<string | null>;
 }
 
 export interface HttpRequestOptions {
@@ -36,12 +37,14 @@ export class HttpClient {
   private readonly fetchImpl: typeof fetch;
   private bearerToken: string | null;
   private readonly getBearerToken?: () => string | null;
+  private readonly refreshSession?: () => Promise<string | null>;
 
   constructor(options: HttpClientOptions = {}) {
     this.baseUrl = normalizeBaseUrl(options.baseUrl ?? defaultApiBaseUrl());
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
     this.bearerToken = null;
     this.getBearerToken = options.getBearerToken;
+    this.refreshSession = options.refreshSession;
   }
 
   setBearerToken(token: string | null): void {
@@ -71,6 +74,14 @@ export class HttpClient {
       response = await this.fetchImpl(url, init);
     } catch (error) {
       throw error;
+    }
+
+    if (response.status === 401 && options.auth !== false && this.refreshSession) {
+      const refreshedToken = await this.refreshSession();
+      if (refreshedToken) {
+        headers.set("Authorization", `Bearer ${refreshedToken}`);
+        response = await this.fetchImpl(url, init);
+      }
     }
 
     if (!response.ok) {

@@ -21,6 +21,9 @@ describe("migration discovery", () => {
       "009_payment_reference_ids_text.sql",
       "010_allow_330ml_pour_size.sql",
       "011_seed_kutana_menu_catalog.sql",
+      "012_allow_draft_line_item_deletion.sql",
+      "013_payment_methods_table.sql",
+      "014_auth_refresh_tokens.sql",
     ]);
   });
 });

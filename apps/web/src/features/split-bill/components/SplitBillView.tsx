@@ -4,6 +4,7 @@ import type {
   PersonalAccountStatus,
 } from "@kutana/shared/billing/model/personal-account.js";
 import { Button } from "../../../design-system/atoms/Button.js";
+import { Icon } from "../../../design-system/atoms/Icon.js";
 import { Input } from "../../../design-system/atoms/Input.js";
 import { ButtonRow } from "../../../design-system/molecules/ButtonRow.js";
 import { PriceTag } from "../../../design-system/molecules/PriceTag.js";
@@ -187,6 +188,11 @@ export function SplitBillView({
           title="Asignar productos"
           description="Elegí una cuenta y sumale los productos pendientes desde la lista."
         />
+        {lines.length === 0 ? (
+          <div role="alert" className={styles.review}>
+            Para dividir la cuenta o cobrar debe existir al menos un producto para pagar.
+          </div>
+        ) : null}
         <div className={styles.assignmentWorkspace}>
           <section aria-label="Productos pendientes" className={styles.assignmentList}>
             {lines.map((line) => {
@@ -252,24 +258,40 @@ export function SplitBillView({
               {accounts.map((account) => {
                 const isSelected = account.id === allocationDraft.accountId;
                 return (
-                  <button
-                    key={account.id}
-                    type="button"
-                    className={isSelected ? styles.selectedAccountButton : styles.accountButton}
-                    onClick={() =>
-                      onAllocationDraftChange({
-                        ...allocationDraft,
-                        accountId: isSelected ? "" : account.id,
-                      })
-                    }
-                    disabled={disabled}
-                    aria-label={`${isSelected ? "Quitar cuenta seleccionada" : "Seleccionar cuenta"} ${account.ownerLabel}`}
-                    aria-pressed={isSelected}
-                  >
-                    <span>{isSelected ? "Cuenta seleccionada" : "Seleccionar cuenta"}</span>
-                    <strong>{account.ownerLabel}</strong>
-                    <small>{formatAccountStatus(account.status)}</small>
-                  </button>
+                  <article key={account.id} className={styles.accountPickerItem}>
+                    <button
+                      type="button"
+                      className={isSelected ? styles.selectedAccountButton : styles.accountButton}
+                      onClick={() =>
+                        onAllocationDraftChange({
+                          ...allocationDraft,
+                          accountId: isSelected ? "" : account.id,
+                        })
+                      }
+                      disabled={disabled}
+                      aria-label={`${isSelected ? "Quitar cuenta seleccionada" : "Seleccionar cuenta"} ${account.ownerLabel}`}
+                      aria-pressed={isSelected}
+                    >
+                      <span>{isSelected ? "Cuenta seleccionada" : "Seleccionar cuenta"}</span>
+                      <strong>{account.ownerLabel}</strong>
+                      <small>{formatAccountStatus(account.status)}</small>
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.removeAccountButton}
+                      aria-label={`Quitar ${account.ownerLabel} de esta división`}
+                      title="Quitar de esta división"
+                      onClick={() => onDeleteAccount(account.id)}
+                      disabled={
+                        disabled ||
+                        account.paidCents > 0 ||
+                        account.status === "pending" ||
+                        account.status === "paid"
+                      }
+                    >
+                      <Icon name="close" size={16} />
+                    </button>
+                  </article>
                 );
               })}
             </div>

@@ -27,6 +27,20 @@ export class MockAuthService implements AuthService {
       displayName: DEMO_OPERATOR.displayName,
       token: "mock-auth-token-mina",
       expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      refreshToken: "mock-refresh-token-mina",
+      refreshExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    };
+    return this.session;
+  }
+
+  async refresh(): Promise<AuthSession | null> {
+    if (!this.session) return null;
+    this.session = {
+      ...this.session,
+      token: `mock-auth-token-mina-${Date.now()}`,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      refreshToken: `mock-refresh-token-mina-${Date.now()}`,
+      refreshExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };
     return this.session;
   }

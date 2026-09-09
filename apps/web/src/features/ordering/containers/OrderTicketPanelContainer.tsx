@@ -103,7 +103,11 @@ export function OrderTicketPanelContainer({
   useEffect(() => {
     if (!order) return;
     return events.subscribe(order.id, (event) => {
-      setOrder(event.payload);
+      setOrder(
+        event.payload.status === "paid" || event.payload.status === "closed_with_pending"
+          ? null
+          : event.payload,
+      );
     });
   }, [order?.id, events]);
 
@@ -117,10 +121,25 @@ export function OrderTicketPanelContainer({
 
     const next = removeLineItem(current, lineId);
     try {
-      const saved = await orders.save(next, current.version);
-      setOrder(saved);
+      const shouldCloseEmptyOrder = next.lineItems.length === 0;
+      const orderToSave: Order = shouldCloseEmptyOrder
+        ? { ...next, status: "paid", closedAt: new Date().toISOString() }
+        : next;
+      const saved = await orders.save(orderToSave, current.version);
+      if (shouldCloseEmptyOrder) {
+        const currentTable = await tables.findById(tableId);
+        if (currentTable) {
+          await tables.save(
+            { ...currentTable, status: "free", currentOrderId: null },
+            currentTable.version,
+          );
+        }
+        setOrder(null);
+      } else {
+        setOrder(saved);
+      }
       events.publish({
-        type: "order.updated",
+        type: shouldCloseEmptyOrder ? "order.closed" : "order.updated",
         orderId: saved.id,
         tableId,
         version: saved.version,

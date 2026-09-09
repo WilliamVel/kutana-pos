@@ -319,8 +319,12 @@ export function SplitBillContainer({
             : "Mesa cerrada con todo pagado.",
         );
         const saved = await orders.save(result.order, order.version);
+        await tables.save(
+          { ...table, status: "free", currentOrderId: null },
+          table.version,
+        );
         events.publish({
-          type: "order.updated",
+          type: "order.closed",
           orderId: saved.id,
           tableId,
           version: saved.version,

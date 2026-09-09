@@ -86,8 +86,8 @@ function formatCentsToDollarsInput(cents: number | null): string {
  * `requiresTendered` flag says so.
  */
 export function RegisterPaymentPanel({
-  title = "Pago",
-  subtitle = "Elegí cómo se va a pagar este saldo.",
+  title,
+  subtitle,
   lines,
   subtotalCents,
   taxCents,
@@ -106,97 +106,113 @@ export function RegisterPaymentPanel({
 }: RegisterPaymentPanelProps): JSX.Element {
   const selectedMethod = methods.find((method) => method.code === selectedMethodCode);
   const showTenderedInput = selectedMethod?.requiresTendered ?? false;
+  const hasHeader = Boolean(title || subtitle);
 
   return (
     <section className={styles.panel} aria-label="Registrar pago">
-      <header className={styles.header}>
-        <p className={styles.eyebrow}>Cobro</p>
-        <h2>{title}</h2>
-        <p>{subtitle}</p>
-      </header>
+      {hasHeader ? (
+        <header className={styles.header}>
+          <p className={styles.eyebrow}>Cobro</p>
+          {title ? <h2>{title}</h2> : null}
+          {subtitle ? <p>{subtitle}</p> : null}
+        </header>
+      ) : null}
 
-      <div className={styles.lines}>
-        {lines.map((line) => (
-          <LineItemRow
-            key={line.id}
-            name={line.name}
-            quantity={line.quantity}
-            unitPriceCents={line.unitPriceCents}
-            totalCents={line.totalCents}
-            pourSizeMl={line.pourSizeMl}
-            isAdjustment={line.isAdjustment}
+      <div className={styles.paymentGrid}>
+        <section className={styles.productsPane} aria-label="Productos a pagar">
+          <div className={styles.paneHeader}>
+            <h3>Productos a pagar</h3>
+            <span>{lines.length} {lines.length === 1 ? "producto" : "productos"}</span>
+          </div>
+          <div className={styles.lines}>
+            {lines.length === 0 ? (
+              <p className={styles.emptyLines}>No hay productos asignados a este pago.</p>
+            ) : null}
+            {lines.map((line) => (
+              <LineItemRow
+                key={line.id}
+                name={line.name}
+                quantity={line.quantity}
+                unitPriceCents={line.unitPriceCents}
+                totalCents={line.totalCents}
+                pourSizeMl={line.pourSizeMl}
+                isAdjustment={line.isAdjustment}
+              />
+            ))}
+          </div>
+        </section>
+
+        <section className={styles.checkoutPane} aria-label="Resumen y método de pago">
+          <div className={styles.totals}>
+            <div className={styles.totalRow}>
+              <span>Subtotal</span>
+              <PriceTag cents={subtotalCents} />
+            </div>
+            <div className={styles.totalRow}>
+              <span>Impuestos</span>
+              <PriceTag cents={taxCents} />
+            </div>
+            <div className={styles.totalRow}>
+              <span>Total</span>
+              <PriceTag cents={totalCents} />
+            </div>
+            <div className={`${styles.totalRow} ${styles.remaining}`}>
+              <span>Saldo restante</span>
+              <PriceTag cents={remainingBalanceCents} />
+            </div>
+          </div>
+
+          <Input
+            label="Monto a pagar ahora"
+            type="number"
+            value={formatCentsToDollarsInput(amountToPayCents)}
+            onChange={(value) => onAmountToPayChange(parseDollarsToCents(value))}
           />
-        ))}
+
+          <fieldset className={styles.methodFieldset}>
+            <legend>Método de pago</legend>
+            <div className={styles.methods}>
+              {methods.map((method) => {
+                const selected = method.code === selectedMethodCode;
+                return (
+                  <label key={method.code} className={selected ? styles.methodOptionSelected : styles.methodOption}>
+                    <input
+                      type="radio"
+                      name="payment-method"
+                      checked={selected}
+                      onChange={() => onSelectMethod(method.code)}
+                    />
+                    <span>
+                      <strong>{method.label}</strong>
+                      <small aria-hidden="true">{method.requiresTendered ? "Efectivo recibido + vuelto" : "No requiere efectivo recibido"}</small>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {showTenderedInput ? (
+            <Input
+              label="Efectivo recibido"
+              type="number"
+              value={formatCentsToDollarsInput(tenderedCents)}
+              onChange={(value) => onTenderedChange(parseDollarsToCents(value))}
+            />
+          ) : null}
+
+          {changeDueCents !== null ? (
+            <div className={styles.change}>
+              <span>Vuelto</span>
+              <PriceTag cents={changeDueCents} />
+            </div>
+          ) : null}
+
+          <Button onClick={onConfirmPayment} disabled={!canConfirm}>
+            Confirmar pago
+          </Button>
+        </section>
       </div>
-
-      <div className={styles.totals}>
-        <div className={styles.totalRow}>
-          <span>Subtotal</span>
-          <PriceTag cents={subtotalCents} />
-        </div>
-        <div className={styles.totalRow}>
-          <span>Impuestos</span>
-          <PriceTag cents={taxCents} />
-        </div>
-        <div className={styles.totalRow}>
-          <span>Total</span>
-          <PriceTag cents={totalCents} />
-        </div>
-        <div className={`${styles.totalRow} ${styles.remaining}`}>
-          <span>Saldo restante</span>
-          <PriceTag cents={remainingBalanceCents} />
-        </div>
-      </div>
-
-      <Input
-        label="Monto a pagar ahora"
-        type="number"
-        value={formatCentsToDollarsInput(amountToPayCents)}
-        onChange={(value) => onAmountToPayChange(parseDollarsToCents(value))}
-      />
-
-      <fieldset className={styles.methodFieldset}>
-        <legend>Método de pago</legend>
-        <div className={styles.methods}>
-          {methods.map((method) => {
-            const selected = method.code === selectedMethodCode;
-            return (
-              <label key={method.code} className={selected ? styles.methodOptionSelected : styles.methodOption}>
-                <input
-                  type="radio"
-                  name="payment-method"
-                  checked={selected}
-                  onChange={() => onSelectMethod(method.code)}
-                />
-                <span>
-                  <strong>{method.label}</strong>
-                  <small aria-hidden="true">{method.requiresTendered ? "Efectivo recibido + vuelto" : "No requiere efectivo recibido"}</small>
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      {showTenderedInput ? (
-        <Input
-          label="Efectivo recibido"
-          type="number"
-          value={formatCentsToDollarsInput(tenderedCents)}
-          onChange={(value) => onTenderedChange(parseDollarsToCents(value))}
-        />
-      ) : null}
-
-      {changeDueCents !== null ? (
-        <div className={styles.change}>
-          <span>Vuelto</span>
-          <PriceTag cents={changeDueCents} />
-        </div>
-      ) : null}
-
-      <Button onClick={onConfirmPayment} disabled={!canConfirm}>
-        Confirmar pago
-      </Button>
     </section>
   );
 }

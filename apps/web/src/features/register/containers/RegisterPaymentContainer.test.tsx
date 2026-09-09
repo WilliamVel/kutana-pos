@@ -30,6 +30,8 @@ describe("RegisterPaymentContainer", () => {
 
     // Seeded order: 2x Pilsener 500ml (784 total w/ tax) + 1 Nachos (728) = 1512
     await waitFor(() => expect(screen.getAllByText("$15.12").length).toBeGreaterThan(0));
+    expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
+    expect(screen.getByText("Loaded Nachos")).toBeInTheDocument();
 
     // First partial payment: CASH, pay 1000 of the 1512 total, tendered exactly 1000.
     fireEvent.click(screen.getByRole("radio", { name: "Efectivo" }));
@@ -73,6 +75,8 @@ describe("RegisterPaymentContainer", () => {
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Cobrar a Juan P." })).toBeInTheDocument());
     expect(screen.getByRole("radio", { name: /Efectivo/ })).toBeInTheDocument();
+    expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
+    expect(screen.queryByText("Loaded Nachos")).not.toBeInTheDocument();
     expect(screen.getAllByText("$3.92").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("radio", { name: /Pago QR/ }));
@@ -84,6 +88,32 @@ describe("RegisterPaymentContainer", () => {
       expect(payments[0]!.amountCents).toBe(392);
       expect((await ports.personalAccounts.findById(account.id))?.status).toBe("paid");
     });
+  });
+
+  it("shows every order product when paying the full table even if an open ticket has no line allocations yet", async () => {
+    const ports = buildMockPorts();
+    const order = (await ports.orders.findByTable("table-1"))!;
+    await ports.tickets.save(
+      {
+        id: "empty-ticket",
+        orderId: order.id,
+        label: "Mesa completa",
+        status: "open" as const,
+        version: 1,
+      },
+      [],
+      0,
+    );
+
+    render(
+      <PortsProvider value={ports}>
+        <RegisterPaymentContainer tableId="table-1" />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getAllByText("$15.12").length).toBeGreaterThan(0));
+    expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
+    expect(screen.getByText("Loaded Nachos")).toBeInTheDocument();
   });
 
   it("pays a SPECIFIC ticket by id, only charging the line items actually allocated to it (a split-bill scenario)", async () => {

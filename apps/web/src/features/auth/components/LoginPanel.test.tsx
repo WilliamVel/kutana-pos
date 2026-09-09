@@ -27,6 +27,8 @@ describe("LoginPanel", () => {
           displayName: "Mina",
           token: "signed-token",
           expiresAt: "2026-01-01T00:15:00.000Z",
+          refreshToken: "refresh-token",
+          refreshExpiresAt: "2026-01-08T00:00:00.000Z",
         }),
         { status: 201, headers: { "Content-Type": "application/json" } },
       ),

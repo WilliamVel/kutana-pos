@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createCustomer, type Customer } from "@kutana/shared/billing/model/personal-account.js";
 import { useCustomers } from "../../../composition/PortsProvider.js";
+import { useDebouncedValue } from "../../../shared/useDebouncedValue.js";
 import { CustomerForm, type CustomerFormValues } from "../components/CustomerForm.js";
 import { CustomerList } from "../components/CustomerList.js";
 import styles from "./CustomerManagementContainer.module.css";
@@ -11,13 +12,16 @@ export function CustomerManagementContainer(): JSX.Element {
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebouncedValue(searchQuery);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     setCustomers(
-      searchQuery.trim() ? await customersPort.search(searchQuery) : await customersPort.listAll(),
+      debouncedSearchQuery.trim()
+        ? await customersPort.search(debouncedSearchQuery)
+        : await customersPort.listAll(),
     );
-  }, [customersPort, searchQuery]);
+  }, [customersPort, debouncedSearchQuery]);
 
   useEffect(() => {
     void load();

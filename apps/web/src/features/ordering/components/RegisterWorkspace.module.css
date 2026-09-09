@@ -35,6 +35,11 @@
   box-shadow: var(--shadow-md);
 }
 
+.centerOverflowVisible {
+  height: auto;
+  overflow: visible;
+}
+
 .rail {
   display: flex;
   flex-direction: column;

@@ -7,10 +7,11 @@ import styles from "./LoginPanel.module.css";
 
 export interface LoginPanelProps {
   readonly onLogin: (session: AuthSession) => void;
+  readonly notice?: string | null;
 }
 
 /** Authenticates an operator through the composed auth port (mock or HTTP). */
-export function LoginPanel({ onLogin }: LoginPanelProps): JSX.Element {
+export function LoginPanel({ onLogin, notice = null }: LoginPanelProps): JSX.Element {
   const auth = useAuth();
   const [operator, setOperator] = useState("");
   const [pin, setPin] = useState("");
@@ -27,7 +28,7 @@ export function LoginPanel({ onLogin }: LoginPanelProps): JSX.Element {
     setError(null);
     try {
       onLogin(await auth.login({ operator, pin }));
-    } catch (error) {
+    } catch {
       setError("Operador o PIN inválido.");
     } finally {
       setIsSubmitting(false);
@@ -53,6 +54,7 @@ export function LoginPanel({ onLogin }: LoginPanelProps): JSX.Element {
             placeholder="Tu nombre…"
           />
           <Input label="PIN" value={pin} onChange={setPin} type="password" placeholder="••••" />
+          {notice ? <p role="status">{notice}</p> : null}
           {error ? <p role="alert">{error}</p> : null}
           <Button type="submit" disabled={!canSubmit} onClick={() => undefined}>
             {isSubmitting ? "Ingresando…" : "Ingresar"}
