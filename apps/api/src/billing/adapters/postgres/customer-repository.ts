@@ -14,7 +14,8 @@ interface CustomerRow {
   updated_at: Date | string;
 }
 
-const iso = (value: Date | string): string => value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+const iso = (value: Date | string): string =>
+  value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 
 const mapCustomer = (row: CustomerRow): Customer => ({
   id: row.id,
@@ -41,6 +42,20 @@ export class PostgresCustomerRepository implements CustomerRepository {
   async listAll(): Promise<Customer[]> {
     const result = await this.pool.query<CustomerRow>(
       "SELECT id, display_name, phone, email, notes, created_at, updated_at FROM customers ORDER BY display_name, id",
+    );
+    return result.rows.map(mapCustomer);
+  }
+
+  async search(query: string): Promise<Customer[]> {
+    const needle = query.trim();
+    if (!needle) return this.listAll();
+
+    const result = await this.pool.query<CustomerRow>(
+      `SELECT id, display_name, phone, email, notes, created_at, updated_at
+       FROM customers
+       WHERE display_name ILIKE $1 OR phone ILIKE $1 OR email ILIKE $1
+       ORDER BY display_name, id`,
+      [`%${needle}%`],
     );
     return result.rows.map(mapCustomer);
   }

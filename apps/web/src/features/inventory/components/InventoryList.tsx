@@ -38,6 +38,8 @@ export interface InventoryListProps {
   readonly onPageChange: (page: number) => void;
   readonly onEditProduct?: (productId: string) => void;
   readonly onDeleteProduct?: (productId: string) => void;
+  readonly onAddProduct?: () => void;
+  readonly onManageCategories?: () => void;
 }
 
 /**
@@ -60,6 +62,8 @@ export function InventoryList({
   onPageChange,
   onEditProduct,
   onDeleteProduct,
+  onAddProduct,
+  onManageCategories,
 }: InventoryListProps): JSX.Element {
   const categoryFieldId = useId();
   const stockFieldId = useId();
@@ -74,9 +78,25 @@ export function InventoryList({
           <h2 id="inventory-heading">Productos</h2>
           <p>Buscá, filtrá y revisá el estado del stock antes de vender.</p>
         </div>
-        <div className={styles.summaryCard} aria-live="polite">
-          <strong>{productCount}</strong>
-          <span>{rows.length === 1 ? "Producto visible" : "Productos visibles"}</span>
+        <div className={styles.headerAside}>
+          <div className={styles.inventoryActions} aria-label="Acciones de catálogo">
+            {onAddProduct ? (
+              <Button onClick={onAddProduct}>
+                <Icon name="plus" size={18} />
+                Agregar producto
+              </Button>
+            ) : null}
+            {onManageCategories ? (
+              <Button variant="secondary" onClick={onManageCategories}>
+                <Icon name="folder" size={18} />
+                Categorías
+              </Button>
+            ) : null}
+          </div>
+          <div className={styles.summaryCard} aria-live="polite">
+            <strong>{productCount}</strong>
+            <span>{rows.length === 1 ? "Producto visible" : "Productos visibles"}</span>
+          </div>
         </div>
       </header>
 
@@ -156,7 +176,7 @@ export function InventoryList({
                 <th>Categoría</th>
                 <th>Precio</th>
                 <th>Stock</th>
-                {onEditProduct || onDeleteProduct ? <th>Acciones</th> : null}
+                {onEditProduct || onDeleteProduct ? <th className={styles.actionCell}>Acciones</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -198,11 +218,17 @@ export function InventoryList({
                   </td>
                   {onEditProduct || onDeleteProduct ? (
                     <td className={styles.actionCell}>
-                      <div className={styles.actions}>
+                      <div className={styles.actions} aria-label="Acciones de producto">
                         {onEditProduct ? (
-                          <Button variant="secondary" onClick={() => onEditProduct(row.id)}>
-                            Editar
-                          </Button>
+                          <button
+                            type="button"
+                            className={styles.iconButton}
+                            aria-label="Editar"
+                            title="Editar producto"
+                            onClick={() => onEditProduct(row.id)}
+                          >
+                            <Icon name="edit" size={18} />
+                          </button>
                         ) : null}
                         {onDeleteProduct ? (
                           <button
@@ -226,8 +252,13 @@ export function InventoryList({
       )}
 
       <nav className={styles.pagination} aria-label="Páginas de productos">
-        <Button variant="secondary" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
-          Anterior
+        <Button
+          variant="secondary"
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+          ariaLabel="Página anterior"
+        >
+          <Icon name="arrow-left" size={20} />
         </Button>
         <span aria-live="polite">
           Página {page} de {pageCount}
@@ -236,8 +267,9 @@ export function InventoryList({
           variant="secondary"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= pageCount}
+          ariaLabel="Página siguiente"
         >
-          Siguiente
+          <Icon name="arrow-right" size={20} />
         </Button>
       </nav>
     </section>

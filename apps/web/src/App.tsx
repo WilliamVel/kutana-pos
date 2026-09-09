@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AuthSession } from "@kutana/shared/auth/model/auth-session.js";
 import type { Product } from "@kutana/shared/catalog/model/product.js";
 import { AppShell } from "./app-shell/components/AppShell.js";
@@ -6,6 +6,7 @@ import { TopBar } from "./app-shell/components/TopBar.js";
 import type { ScreenId } from "./app-shell/screens.js";
 import { useAuth } from "./composition/PortsProvider.js";
 import { Button } from "./design-system/atoms/Button.js";
+import { Icon } from "./design-system/atoms/Icon.js";
 import { ButtonRow } from "./design-system/molecules/ButtonRow.js";
 import { Panel } from "./design-system/molecules/Panel.js";
 import { LoginPanel } from "./features/auth/components/LoginPanel.js";
@@ -34,6 +35,7 @@ type CenterView = "account" | "payment" | "assignment";
 export function App(): JSX.Element {
   const auth = useAuth();
   const [session, setSession] = useState<AuthSession | null>(() => auth.currentSession());
+  const [loginNotice, setLoginNotice] = useState<string | null>(null);
   const [screen, setScreen] = useState<ScreenId>("inventory");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
@@ -47,6 +49,19 @@ export function App(): JSX.Element {
     setSelectedTicketId(null);
     setSelectedAccountId(null);
   };
+
+  useEffect(() => {
+    const expireSession = (): void => {
+      setSession(null);
+      setLoginNotice("Tu sesión expiró. Iniciá sesión nuevamente.");
+      setScreen("inventory");
+      setEditingProduct(null);
+      resetCenter();
+    };
+
+    window.addEventListener("kutana.auth.session-expired", expireSession);
+    return () => window.removeEventListener("kutana.auth.session-expired", expireSession);
+  }, []);
 
   const navigate = (next: ScreenId): void => {
     if (next === "register") resetCenter();
@@ -96,17 +111,24 @@ export function App(): JSX.Element {
         <>
           <OrderTicketPanelContainer tableId={selectedTableId} />
           <ButtonRow>
-            <Button variant="secondary" onClick={() => setCenterView("assignment")}>
-              Administrar cuentas
+            <Button
+              variant="secondary"
+              ariaLabel="Dividir cuenta"
+              onClick={() => setCenterView("assignment")}
+            >
+              <Icon name="split" size={22} />
+              Dividir
             </Button>
             <Button
+              ariaLabel="Pagar mesa completa"
               onClick={() => {
                 setSelectedTicketId(null);
                 setSelectedAccountId(null);
                 setCenterView("payment");
               }}
             >
-              Cobrar saldo de mesa
+              <Icon name="cash" size={22} />
+              Pagar
             </Button>
           </ButtonRow>
         </>
@@ -115,7 +137,15 @@ export function App(): JSX.Element {
   }
 
   if (!session) {
-    return <LoginPanel onLogin={setSession} />;
+    return (
+      <LoginPanel
+        notice={loginNotice}
+        onLogin={(nextSession) => {
+          setLoginNotice(null);
+          setSession(nextSession);
+        }}
+      />
+    );
   }
 
   return (
@@ -136,6 +166,11 @@ export function App(): JSX.Element {
     >
       {screen === "inventory" ? (
         <InventoryListContainer
+          onAddProduct={() => {
+            setEditingProduct(null);
+            setScreen("new-product");
+          }}
+          onManageCategories={() => setScreen("categories")}
           onEditProduct={(product) => {
             setEditingProduct(product);
             setScreen("new-product");

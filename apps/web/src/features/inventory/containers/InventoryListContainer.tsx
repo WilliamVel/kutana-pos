@@ -10,6 +10,8 @@ const PAGE_SIZE = 10;
 
 export interface InventoryListContainerProps {
   readonly onEditProduct?: (product: Product) => void;
+  readonly onAddProduct?: () => void;
+  readonly onManageCategories?: () => void;
 }
 
 /**
@@ -20,6 +22,8 @@ export interface InventoryListContainerProps {
  */
 export function InventoryListContainer({
   onEditProduct,
+  onAddProduct,
+  onManageCategories,
 }: InventoryListContainerProps = {}): JSX.Element {
   const products = useProducts();
   const categories = useCategories();
@@ -165,6 +169,8 @@ export function InventoryListContainer({
           : undefined
       }
       onDeleteProduct={deleteProduct}
+      onAddProduct={onAddProduct}
+      onManageCategories={onManageCategories}
     />
   );
 }

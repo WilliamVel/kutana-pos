@@ -26,7 +26,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Inventario" })).toBeInTheDocument();
   });
 
-  it("opens category management from the top bar", async () => {
+  it("opens category management from the inventory actions", async () => {
     render(
       <PortsProvider value={buildMockPorts()}>
         <App />
@@ -37,7 +37,7 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Categorías" })).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: "Agregar producto" })).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByRole("button", { name: "Categorías" }));
 

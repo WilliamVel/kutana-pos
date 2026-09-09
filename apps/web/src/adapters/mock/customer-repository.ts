@@ -13,6 +13,18 @@ export class MockCustomerRepository implements CustomerRepository {
     return simulateLatency(() => [...this.customersById.values()]);
   }
 
+  async search(query: string): Promise<Customer[]> {
+    return simulateLatency(() => {
+      const needle = query.trim().toLowerCase();
+      if (!needle) return [...this.customersById.values()];
+      return [...this.customersById.values()].filter((customer) =>
+        [customer.displayName, customer.phone, customer.email]
+          .filter((value): value is string => value !== null)
+          .some((value) => value.toLowerCase().includes(needle)),
+      );
+    });
+  }
+
   async save(customer: Customer): Promise<Customer> {
     return simulateLatency(() => {
       this.customersById.set(customer.id, customer);

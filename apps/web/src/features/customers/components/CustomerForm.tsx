@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "../../../design-system/atoms/Button.js";
 import { Input } from "../../../design-system/atoms/Input.js";
 import styles from "./CustomerForm.module.css";
@@ -14,6 +14,9 @@ export interface CustomerFormProps {
   readonly onSubmit: (values: CustomerFormValues) => void;
   readonly disabled: boolean;
   readonly message: string | null;
+  readonly initialValues?: CustomerFormValues;
+  readonly submitLabel?: string;
+  readonly onCancel?: () => void;
 }
 
 const EMPTY_VALUES: CustomerFormValues = {
@@ -23,8 +26,19 @@ const EMPTY_VALUES: CustomerFormValues = {
   notes: "",
 };
 
-export function CustomerForm({ onSubmit, disabled, message }: CustomerFormProps): JSX.Element {
-  const [values, setValues] = useState<CustomerFormValues>(EMPTY_VALUES);
+export function CustomerForm({
+  onSubmit,
+  disabled,
+  message,
+  initialValues,
+  submitLabel = "Crear cliente",
+  onCancel,
+}: CustomerFormProps): JSX.Element {
+  const [values, setValues] = useState<CustomerFormValues>(initialValues ?? EMPTY_VALUES);
+
+  useEffect(() => {
+    setValues(initialValues ?? EMPTY_VALUES);
+  }, [initialValues]);
 
   function update<K extends keyof CustomerFormValues>(key: K, value: CustomerFormValues[K]): void {
     setValues((current) => ({ ...current, [key]: value }));
@@ -33,7 +47,7 @@ export function CustomerForm({ onSubmit, disabled, message }: CustomerFormProps)
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     onSubmit(values);
-    setValues(EMPTY_VALUES);
+    if (!initialValues) setValues(EMPTY_VALUES);
   }
 
   const canSubmit = values.displayName.trim().length > 0 && !disabled;
@@ -47,8 +61,8 @@ export function CustomerForm({ onSubmit, disabled, message }: CustomerFormProps)
     >
       <div className={styles.header}>
         <p className={styles.eyebrow}>Directorio de clientes</p>
-        <h2>Clientes</h2>
-        <p>Creá clientes para usarlos en cuentas personales y en deudas pendientes.</p>
+        <h2>{initialValues ? "Editar cliente" : "Clientes"}</h2>
+        <p>Creá y actualizá clientes para usarlos en cuentas personales y en deudas pendientes.</p>
       </div>
 
       {message ? (
@@ -87,8 +101,13 @@ export function CustomerForm({ onSubmit, disabled, message }: CustomerFormProps)
 
       <div className={styles.actions}>
         <Button type="submit" onClick={() => {}} disabled={!canSubmit}>
-          Crear cliente
+          {submitLabel}
         </Button>
+        {onCancel ? (
+          <Button type="button" variant="secondary" onClick={onCancel} disabled={disabled}>
+            Cancelar
+          </Button>
+        ) : null}
       </div>
     </form>
   );

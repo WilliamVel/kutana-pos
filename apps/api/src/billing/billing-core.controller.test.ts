@@ -4,7 +4,11 @@ import { Test } from "@nestjs/testing";
 import { describe, expect, it, vi } from "vitest";
 import type { Allocation } from "@kutana/shared/billing/model/allocation.js";
 import type { CustomerDebtEntry } from "@kutana/shared/billing/model/customer-debt-ledger.js";
-import type { AccountLineAllocation, Customer, PersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
+import type {
+  AccountLineAllocation,
+  Customer,
+  PersonalAccount,
+} from "@kutana/shared/billing/model/personal-account.js";
 import type { Ticket } from "@kutana/shared/billing/model/ticket.js";
 import { PostgresPool } from "../infrastructure/postgres/postgres-pool.js";
 import { PostgresCustomerDebtRepository } from "./adapters/postgres/customer-debt-repository.js";
@@ -79,6 +83,7 @@ describe("BillingCoreController", () => {
     const customers = {
       findById: vi.fn(),
       listAll: vi.fn(),
+      search: vi.fn(),
       save: vi.fn(),
     };
     const personalAccounts = {
@@ -118,6 +123,16 @@ describe("BillingCoreController", () => {
     expect(customers.listAll).toHaveBeenCalledOnce();
   });
 
+  it("delegates customer search when a query is provided", async () => {
+    const { controller, customers } = controllerWithMocks();
+    customers.search.mockResolvedValue([customer]);
+
+    await expect(controller.listCustomers("ada")).resolves.toEqual([customer]);
+
+    expect(customers.search).toHaveBeenCalledWith("ada");
+    expect(customers.listAll).not.toHaveBeenCalled();
+  });
+
   it("saves a customer with the route id merged into the body", async () => {
     const { controller, customers } = controllerWithMocks();
     customers.save.mockResolvedValue({ ...customer, id: "customer-route" });
@@ -131,7 +146,9 @@ describe("BillingCoreController", () => {
     const { controller, personalAccounts } = controllerWithMocks();
     personalAccounts.listAllocationsByOrder.mockResolvedValue([accountAllocation]);
 
-    await expect(controller.listAccountLineAllocationsByOrder("order-1")).resolves.toEqual([accountAllocation]);
+    await expect(controller.listAccountLineAllocationsByOrder("order-1")).resolves.toEqual([
+      accountAllocation,
+    ]);
 
     expect(personalAccounts.listAllocationsByOrder).toHaveBeenCalledWith("order-1");
   });
@@ -165,7 +182,9 @@ describe("BillingCoreController", () => {
   it("rejects invalid delete expectedVersion", async () => {
     const { controller, personalAccounts } = controllerWithMocks();
 
-    await expect(() => controller.deletePersonalAccount("account-1", "not-a-number")).toThrow(BadRequestException);
+    await expect(() => controller.deletePersonalAccount("account-1", "not-a-number")).toThrow(
+      BadRequestException,
+    );
 
     expect(personalAccounts.delete).not.toHaveBeenCalled();
   });
@@ -187,7 +206,9 @@ describe("BillingCoreController", () => {
     const { controller, customerDebts } = controllerWithMocks();
     customerDebts.listByCustomer.mockResolvedValue([debtEntry]);
 
-    await expect(controller.listCustomerDebtsByCustomer("customer-1")).resolves.toEqual([debtEntry]);
+    await expect(controller.listCustomerDebtsByCustomer("customer-1")).resolves.toEqual([
+      debtEntry,
+    ]);
 
     expect(customerDebts.listByCustomer).toHaveBeenCalledWith("customer-1");
   });

@@ -4,6 +4,7 @@ import type { Customer } from "../model/personal-account.js";
 export interface CustomerRepository {
   findById(id: string): Promise<Customer | null>;
   listAll(): Promise<Customer[]>;
+  search(query: string): Promise<Customer[]>;
   save(customer: Customer): Promise<Customer>;
   delete(id: string): Promise<void>;
 }

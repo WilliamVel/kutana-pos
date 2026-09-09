@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Icon } from "../../design-system/atoms/Icon.js";
 import { SCREENS, type ScreenId } from "../screens.js";
 import styles from "./TopBar.module.css";
 
@@ -54,7 +55,10 @@ export function TopBar({ currentScreen, onNavigate, onLogout }: TopBarProps): JS
             aria-current={screen.id === currentScreen ? "page" : undefined}
             onClick={() => navigate(screen.id)}
           >
-            {screen.tabLabel}
+            <span className={styles.tabIcon} aria-hidden="true">
+              <Icon name={screen.icon} size={18} />
+            </span>
+            <span className={styles.tabLabel}>{screen.tabLabel}</span>
           </button>
         ))}
 

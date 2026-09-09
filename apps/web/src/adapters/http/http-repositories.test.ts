@@ -185,7 +185,9 @@ describe("HTTP repositories", () => {
 
     await repository.findById("customer 1/with slash");
 
-    expect(calls[0]?.url).toBe("http://api.example.test/root/billing/customers/customer%201%2Fwith%20slash");
+    expect(calls[0]?.url).toBe(
+      "http://api.example.test/root/billing/customers/customer%201%2Fwith%20slash",
+    );
     expect(calls[0]?.init.method).toBe("GET");
   });
 
@@ -197,7 +199,9 @@ describe("HTTP repositories", () => {
   });
 
   it("rejects non-2xx responses with status and message", async () => {
-    const { fetchImpl } = createFetch([new Response("Version conflict", { status: 409, statusText: "Conflict" })]);
+    const { fetchImpl } = createFetch([
+      new Response("Version conflict", { status: 409, statusText: "Conflict" }),
+    ]);
     const client = new HttpClient({ baseUrl: BASE_URL, fetchImpl });
 
     await expect(client.request("/billing/tickets/ticket-1")).rejects.toMatchObject({
@@ -207,18 +211,25 @@ describe("HTTP repositories", () => {
     } satisfies Partial<HttpError>);
   });
 
-  it("maps CustomerRepository listAll and save", async () => {
-    const { fetchImpl, calls } = createFetch([jsonResponse([customer]), jsonResponse(customer)]);
+  it("maps CustomerRepository listAll, search, and save", async () => {
+    const { fetchImpl, calls } = createFetch([
+      jsonResponse([customer]),
+      jsonResponse([customer]),
+      jsonResponse(customer),
+    ]);
     const repository = new HttpCustomerRepository({ baseUrl: BASE_URL, fetchImpl });
 
     await repository.listAll();
+    await repository.search("Ana María");
     await repository.save(customer);
 
     expect(calls[0]?.url).toBe(`${BASE_URL}/billing/customers`);
     expect(calls[0]?.init.method).toBe("GET");
-    expect(calls[1]?.url).toBe(`${BASE_URL}/billing/customers/customer%201%2Fwith%20slash`);
-    expect(calls[1]?.init.method).toBe("PUT");
-    expect(parseJsonBody(calls[1]!)).toEqual(customer);
+    expect(calls[1]?.url).toBe(`${BASE_URL}/billing/customers?q=Ana+Mar%C3%ADa`);
+    expect(calls[1]?.init.method).toBe("GET");
+    expect(calls[2]?.url).toBe(`${BASE_URL}/billing/customers/customer%201%2Fwith%20slash`);
+    expect(calls[2]?.init.method).toBe("PUT");
+    expect(parseJsonBody(calls[2]!)).toEqual(customer);
   });
 
   it("maps TicketRepository save body shape", async () => {
@@ -229,19 +240,30 @@ describe("HTTP repositories", () => {
 
     expect(calls[0]?.url).toBe(`${BASE_URL}/billing/tickets/ticket-1`);
     expect(calls[0]?.init.method).toBe("PUT");
-    expect(parseJsonBody(calls[0]!)).toEqual({ ticket, allocations: [allocation], expectedVersion: 3 });
+    expect(parseJsonBody(calls[0]!)).toEqual({
+      ticket,
+      allocations: [allocation],
+      expectedVersion: 3,
+    });
   });
 
   it("maps PersonalAccountRepository listByOrder query and delete expectedVersion query", async () => {
-    const { fetchImpl, calls } = createFetch([jsonResponse([account]), new Response(null, { status: 204 })]);
+    const { fetchImpl, calls } = createFetch([
+      jsonResponse([account]),
+      new Response(null, { status: 204 }),
+    ]);
     const repository = new HttpPersonalAccountRepository({ baseUrl: BASE_URL, fetchImpl });
 
     await repository.listByOrder("order 1/with slash");
     await repository.delete("account 1/with slash", 7);
 
-    expect(calls[0]?.url).toBe(`${BASE_URL}/billing/personal-accounts?orderId=order+1%2Fwith+slash`);
+    expect(calls[0]?.url).toBe(
+      `${BASE_URL}/billing/personal-accounts?orderId=order+1%2Fwith+slash`,
+    );
     expect(calls[0]?.init.method).toBe("GET");
-    expect(calls[1]?.url).toBe(`${BASE_URL}/billing/personal-accounts/account%201%2Fwith%20slash?expectedVersion=7`);
+    expect(calls[1]?.url).toBe(
+      `${BASE_URL}/billing/personal-accounts/account%201%2Fwith%20slash?expectedVersion=7`,
+    );
     expect(calls[1]?.init.method).toBe("DELETE");
   });
 
@@ -273,8 +295,12 @@ describe("HTTP repositories", () => {
     await repository.listByTarget({ kind: "ticket", ticketId: "ticket 1" });
     await repository.record(payment);
 
-    expect(calls[0]?.url).toBe(`${BASE_URL}/payments?targetKind=personal_account&accountId=account+1`);
-    expect(calls[1]?.url).toBe(`${BASE_URL}/payments?targetKind=customer_debt&customerId=customer+1`);
+    expect(calls[0]?.url).toBe(
+      `${BASE_URL}/payments?targetKind=personal_account&accountId=account+1`,
+    );
+    expect(calls[1]?.url).toBe(
+      `${BASE_URL}/payments?targetKind=customer_debt&customerId=customer+1`,
+    );
     expect(calls[2]?.url).toBe(`${BASE_URL}/payments?targetKind=ticket&ticketId=ticket+1`);
     expect(calls[3]?.url).toBe(`${BASE_URL}/payments`);
     expect(calls[3]?.init.method).toBe("POST");
@@ -282,7 +308,11 @@ describe("HTTP repositories", () => {
   });
 
   it("maps OrderRepository findByTable, listAll, and save", async () => {
-    const { fetchImpl, calls } = createFetch([jsonResponse(order), jsonResponse([order]), jsonResponse(order)]);
+    const { fetchImpl, calls } = createFetch([
+      jsonResponse(order),
+      jsonResponse([order]),
+      jsonResponse(order),
+    ]);
     const repository = new HttpOrderRepository({ baseUrl: BASE_URL, fetchImpl });
 
     await repository.findByTable("table 1/with slash");
@@ -299,7 +329,11 @@ describe("HTTP repositories", () => {
   });
 
   it("maps TableRepository listAll, findById, and save", async () => {
-    const { fetchImpl, calls } = createFetch([jsonResponse([table]), jsonResponse(table), jsonResponse(table)]);
+    const { fetchImpl, calls } = createFetch([
+      jsonResponse([table]),
+      jsonResponse(table),
+      jsonResponse(table),
+    ]);
     const repository = new HttpTableRepository({ baseUrl: BASE_URL, fetchImpl });
 
     await repository.listAll();
@@ -316,7 +350,11 @@ describe("HTTP repositories", () => {
   });
 
   it("maps CategoryRepository listAll, findById, and save", async () => {
-    const { fetchImpl, calls } = createFetch([jsonResponse([category]), jsonResponse(category), jsonResponse(category)]);
+    const { fetchImpl, calls } = createFetch([
+      jsonResponse([category]),
+      jsonResponse(category),
+      jsonResponse(category),
+    ]);
     const repository = new HttpCategoryRepository({ baseUrl: BASE_URL, fetchImpl });
 
     await repository.listAll();
@@ -349,18 +387,26 @@ describe("HTTP repositories", () => {
     await repository.save(product, 2);
 
     expect(calls[0]?.url).toBe(`${BASE_URL}/catalog/products/by-sku/sku%201%2Fwith%20slash`);
-    expect(calls[1]?.url).toBe(`${BASE_URL}/catalog/products/by-barcode/barcode%201%2Fwith%20slash`);
+    expect(calls[1]?.url).toBe(
+      `${BASE_URL}/catalog/products/by-barcode/barcode%201%2Fwith%20slash`,
+    );
     expect(calls[2]?.url).toBe(
       `${BASE_URL}/catalog/categories/category%201%2Fwith%20slash/products?includeInactive=true`,
     );
-    expect(calls[3]?.url).toBe(`${BASE_URL}/catalog/categories/category%201%2Fwith%20slash/products`);
+    expect(calls[3]?.url).toBe(
+      `${BASE_URL}/catalog/categories/category%201%2Fwith%20slash/products`,
+    );
     expect(calls[4]?.url).toBe(`${BASE_URL}/catalog/products/product%201%2Fwith%20slash`);
     expect(calls[4]?.init.method).toBe("PUT");
     expect(parseJsonBody(calls[4]!)).toEqual({ product, expectedVersion: 2 });
   });
 
   it("maps StockRepository low-stock, movement listing, and recordMovement", async () => {
-    const { fetchImpl, calls } = createFetch([jsonResponse([stockItem]), jsonResponse([movement]), jsonResponse(stockItem)]);
+    const { fetchImpl, calls } = createFetch([
+      jsonResponse([stockItem]),
+      jsonResponse([movement]),
+      jsonResponse(stockItem),
+    ]);
     const repository = new HttpStockRepository({ baseUrl: BASE_URL, fetchImpl });
 
     await repository.listLowStock();
@@ -369,7 +415,9 @@ describe("HTTP repositories", () => {
 
     expect(calls[0]?.url).toBe(`${BASE_URL}/inventory/stock-items/low-stock`);
     expect(calls[0]?.init.method).toBe("GET");
-    expect(calls[1]?.url).toBe(`${BASE_URL}/inventory/stock-items/stock%201%2Fwith%20slash/movements`);
+    expect(calls[1]?.url).toBe(
+      `${BASE_URL}/inventory/stock-items/stock%201%2Fwith%20slash/movements`,
+    );
     expect(calls[1]?.init.method).toBe("GET");
     expect(calls[2]?.url).toBe(`${BASE_URL}/inventory/stock-movements`);
     expect(calls[2]?.init.method).toBe("POST");
@@ -379,13 +427,39 @@ describe("HTTP repositories", () => {
 
 describe("HttpClient auth", () => {
   it("attaches a bearer token from client options unless auth is disabled", async () => {
-    const { fetchImpl, calls } = createFetch([jsonResponse({ ok: true }), jsonResponse({ ok: true })]);
-    const client = new HttpClient({ baseUrl: BASE_URL, fetchImpl, getBearerToken: () => "token-1" });
+    const { fetchImpl, calls } = createFetch([
+      jsonResponse({ ok: true }),
+      jsonResponse({ ok: true }),
+    ]);
+    const client = new HttpClient({
+      baseUrl: BASE_URL,
+      fetchImpl,
+      getBearerToken: () => "token-1",
+    });
 
     await client.request("/protected");
     await client.request("/auth/login", { method: "POST", body: {}, auth: false });
 
     expect((calls[0]?.init.headers as Headers).get("Authorization")).toBe("Bearer token-1");
     expect((calls[1]?.init.headers as Headers).get("Authorization")).toBeNull();
+  });
+
+  it("refreshes once after a 401 and retries the protected request", async () => {
+    const { fetchImpl, calls } = createFetch([
+      new Response("Expired bearer token", { status: 401, statusText: "Unauthorized" }),
+      jsonResponse({ ok: true }),
+    ]);
+    const client = new HttpClient({
+      baseUrl: BASE_URL,
+      fetchImpl,
+      getBearerToken: () => "expired-token",
+      refreshSession: async () => "fresh-token",
+    });
+
+    await expect(client.request("/protected")).resolves.toEqual({ ok: true });
+
+    expect(calls).toHaveLength(2);
+    expect((calls[0]?.init.headers as Headers).get("Authorization")).toBe("Bearer fresh-token");
+    expect((calls[1]?.init.headers as Headers).get("Authorization")).toBe("Bearer fresh-token");
   });
 });

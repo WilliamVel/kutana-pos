@@ -10,10 +10,14 @@ export function CustomerManagementContainer(): JSX.Element {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
-    setCustomers(await customersPort.listAll());
-  }, [customersPort]);
+    setCustomers(
+      searchQuery.trim() ? await customersPort.search(searchQuery) : await customersPort.listAll(),
+    );
+  }, [customersPort, searchQuery]);
 
   useEffect(() => {
     void load();
@@ -32,19 +36,32 @@ export function CustomerManagementContainer(): JSX.Element {
     })();
   };
 
-  const create = (values: CustomerFormValues): void => {
+  const saveCustomer = (values: CustomerFormValues): void => {
     void (async () => {
       setBusy(true);
       try {
-        await customersPort.save(
-          createCustomer({
-            displayName: values.displayName,
+        if (editingCustomer) {
+          await customersPort.save({
+            ...editingCustomer,
+            displayName: values.displayName.trim(),
             phone: values.phone.trim() || null,
             email: values.email.trim() || null,
             notes: values.notes.trim() || null,
-          }),
-        );
-        setMessage("Cliente creado.");
+            updatedAt: new Date().toISOString(),
+          });
+          setEditingCustomer(null);
+          setMessage("Cliente actualizado.");
+        } else {
+          await customersPort.save(
+            createCustomer({
+              displayName: values.displayName,
+              phone: values.phone.trim() || null,
+              email: values.email.trim() || null,
+              notes: values.notes.trim() || null,
+            }),
+          );
+          setMessage("Cliente creado.");
+        }
         await load();
       } finally {
         setBusy(false);
@@ -54,8 +71,30 @@ export function CustomerManagementContainer(): JSX.Element {
 
   return (
     <div className={styles.screen}>
-      <CustomerForm onSubmit={create} disabled={busy} message={message} />
-      <CustomerList customers={customers} onDeleteCustomer={deleteCustomer} />
+      <CustomerForm
+        onSubmit={saveCustomer}
+        disabled={busy}
+        message={message}
+        initialValues={
+          editingCustomer
+            ? {
+                displayName: editingCustomer.displayName,
+                phone: editingCustomer.phone ?? "",
+                email: editingCustomer.email ?? "",
+                notes: editingCustomer.notes ?? "",
+              }
+            : undefined
+        }
+        submitLabel={editingCustomer ? "Guardar cambios" : "Crear cliente"}
+        onCancel={editingCustomer ? () => setEditingCustomer(null) : undefined}
+      />
+      <CustomerList
+        customers={customers}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        onEditCustomer={setEditingCustomer}
+        onDeleteCustomer={deleteCustomer}
+      />
     </div>
   );
 }

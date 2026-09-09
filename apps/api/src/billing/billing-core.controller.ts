@@ -1,7 +1,21 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Query } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+} from "@nestjs/common";
 import type { Allocation } from "@kutana/shared/billing/model/allocation.js";
 import type { CustomerDebtEntry } from "@kutana/shared/billing/model/customer-debt-ledger.js";
-import type { AccountLineAllocation, Customer, PersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
+import type {
+  AccountLineAllocation,
+  Customer,
+  PersonalAccount,
+} from "@kutana/shared/billing/model/personal-account.js";
 import type { Ticket } from "@kutana/shared/billing/model/ticket.js";
 import { PostgresCustomerDebtRepository } from "./adapters/postgres/customer-debt-repository.js";
 import { PostgresCustomerRepository } from "./adapters/postgres/customer-repository.js";
@@ -50,8 +64,8 @@ export class BillingCoreController {
   }
 
   @Get("customers")
-  listCustomers(): Promise<Customer[]> {
-    return this.customers.listAll();
+  listCustomers(@Query("q") query?: string): Promise<Customer[]> {
+    return query?.trim() ? this.customers.search(query) : this.customers.listAll();
   }
 
   @Get("customers/:id")
@@ -70,7 +84,9 @@ export class BillingCoreController {
   }
 
   @Get("customers/:customerId/debts")
-  listCustomerDebtsByCustomer(@Param("customerId") customerId: string): Promise<CustomerDebtEntry[]> {
+  listCustomerDebtsByCustomer(
+    @Param("customerId") customerId: string,
+  ): Promise<CustomerDebtEntry[]> {
     return this.customerDebts.listByCustomer(customerId);
   }
 
@@ -93,17 +109,29 @@ export class BillingCoreController {
   }
 
   @Get("orders/:orderId/account-line-allocations")
-  listAccountLineAllocationsByOrder(@Param("orderId") orderId: string): Promise<AccountLineAllocation[]> {
+  listAccountLineAllocationsByOrder(
+    @Param("orderId") orderId: string,
+  ): Promise<AccountLineAllocation[]> {
     return this.personalAccounts.listAllocationsByOrder(orderId);
   }
 
   @Put("personal-accounts/:id")
-  savePersonalAccount(@Param("id") id: string, @Body() body: SavePersonalAccountDto): Promise<PersonalAccount> {
-    return this.personalAccounts.save({ ...body.account, id }, body.allocations, body.expectedVersion);
+  savePersonalAccount(
+    @Param("id") id: string,
+    @Body() body: SavePersonalAccountDto,
+  ): Promise<PersonalAccount> {
+    return this.personalAccounts.save(
+      { ...body.account, id },
+      body.allocations,
+      body.expectedVersion,
+    );
   }
 
   @Delete("personal-accounts/:id")
-  deletePersonalAccount(@Param("id") id: string, @Query("expectedVersion") expectedVersion?: string): Promise<void> {
+  deletePersonalAccount(
+    @Param("id") id: string,
+    @Query("expectedVersion") expectedVersion?: string,
+  ): Promise<void> {
     if (!expectedVersion?.trim()) {
       throw new BadRequestException("expectedVersion query parameter must be an integer");
     }

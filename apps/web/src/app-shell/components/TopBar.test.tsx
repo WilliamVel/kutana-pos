@@ -8,24 +8,19 @@ describe("TopBar", () => {
 
     expect(screen.getByRole("heading", { name: "KUTANA" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute("src", "/LOGOkutana.svg");
-    for (const label of [
-      "Inventario",
-      "Agregar producto",
-      "Categorías",
-      "Caja",
-      "Clientes",
-      "Deudas pendientes",
-    ]) {
+    for (const label of ["Inventario", "Órdenes", "Clientes", "Cuentas por cobrar"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
     expect(screen.getByRole("button", { name: "Cuenta Operador" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Abrir menú de navegación" })).toBeInTheDocument();
+    expect(document.querySelector('[data-icon="inventory"]')).not.toBeNull();
+    expect(document.querySelector('[data-icon="orders"]')).not.toBeNull();
   });
 
   it("marks the current screen's tab as the active page", () => {
     render(<TopBar currentScreen="register" onNavigate={vi.fn()} onLogout={vi.fn()} />);
 
-    expect(screen.getByRole("button", { name: "Caja" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Órdenes" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("button", { name: "Inventario" })).not.toHaveAttribute("aria-current");
   });
 
@@ -33,7 +28,7 @@ describe("TopBar", () => {
     const onNavigate = vi.fn();
     render(<TopBar currentScreen="inventory" onNavigate={onNavigate} onLogout={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Caja" }));
+    fireEvent.click(screen.getByRole("button", { name: "Órdenes" }));
 
     expect(onNavigate).toHaveBeenCalledWith("register");
   });

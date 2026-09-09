@@ -25,7 +25,10 @@
   gap: var(--space-4);
   min-width: 0;
   max-width: 100%;
+  height: calc(100vh - 10rem);
+  min-height: 0;
   padding: var(--space-5);
+  overflow: hidden;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   background-color: var(--surface-raised);
@@ -53,5 +56,10 @@
   .workspace,
   .workspaceFocused {
     grid-template-columns: 1fr;
+  }
+
+  .center {
+    height: auto;
+    overflow: visible;
   }
 }

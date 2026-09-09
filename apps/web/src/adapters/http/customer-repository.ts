@@ -17,6 +17,11 @@ export class HttpCustomerRepository implements CustomerRepository {
     return this.http.request<Customer[]>("/billing/customers");
   }
 
+  search(query: string): Promise<Customer[]> {
+    const params = new URLSearchParams({ q: query });
+    return this.http.request<Customer[]>(`/billing/customers?${params.toString()}`);
+  }
+
   save(customer: Customer): Promise<Customer> {
     return this.http.request<Customer>(`/billing/customers/${encodePathSegment(customer.id)}`, {
       method: "PUT",

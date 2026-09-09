@@ -20,7 +20,13 @@ import {
 } from "./PortsProvider.js";
 
 const TEST_METHODS: PaymentMethodRegistry = [
-  { code: "CASH" as PaymentMethodRegistry[number]["code"], label: "Cash", requiresTendered: true, active: true, sortOrder: 1 },
+  {
+    code: "CASH" as PaymentMethodRegistry[number]["code"],
+    label: "Cash",
+    requiresTendered: true,
+    active: true,
+    sortOrder: 1,
+  },
 ];
 
 function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
@@ -44,6 +50,7 @@ function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
     customers: {
       findById: async () => null,
       listAll: async () => [],
+      search: async () => [],
       save: async (customer) => customer,
       delete: async () => {},
     } as Ports["customers"],

@@ -28,6 +28,54 @@ describe("CustomerManagementContainer", () => {
     ).toBe(true);
   });
 
+  it("filters customers through the customer port and edits an existing customer", async () => {
+    const ports = buildMockPorts();
+    await ports.customers.save({
+      id: "customer-ada",
+      displayName: "Ada Lovelace",
+      phone: "555-0101",
+      email: "ada@example.com",
+      notes: null,
+      createdAt: "2025-01-01T00:00:00.000Z",
+      updatedAt: "2025-01-01T00:00:00.000Z",
+    });
+    await ports.customers.save({
+      id: "customer-grace",
+      displayName: "Grace Hopper",
+      phone: null,
+      email: null,
+      notes: null,
+      createdAt: "2025-01-01T00:00:00.000Z",
+      updatedAt: "2025-01-01T00:00:00.000Z",
+    });
+
+    render(
+      <PortsProvider value={ports}>
+        <CustomerManagementContainer />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Ada Lovelace")).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText("Buscar clientes por nombre"), {
+      target: { value: "ada" },
+    });
+    await waitFor(() => expect(screen.queryByText("Grace Hopper")).not.toBeInTheDocument());
+    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Editar cliente Ada Lovelace" }));
+    fireEvent.change(screen.getByLabelText("Nombre visible"), {
+      target: { value: "Ada Byron" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("Cliente actualizado."),
+    );
+    await expect(ports.customers.findById("customer-ada")).resolves.toMatchObject({
+      displayName: "Ada Byron",
+    });
+  });
+
   it("deletes a customer from the saved list using the trash icon", async () => {
     const ports = buildMockPorts();
     await ports.customers.save({

@@ -1,22 +1,18 @@
-/**
- * Single source of truth for the milestone-1 screen list: the id used by
- * the App switcher and the tab label shown in the top bar (unchanged
- * visible text from the pre-shell nav).
- */
+import type { IconName } from "../design-system/atoms/Icon.js";
+
+/** App screens: some are primary navigation items, others are reached from inside a screen. */
 export type ScreenId =
   "inventory" | "new-product" | "categories" | "register" | "customers" | "pending-debts";
 
 export interface ScreenMeta {
   readonly id: ScreenId;
-  /** Visible tab text — must stay stable (the E2E specs match on it). */
   readonly tabLabel: string;
+  readonly icon: IconName;
 }
 
 export const SCREENS: readonly ScreenMeta[] = [
-  { id: "inventory", tabLabel: "Inventario" },
-  { id: "new-product", tabLabel: "Agregar producto" },
-  { id: "categories", tabLabel: "Categorías" },
-  { id: "register", tabLabel: "Caja" },
-  { id: "customers", tabLabel: "Clientes" },
-  { id: "pending-debts", tabLabel: "Deudas pendientes" },
+  { id: "inventory", tabLabel: "Inventario", icon: "inventory" },
+  { id: "register", tabLabel: "Órdenes", icon: "orders" },
+  { id: "customers", tabLabel: "Clientes", icon: "customers" },
+  { id: "pending-debts", tabLabel: "Cuentas por cobrar", icon: "debt" },
 ];

@@ -84,6 +84,16 @@ describe("InventoryList", () => {
     expect(props.onStockStatusFilterChange).toHaveBeenCalledWith("low-stock");
   });
 
+  it("calls catalog actions from the inventory header", () => {
+    const props = renderList({ onAddProduct: vi.fn(), onManageCategories: vi.fn() });
+
+    fireEvent.click(screen.getByRole("button", { name: "Agregar producto" }));
+    fireEvent.click(screen.getByRole("button", { name: "Categorías" }));
+
+    expect(props.onAddProduct).toHaveBeenCalledOnce();
+    expect(props.onManageCategories).toHaveBeenCalledOnce();
+  });
+
   it("calls onEditProduct with the selected row id", () => {
     const props = renderList();
 
@@ -98,16 +108,16 @@ describe("InventoryList", () => {
   it("renders pagination controls and calls onPageChange", () => {
     const props = renderList({ page: 2, pageCount: 5 });
     expect(screen.getByText("Página 2 de 5")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
+    fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
     expect(props.onPageChange).toHaveBeenCalledWith(3);
-    fireEvent.click(screen.getByRole("button", { name: "Anterior" }));
+    fireEvent.click(screen.getByRole("button", { name: "Página anterior" }));
     expect(props.onPageChange).toHaveBeenCalledWith(1);
   });
 
   it("disables Previous on the first page and Next on the last page", () => {
     renderList({ page: 1, pageCount: 1 });
-    expect(screen.getByRole("button", { name: "Anterior" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Siguiente" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Página anterior" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Página siguiente" })).toBeDisabled();
   });
 
   it("shows an empty state when there are no rows", () => {
