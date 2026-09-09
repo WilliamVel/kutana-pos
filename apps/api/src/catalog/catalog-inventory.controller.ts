@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from "@nestjs/common";
 import type { Category } from "@kutana/shared/catalog/model/category.js";
 import type { Product } from "@kutana/shared/catalog/model/product.js";
 import type { StockItem } from "@kutana/shared/inventory/model/stock-item.js";
@@ -39,6 +39,11 @@ export class CatalogInventoryController {
   @Put("catalog/categories/:id")
   saveCategory(@Param("id") id: string, @Body() body: Category): Promise<Category> {
     return this.categories.save({ ...body, id });
+  }
+
+  @Delete("catalog/categories/:id")
+  deleteCategory(@Param("id") id: string): Promise<void> {
+    return this.categories.delete(id);
   }
 
   @Get("catalog/products/by-sku/:sku")

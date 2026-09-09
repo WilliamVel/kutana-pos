@@ -13,6 +13,7 @@ describe("CategoryManagement", () => {
         ]}
         onCreate={vi.fn()}
         onSave={vi.fn()}
+        onDelete={vi.fn()}
       />,
     );
 
@@ -23,7 +24,9 @@ describe("CategoryManagement", () => {
 
   it("submits new categories", () => {
     const onCreate = vi.fn();
-    render(<CategoryManagement categories={[]} onCreate={onCreate} onSave={vi.fn()} />);
+    render(
+      <CategoryManagement categories={[]} onCreate={onCreate} onSave={vi.fn()} onDelete={vi.fn()} />,
+    );
 
     const form = screen.getByRole("form", { name: "Crear categoría" });
     fireEvent.change(within(form).getByLabelText("Nombre"), { target: { value: "Postres" } });
@@ -40,6 +43,7 @@ describe("CategoryManagement", () => {
         categories={[createCategory({ id: "cat-1", name: "Entradas", sortOrder: 4 })]}
         onCreate={vi.fn()}
         onSave={onSave}
+        onDelete={vi.fn()}
       />,
     );
 

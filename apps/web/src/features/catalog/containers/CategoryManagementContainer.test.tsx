@@ -47,4 +47,22 @@ describe("CategoryManagementContainer", () => {
     const saved = await ports.categories.findById("category-draft-beer");
     expect(saved).toMatchObject({ name: "Draft Beer Updated", sortOrder: 9 });
   });
+
+  it("deletes a category using the trash icon", async () => {
+    const ports = buildMockPorts();
+    render(
+      <PortsProvider value={ports}>
+        <CategoryManagementContainer />
+      </PortsProvider>,
+    );
+
+    await screen.findByRole("form", { name: "Editar Draft Beer" });
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar categoría Draft Beer" }));
+
+    await waitFor(() => expect(screen.getByText("Categoría eliminada.")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByRole("form", { name: "Editar Draft Beer" })).not.toBeInTheDocument(),
+    );
+    await expect(ports.categories.findById("category-draft-beer")).resolves.toBeNull();
+  });
 });

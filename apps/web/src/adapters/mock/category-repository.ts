@@ -20,4 +20,10 @@ export class MockCategoryRepository implements CategoryRepository {
       return category;
     });
   }
+
+  async delete(id: string): Promise<void> {
+    return simulateLatency(() => {
+      this.categoriesById.delete(id);
+    });
+  }
 }

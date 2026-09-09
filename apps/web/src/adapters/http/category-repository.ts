@@ -23,4 +23,10 @@ export class HttpCategoryRepository implements CategoryRepository {
       body: category,
     });
   }
+
+  delete(id: string): Promise<void> {
+    return this.http.request<void>(`/catalog/categories/${encodePathSegment(id)}`, {
+      method: "DELETE",
+    });
+  }
 }

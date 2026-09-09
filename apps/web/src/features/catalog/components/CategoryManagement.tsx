@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { Category } from "@kutana/shared/catalog/model/category.js";
 import { Button } from "../../../design-system/atoms/Button.js";
+import { Icon } from "../../../design-system/atoms/Icon.js";
 import { Input } from "../../../design-system/atoms/Input.js";
 import styles from "./CategoryManagement.module.css";
 
@@ -8,6 +9,7 @@ export interface CategoryManagementProps {
   readonly categories: readonly Category[];
   readonly onCreate: (values: { name: string; sortOrder: number }) => void;
   readonly onSave: (category: Category) => void;
+  readonly onDelete: (categoryId: string) => void;
   readonly disabled?: boolean;
   readonly message?: string | null;
 }
@@ -16,6 +18,7 @@ export function CategoryManagement({
   categories,
   onCreate,
   onSave,
+  onDelete,
   disabled = false,
   message = null,
 }: CategoryManagementProps): JSX.Element {
@@ -64,6 +67,7 @@ export function CategoryManagement({
             key={category.id}
             category={category}
             onSave={onSave}
+            onDelete={onDelete}
             disabled={disabled}
           />
         ))}
@@ -75,10 +79,12 @@ export function CategoryManagement({
 function EditableCategoryRow({
   category,
   onSave,
+  onDelete,
   disabled,
 }: {
   readonly category: Category;
   readonly onSave: (category: Category) => void;
+  readonly onDelete: (categoryId: string) => void;
   readonly disabled: boolean;
 }): JSX.Element {
   const [name, setName] = useState(category.name);
@@ -107,14 +113,26 @@ function EditableCategoryRow({
           value={sortOrder}
           onChange={setSortOrder}
         />
-        <Button
-          type="submit"
-          variant="secondary"
-          disabled={disabled || name.trim() === ""}
-          onClick={() => {}}
-        >
-          Guardar
-        </Button>
+        <div className={styles.actions}>
+          <Button
+            type="submit"
+            variant="secondary"
+            disabled={disabled || name.trim() === ""}
+            onClick={() => {}}
+          >
+            Guardar
+          </Button>
+          <button
+            type="button"
+            className={styles.iconButton}
+            aria-label={`Eliminar categoría ${category.name}`}
+            title="Eliminar categoría"
+            disabled={disabled}
+            onClick={() => onDelete(category.id)}
+          >
+            <Icon name="trash" size={18} />
+          </button>
+        </div>
       </form>
     </li>
   );

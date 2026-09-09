@@ -71,6 +71,7 @@ function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
       findById: async () => null,
       listAll: async () => [],
       save: async (category) => category,
+      delete: async () => {},
     } as Ports["categories"],
     stock: {
       findById: async () => null,

@@ -49,12 +49,26 @@ export function CategoryManagementContainer(): JSX.Element {
     })();
   }
 
+  function deleteCategory(categoryId: string): void {
+    void (async () => {
+      setBusy(true);
+      try {
+        await categoriesPort.delete(categoryId);
+        setMessage("Categoría eliminada.");
+        await load();
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }
+
   return (
     <div className={styles.screen}>
       <CategoryManagement
         categories={categories}
         onCreate={create}
         onSave={save}
+        onDelete={deleteCategory}
         disabled={busy}
         message={message}
       />

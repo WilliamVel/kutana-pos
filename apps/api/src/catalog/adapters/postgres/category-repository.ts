@@ -43,4 +43,8 @@ export class PostgresCategoryRepository implements CategoryRepository {
     if (!row) throw new Error(`Category ${category.id} was not returned after save`);
     return mapCategory(row);
   }
+
+  async delete(id: string): Promise<void> {
+    await this.pool.query("DELETE FROM categories WHERE id = $1", [id]);
+  }
 }
