@@ -174,7 +174,7 @@ export class AuthService {
 
   private matchesPin(user: LoginUser, pin: string): boolean {
     if (user.pinHash) return constantTimeEqual(hashPin(pin), user.pinHash);
-    return user.pin !== undefined && constantTimeEqual(pin, user.pin);
+    return isOperatorRecord(user) && user.pin !== undefined && constantTimeEqual(pin, user.pin);
   }
 
   private signPayload(payload: TokenPayload): string {
@@ -229,6 +229,10 @@ function constantTimeEqual(left: string, right: string): boolean {
 
 function isAuthRole(role: string): role is AuthRole {
   return role === "admin" || role === "operator";
+}
+
+function isOperatorRecord(user: LoginUser): user is OperatorRecord {
+  return "pin" in user;
 }
 
 function toPublicUserRecord(user: AuthUserRecord): PublicUserRecord {

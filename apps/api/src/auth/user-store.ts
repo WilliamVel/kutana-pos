@@ -78,7 +78,7 @@ export class PostgresAuthUserStore implements AuthUserStore {
        RETURNING id, display_name, role, pin_hash, deactivated_at`,
       [randomUUID(), input.displayName, input.role, input.pinHash],
     );
-    return mapRow(result.rows[0]);
+    return mapRequiredRow(result.rows[0]);
   }
 
   async deactivateUser(id: string): Promise<AuthUserRecord | null> {
@@ -104,6 +104,11 @@ export class PostgresAuthUserStore implements AuthUserStore {
       [randomUUID(), displayName, pinHash],
     );
   }
+}
+
+function mapRequiredRow(row: AuthUserRow | undefined): AuthUserRecord {
+  if (!row) throw new Error("Expected auth_users RETURNING row");
+  return mapRow(row);
 }
 
 function mapRow(row: AuthUserRow): AuthUserRecord {
