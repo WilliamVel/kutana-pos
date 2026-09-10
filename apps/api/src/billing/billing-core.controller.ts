@@ -7,7 +7,9 @@ import {
   Param,
   Post,
   Put,
+  Optional,
   Query,
+  Req,
 } from "@nestjs/common";
 import type { Allocation } from "@kutana/shared/billing/model/allocation.js";
 import type { CustomerDebtEntry } from "@kutana/shared/billing/model/customer-debt-ledger.js";
@@ -17,6 +19,9 @@ import type {
   PersonalAccount,
 } from "@kutana/shared/billing/model/personal-account.js";
 import type { Ticket } from "@kutana/shared/billing/model/ticket.js";
+import type { Sale } from "@kutana/shared/billing/model/sale.js";
+import type { TokenPayload } from "../auth/auth.service.js";
+import { PaymentClosureService } from "./payment-closure.service.js";
 import { PostgresCustomerDebtRepository } from "./adapters/postgres/customer-debt-repository.js";
 import { PostgresCustomerRepository } from "./adapters/postgres/customer-repository.js";
 import { PostgresPersonalAccountRepository } from "./adapters/postgres/personal-account-repository.js";
@@ -26,6 +31,10 @@ interface SaveTicketDto {
   readonly ticket: Ticket;
   readonly allocations: Allocation[];
   readonly expectedVersion: number;
+}
+
+interface AuthenticatedRequest {
+  readonly auth?: TokenPayload;
 }
 
 interface SavePersonalAccountDto {
@@ -41,7 +50,14 @@ export class BillingCoreController {
     private readonly customers: PostgresCustomerRepository,
     private readonly personalAccounts: PostgresPersonalAccountRepository,
     private readonly customerDebts: PostgresCustomerDebtRepository,
+    @Optional() private readonly paymentClosure?: PaymentClosureService,
   ) {}
+
+  @Post("orders/:id/close")
+  closeOrder(@Param("id") id: string, @Req() request: AuthenticatedRequest): Promise<Sale> {
+    if (!this.paymentClosure) throw new Error("Payment closure service is unavailable");
+    return this.paymentClosure.closeOrder(id, request.auth?.sub ?? "");
+  }
 
   @Get("tickets/:id")
   findTicketById(@Param("id") id: string): Promise<Ticket | null> {

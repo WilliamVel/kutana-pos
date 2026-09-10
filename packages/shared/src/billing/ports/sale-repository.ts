@@ -4,6 +4,9 @@ import type { Sale } from "../model/sale.js";
 export interface SaleRepository {
   findByPublicUuid(publicUuid: string): Promise<Sale | null>;
   findByOrderId(orderId: string): Promise<Sale | null>;
-  /** Sales are append-only: there is no update path. */
+  /**
+   * Persists the closure snapshot. The order id is an idempotency key: retrying
+   * the same order must return the existing sale rather than create a duplicate.
+   */
   create(sale: Sale): Promise<Sale>;
 }

@@ -6,8 +6,10 @@ import { PostgresPaymentRepository } from "../payments/adapters/postgres/payment
 import { PostgresCustomerDebtRepository } from "./adapters/postgres/customer-debt-repository.js";
 import { PostgresCustomerRepository } from "./adapters/postgres/customer-repository.js";
 import { PostgresPersonalAccountRepository } from "./adapters/postgres/personal-account-repository.js";
+import { PostgresSaleRepository } from "./adapters/postgres/sale-repository.js";
 import { PostgresTicketRepository } from "./adapters/postgres/ticket-repository.js";
 import { BillingCoreController } from "./billing-core.controller.js";
+import { PaymentClosureService } from "./payment-closure.service.js";
 
 @Module({
   imports: [PostgresModule],
@@ -19,6 +21,8 @@ import { BillingCoreController } from "./billing-core.controller.js";
     PostgresCustomerDebtRepository,
     PostgresPaymentRepository,
     PostgresPaymentMethodRepository,
+    PostgresSaleRepository,
+    PaymentClosureService,
   ],
 })
 export class BillingCoreModule {}

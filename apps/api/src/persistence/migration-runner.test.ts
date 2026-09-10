@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { discoverMigrations } from "./migration-runner.js";
@@ -25,6 +25,22 @@ describe("migration discovery", () => {
       "013_payment_methods_table.sql",
       "014_auth_refresh_tokens.sql",
       "015_auth_users.sql",
+      "016_payment_closure_sales_history.sql",
     ]);
+  });
+
+  it("keeps migration 016 reference columns compatible with earlier text identifiers", () => {
+    const sql = readFileSync(join(migrationDirectory, "016_payment_closure_sales_history.sql"), "utf8");
+
+    expect(sql).toContain("ADD COLUMN table_id text REFERENCES restaurant_tables(id)");
+    expect(sql).toContain("order_line_item_id text");
+    expect(sql).toContain("product_id text NOT NULL");
+    expect(sql).toContain("customer_id text REFERENCES customers(id)");
+    expect(sql).toContain("account_id text");
+    expect(sql).toContain("id uuid PRIMARY KEY");
+    expect(sql).toContain("sale_id uuid NOT NULL REFERENCES sales(id)");
+    expect(sql).not.toContain("table_id uuid REFERENCES restaurant_tables(id)");
+    expect(sql).not.toContain("order_line_item_id uuid");
+    expect(sql).not.toContain("customer_id uuid REFERENCES customers(id)");
   });
 });
