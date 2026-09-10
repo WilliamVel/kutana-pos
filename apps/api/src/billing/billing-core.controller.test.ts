@@ -17,6 +17,7 @@ import { PostgresPersonalAccountRepository } from "./adapters/postgres/personal-
 import { PostgresTicketRepository } from "./adapters/postgres/ticket-repository.js";
 import { BillingCoreController } from "./billing-core.controller.js";
 import { BillingCoreModule } from "./billing-core.module.js";
+import { SalesAnalyticsService } from "./sales-analytics.service.js";
 
 const customer: Customer = {
   id: "customer-original",
@@ -99,6 +100,12 @@ describe("BillingCoreController", () => {
       listAll: vi.fn(),
       record: vi.fn(),
     };
+    const salesAnalytics = {
+      dailySales: vi.fn(),
+      productMix: vi.fn(),
+      paymentMix: vi.fn(),
+      pendingExposure: vi.fn(),
+    };
 
     return {
       controller: new BillingCoreController(
@@ -106,13 +113,34 @@ describe("BillingCoreController", () => {
         customers as unknown as PostgresCustomerRepository,
         personalAccounts as unknown as PostgresPersonalAccountRepository,
         customerDebts as unknown as PostgresCustomerDebtRepository,
+        salesAnalytics as unknown as SalesAnalyticsService,
       ),
       tickets,
       customers,
       personalAccounts,
       customerDebts,
+      salesAnalytics,
     };
   }
+
+  it("delegates analytics queries with date filters", async () => {
+    const { controller, salesAnalytics } = controllerWithMocks();
+    const query = { from: "2025-01-01", to: "2025-01-31" };
+    salesAnalytics.dailySales.mockResolvedValue([]);
+    salesAnalytics.productMix.mockResolvedValue([]);
+    salesAnalytics.paymentMix.mockResolvedValue([]);
+    salesAnalytics.pendingExposure.mockResolvedValue([]);
+
+    await controller.dailySales(query);
+    await controller.productMix(query);
+    await controller.paymentMix(query);
+    await controller.pendingExposure(query);
+
+    expect(salesAnalytics.dailySales).toHaveBeenCalledWith(query);
+    expect(salesAnalytics.productMix).toHaveBeenCalledWith(query);
+    expect(salesAnalytics.paymentMix).toHaveBeenCalledWith(query);
+    expect(salesAnalytics.pendingExposure).toHaveBeenCalledWith(query);
+  });
 
   it("delegates list customers to the customer repository", async () => {
     const { controller, customers } = controllerWithMocks();

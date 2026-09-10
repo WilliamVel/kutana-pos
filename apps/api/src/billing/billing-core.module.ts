@@ -10,6 +10,7 @@ import { PostgresSaleRepository } from "./adapters/postgres/sale-repository.js";
 import { PostgresTicketRepository } from "./adapters/postgres/ticket-repository.js";
 import { BillingCoreController } from "./billing-core.controller.js";
 import { PaymentClosureService } from "./payment-closure.service.js";
+import { SalesAnalyticsService } from "./sales-analytics.service.js";
 
 @Module({
   imports: [PostgresModule],
@@ -22,6 +23,7 @@ import { PaymentClosureService } from "./payment-closure.service.js";
     PostgresPaymentRepository,
     PostgresPaymentMethodRepository,
     PostgresSaleRepository,
+    SalesAnalyticsService,
     PaymentClosureService,
   ],
 })

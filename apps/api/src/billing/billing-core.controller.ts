@@ -22,6 +22,14 @@ import type { Ticket } from "@kutana/shared/billing/model/ticket.js";
 import type { Sale } from "@kutana/shared/billing/model/sale.js";
 import type { TokenPayload } from "../auth/auth.service.js";
 import { PaymentClosureService } from "./payment-closure.service.js";
+import {
+  SalesAnalyticsService,
+  type AnalyticsDateQuery,
+  type DailySalesTotal,
+  type PaymentMixRow,
+  type PendingExposureRow,
+  type ProductMixRow,
+} from "./sales-analytics.service.js";
 import { PostgresCustomerDebtRepository } from "./adapters/postgres/customer-debt-repository.js";
 import { PostgresCustomerRepository } from "./adapters/postgres/customer-repository.js";
 import { PostgresPersonalAccountRepository } from "./adapters/postgres/personal-account-repository.js";
@@ -50,8 +58,33 @@ export class BillingCoreController {
     private readonly customers: PostgresCustomerRepository,
     private readonly personalAccounts: PostgresPersonalAccountRepository,
     private readonly customerDebts: PostgresCustomerDebtRepository,
+    @Optional() private readonly salesAnalytics?: SalesAnalyticsService,
     @Optional() private readonly paymentClosure?: PaymentClosureService,
   ) {}
+
+  @Get("analytics/daily-sales")
+  dailySales(@Query() query: AnalyticsDateQuery): Promise<DailySalesTotal[]> {
+    if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
+    return this.salesAnalytics.dailySales(query);
+  }
+
+  @Get("analytics/product-mix")
+  productMix(@Query() query: AnalyticsDateQuery): Promise<ProductMixRow[]> {
+    if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
+    return this.salesAnalytics.productMix(query);
+  }
+
+  @Get("analytics/payment-mix")
+  paymentMix(@Query() query: AnalyticsDateQuery): Promise<PaymentMixRow[]> {
+    if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
+    return this.salesAnalytics.paymentMix(query);
+  }
+
+  @Get("analytics/pending-exposure")
+  pendingExposure(@Query() query: AnalyticsDateQuery): Promise<PendingExposureRow[]> {
+    if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
+    return this.salesAnalytics.pendingExposure(query);
+  }
 
   @Post("orders/:id/close")
   closeOrder(@Param("id") id: string, @Req() request: AuthenticatedRequest): Promise<Sale> {
