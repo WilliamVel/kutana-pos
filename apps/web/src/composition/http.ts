@@ -1,3 +1,4 @@
+import { HttpAnalyticsService } from "../adapters/http/analytics-service.js";
 import { HttpAuthService } from "../adapters/http/auth-service.js";
 import { HttpCategoryRepository } from "../adapters/http/category-repository.js";
 import { HttpCustomerDebtRepository } from "../adapters/http/customer-debt-repository.js";
@@ -16,10 +17,6 @@ import { HttpTicketRepository } from "../adapters/http/ticket-repository.js";
 import { HttpUserManagementService } from "../adapters/http/user-management-service.js";
 import type { Ports } from "./ports.js";
 
-/**
- * HTTP wiring: repository ports are backed by fetch-based HTTP adapters and
- * order events use SSE plus same-tab fanout after successful local saves.
- */
 export type HttpPortsOptions = HttpClientOptions & HttpOrderEventsOptions;
 
 export function buildHttpPorts(options: HttpPortsOptions = {}): Ports {
@@ -31,6 +28,7 @@ export function buildHttpPorts(options: HttpPortsOptions = {}): Ports {
   };
 
   return {
+    analytics: new HttpAnalyticsService(authenticatedOptions),
     auth,
     userManagement: new HttpUserManagementService(authenticatedOptions),
     orders: new HttpOrderRepository(authenticatedOptions),

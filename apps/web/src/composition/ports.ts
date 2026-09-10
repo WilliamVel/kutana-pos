@@ -1,3 +1,4 @@
+import type { AnalyticsReadPort } from "@kutana/shared/analytics/ports/analytics-service.js";
 import type { AuthService } from "@kutana/shared/auth/ports/auth-service.js";
 import type { UserManagementService } from "@kutana/shared/auth/ports/user-management-service.js";
 import type { OrderRepository } from "@kutana/shared/ordering/ports/order-repository.js";
@@ -27,6 +28,7 @@ import type { StockRepository } from "@kutana/shared/inventory/ports/stock-repos
  * read them from the backend/database just like catalog categories.
  */
 export interface Ports {
+  readonly analytics?: AnalyticsReadPort;
   readonly auth?: AuthService;
   readonly userManagement: UserManagementService;
   readonly orders: OrderRepository;

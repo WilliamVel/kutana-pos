@@ -17,6 +17,7 @@ import { PostgresPersonalAccountRepository } from "./adapters/postgres/personal-
 import { PostgresTicketRepository } from "./adapters/postgres/ticket-repository.js";
 import { BillingCoreController } from "./billing-core.controller.js";
 import { BillingCoreModule } from "./billing-core.module.js";
+import { REQUIRED_ROLES } from "../auth/roles.decorator.js";
 import { SalesAnalyticsService } from "./sales-analytics.service.js";
 
 const customer: Customer = {
@@ -74,6 +75,11 @@ const debtEntry: CustomerDebtEntry = {
 };
 
 describe("BillingCoreController", () => {
+      it("requires admin role on every analytics route", () => {
+        for (const method of ["dailySales", "productMix", "paymentMix", "pendingExposure"] as const) {
+          expect(Reflect.getMetadata(REQUIRED_ROLES, BillingCoreController.prototype[method])).toEqual(["admin"]);
+        }
+      });
   function controllerWithMocks() {
     const tickets = {
       findById: vi.fn(),

@@ -21,6 +21,7 @@ import type {
 import type { Ticket } from "@kutana/shared/billing/model/ticket.js";
 import type { Sale } from "@kutana/shared/billing/model/sale.js";
 import type { TokenPayload } from "../auth/auth.service.js";
+    import { RequireRole } from "../auth/roles.decorator.js";
 import { PaymentClosureService } from "./payment-closure.service.js";
 import {
   SalesAnalyticsService,
@@ -62,25 +63,29 @@ export class BillingCoreController {
     @Optional() private readonly paymentClosure?: PaymentClosureService,
   ) {}
 
-  @Get("analytics/daily-sales")
+  @RequireRole("admin")
+      @Get("analytics/daily-sales")
   dailySales(@Query() query: AnalyticsDateQuery): Promise<DailySalesTotal[]> {
     if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
     return this.salesAnalytics.dailySales(query);
   }
 
-  @Get("analytics/product-mix")
+  @RequireRole("admin")
+      @Get("analytics/product-mix")
   productMix(@Query() query: AnalyticsDateQuery): Promise<ProductMixRow[]> {
     if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
     return this.salesAnalytics.productMix(query);
   }
 
-  @Get("analytics/payment-mix")
+  @RequireRole("admin")
+      @Get("analytics/payment-mix")
   paymentMix(@Query() query: AnalyticsDateQuery): Promise<PaymentMixRow[]> {
     if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
     return this.salesAnalytics.paymentMix(query);
   }
 
-  @Get("analytics/pending-exposure")
+  @RequireRole("admin")
+      @Get("analytics/pending-exposure")
   pendingExposure(@Query() query: AnalyticsDateQuery): Promise<PendingExposureRow[]> {
     if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
     return this.salesAnalytics.pendingExposure(query);

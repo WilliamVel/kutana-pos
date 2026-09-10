@@ -24,6 +24,8 @@ import { SplitBillContainer } from "./features/split-bill/containers/SplitBillCo
 import { PendingDebtsContainer } from "./features/pending-debts/containers/PendingDebtsContainer.js";
 import { CustomerManagementContainer } from "./features/customers/containers/CustomerManagementContainer.js";
 import { UserManagementContainer } from "./features/users/containers/UserManagementContainer.js";
+import { AnalyticsScreen } from "./features/analytics/AnalyticsScreen.js";
+import { canAccessScreen } from "./app-shell/screens.js";
 
 /** Center-column sub-state of the unified Register workspace. */
 type CenterView = "account" | "payment" | "assignment";
@@ -45,6 +47,7 @@ export function App(): JSX.Element {
   const [centerView, setCenterView] = useState<CenterView>("account");
   const [ordersReloadKey, setOrdersReloadKey] = useState(0);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+      const [isChangePinOpen, setIsChangePinOpen] = useState(false);
 
   const resetCenter = (): void => {
     setCenterView("account");
@@ -67,7 +70,7 @@ export function App(): JSX.Element {
 
   const navigate = (next: ScreenId): void => {
     if (!session) return;
-    if (next === "users" && session.role !== "admin") return;
+    if (!canAccessScreen(next, session.role)) return;
     if (next === "register") resetCenter();
     setEditingProduct(null);
     setScreen(next);
@@ -159,7 +162,7 @@ export function App(): JSX.Element {
           currentScreen={screen}
           session={session}
           onNavigate={navigate}
-              onChangePin={() => setScreen("change-pin")}
+              onChangePin={() => setIsChangePinOpen(true)}
           onLogout={() => {
             auth.logout();
             setSession(null);
@@ -208,7 +211,9 @@ export function App(): JSX.Element {
 
       {screen === "users" && session.role === "admin" ? <UserManagementContainer /> : null}
 
-          {screen === "change-pin" ? <ChangePinPanel onDone={() => setScreen("inventory")} /> : null}
+          {screen === "analytics" && session.role === "admin" ? <AnalyticsScreen /> : null}
+
+          {isChangePinOpen ? <ChangePinPanel onDone={() => setIsChangePinOpen(false)} /> : null}
 
       {screen === "register" ? (
         <RegisterWorkspace

@@ -47,7 +47,8 @@ describe("buildHttpPorts", () => {
     const ports = buildHttpPorts({ baseUrl: BASE_URL, fetchImpl });
 
     expect(Object.keys(ports).sort()).toEqual([
-      "auth",
+      "analytics",
+          "auth",
       "categories",
       "customerDebts",
       "customers",

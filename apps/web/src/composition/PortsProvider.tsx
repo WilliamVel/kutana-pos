@@ -43,6 +43,12 @@ export function usePorts(): Ports {
   return ports;
 }
 
+export function useAnalytics(): NonNullable<Ports["analytics"]> {
+  const analytics = usePorts().analytics;
+  if (!analytics) throw new Error("Analytics port is not configured on <PortsProvider>.");
+  return analytics;
+}
+
 export function useAuth(): AuthService {
   const auth = usePorts().auth;
   if (!auth) throw new Error("Auth port is not configured on <PortsProvider>.");

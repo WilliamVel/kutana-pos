@@ -1,3 +1,4 @@
+import { MockAnalyticsService } from "../adapters/mock/analytics-service.js";
 import { MockAuthService } from "../adapters/mock/auth-service.js";
 import { MockCategoryRepository } from "../adapters/mock/category-repository.js";
 import { MockCustomerDebtRepository } from "../adapters/mock/customer-debt-repository.js";
@@ -51,6 +52,7 @@ export function buildMockPorts(): Ports {
   seedTables(tables, fixtures);
 
   return {
+    analytics: new MockAnalyticsService(),
     auth,
     userManagement,
     orders,
