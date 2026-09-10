@@ -9,6 +9,7 @@ import { Button } from "./design-system/atoms/Button.js";
 import { Icon } from "./design-system/atoms/Icon.js";
 import { ButtonRow } from "./design-system/molecules/ButtonRow.js";
 import { Panel } from "./design-system/molecules/Panel.js";
+import { ChangePinPanel } from "./features/auth/components/ChangePinPanel.js";
 import { LoginPanel } from "./features/auth/components/LoginPanel.js";
 import { CategoryManagementContainer } from "./features/catalog/containers/CategoryManagementContainer.js";
 import { ProductFormContainer } from "./features/catalog/containers/ProductFormContainer.js";
@@ -158,6 +159,7 @@ export function App(): JSX.Element {
           currentScreen={screen}
           session={session}
           onNavigate={navigate}
+              onChangePin={() => setScreen("change-pin")}
           onLogout={() => {
             auth.logout();
             setSession(null);
@@ -205,6 +207,8 @@ export function App(): JSX.Element {
       {screen === "pending-debts" ? <PendingDebtsContainer /> : null}
 
       {screen === "users" && session.role === "admin" ? <UserManagementContainer /> : null}
+
+          {screen === "change-pin" ? <ChangePinPanel onDone={() => setScreen("inventory")} /> : null}
 
       {screen === "register" ? (
         <RegisterWorkspace

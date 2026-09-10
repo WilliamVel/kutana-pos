@@ -15,6 +15,7 @@ export interface RefreshTokenStore {
     readonly expiresAtMs: number;
   }) => Promise<void>;
   readonly consume: (tokenHash: string) => Promise<RefreshTokenRecord | null>;
+  readonly revokeForOperator: (operatorId: string) => Promise<void>;
 }
 
 export class InMemoryRefreshTokenStore implements RefreshTokenStore {
@@ -35,6 +36,12 @@ export class InMemoryRefreshTokenStore implements RefreshTokenStore {
     const record = this.refreshTokens.get(tokenHash) ?? null;
     this.refreshTokens.delete(tokenHash);
     return record;
+  }
+
+  async revokeForOperator(operatorId: string): Promise<void> {
+    for (const [tokenHash, record] of this.refreshTokens) {
+      if (record.operatorId === operatorId) this.refreshTokens.delete(tokenHash);
+    }
   }
 }
 
@@ -73,5 +80,9 @@ export class PostgresRefreshTokenStore implements RefreshTokenStore {
       operatorId: row.operator_id,
       expiresAtMs: new Date(row.expires_at).getTime(),
     };
+  }
+
+  async revokeForOperator(operatorId: string): Promise<void> {
+    await this.pool.query(`DELETE FROM auth_refresh_tokens WHERE operator_id = $1`, [operatorId]);
   }
 }

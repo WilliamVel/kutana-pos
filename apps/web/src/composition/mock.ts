@@ -31,7 +31,7 @@ export function buildMockPorts(): Ports {
   const fixtures = buildSeedFixtures();
 
   const auth = new MockAuthService();
-  const userManagement = new MockUserManagementService();
+  const userManagement = new MockUserManagementService(undefined, (userId, newPin) => auth.resetPin(userId, newPin));
   const orders = new MockOrderRepository();
   const tables = new MockTableRepository();
   const tickets = new MockTicketRepository();

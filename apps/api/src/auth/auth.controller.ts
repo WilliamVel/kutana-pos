@@ -1,5 +1,5 @@
 import type { AuthRole, AuthSession } from "@kutana/shared/auth/model/auth-session.js";
-import { Body, Controller, Delete, Get, NotFoundException, Param, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, NotFoundException, Param, Post, Req } from "@nestjs/common";
 import { AuthService, type PublicUserRecord } from "./auth.service.js";
 import { Public } from "./public.decorator.js";
 import { RequireRole } from "./roles.decorator.js";
@@ -11,6 +11,19 @@ interface LoginDto {
 
 interface RefreshDto {
   readonly refreshToken?: string;
+}
+
+interface ChangePinDto {
+  readonly currentPin: string;
+  readonly newPin: string;
+}
+
+interface ResetPinDto {
+  readonly newPin: string;
+}
+
+interface AuthenticatedRequest {
+  readonly auth: { readonly sub: string };
 }
 
 interface CreateUserDto {
@@ -29,6 +42,11 @@ export class AuthController {
     return this.authService.login(body);
   }
 
+  @Post("change-pin")
+  changeOwnPin(@Req() request: AuthenticatedRequest, @Body() body: ChangePinDto): Promise<void> {
+    return this.authService.changeOwnPin(request.auth.sub, body);
+  }
+
   @Public()
   @Post("refresh")
   refresh(@Body() body: RefreshDto): Promise<AuthSession> {
@@ -45,6 +63,12 @@ export class AuthController {
   @Post("users")
   createUser(@Body() body: CreateUserDto): Promise<PublicUserRecord> {
     return this.authService.createUser(body);
+  }
+
+  @RequireRole("admin")
+  @Post("users/:id/reset-pin")
+  resetPin(@Param("id") id: string, @Body() body: ResetPinDto): Promise<void> {
+    return this.authService.resetPin(id, body.newPin);
   }
 
   @RequireRole("admin")

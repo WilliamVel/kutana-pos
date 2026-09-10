@@ -39,7 +39,15 @@ class FakeAuthUserStore implements AuthUserStore {
     return user;
   }
 
-  async deactivateUser(id: string): Promise<AuthUserRecord | null> {
+  async updatePin(id: string, pinHash: string): Promise<AuthUserRecord | null> {
+        const user = this.users.get(id);
+        if (!user || user.deactivatedAt !== null) return null;
+        const updated = { ...user, pinHash };
+        this.users.set(id, updated);
+        return updated;
+      }
+
+      async deactivateUser(id: string): Promise<AuthUserRecord | null> {
     const user = this.users.get(id);
     if (!user) return null;
     const deactivated = { ...user, deactivatedAt: new Date("2025-01-01T00:00:00.000Z") };

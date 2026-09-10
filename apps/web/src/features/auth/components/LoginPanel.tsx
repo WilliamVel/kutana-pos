@@ -29,7 +29,7 @@ export function LoginPanel({ onLogin, notice = null }: LoginPanelProps): JSX.Ele
     try {
       onLogin(await auth.login({ operator, pin }));
     } catch {
-      setError("Operador o PIN inválido.");
+      setError("Operador o PIN inválido. Si olvidaste tu PIN, pedile a un administrador que lo restablezca.");
     } finally {
       setIsSubmitting(false);
     }

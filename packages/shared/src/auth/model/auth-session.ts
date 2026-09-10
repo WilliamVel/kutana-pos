@@ -14,3 +14,10 @@ export interface LoginCredentials {
   readonly operator: string;
   readonly pin: string;
 }
+
+export const PIN_LENGTH = 4;
+export const PIN_PATTERN = /^\d{4}$/;
+
+export function isValidPin(pin: string): boolean {
+  return PIN_PATTERN.test(pin);
+}

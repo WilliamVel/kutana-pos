@@ -9,7 +9,8 @@ export type ScreenId =
   | "register"
   | "customers"
   | "pending-debts"
-  | "users";
+  | "users"
+  | "change-pin";
 
 export interface ScreenMeta {
   readonly id: ScreenId;

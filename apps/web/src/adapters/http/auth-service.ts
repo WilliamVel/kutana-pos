@@ -28,6 +28,10 @@ export class HttpAuthService implements AuthService {
     return session;
   }
 
+  async changePin(input: { readonly currentPin: string; readonly newPin: string }): Promise<void> {
+    await this.http.request<void>("/auth/change-pin", { method: "POST", body: input });
+  }
+
   async refresh(): Promise<AuthSession | null> {
     if (!this.session?.refreshToken) return null;
 

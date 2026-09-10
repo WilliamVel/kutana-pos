@@ -1,5 +1,5 @@
-import type { AuthRole, AuthSession } from "@kutana/shared/auth/model/auth-session.js";
-import { Inject, Injectable, Optional, UnauthorizedException } from "@nestjs/common";
+import { isValidPin, type AuthRole, type AuthSession } from "@kutana/shared/auth/model/auth-session.js";
+import { BadRequestException, Inject, Injectable, NotFoundException, Optional, UnauthorizedException } from "@nestjs/common";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import {
   InMemoryRefreshTokenStore,
@@ -64,6 +64,24 @@ export class AuthService {
     return this.issueSession(user);
   }
 
+  async changeOwnPin(operatorId: string, input: { readonly currentPin: string; readonly newPin: string }): Promise<void> {
+    validatePin(input.newPin);
+    const user = await this.findActiveUserById(operatorId);
+    if (!user || !this.matchesPin(user, input.currentPin)) {
+      throw new UnauthorizedException("Current PIN is invalid");
+    }
+    if (!this.userStore) throw new UnauthorizedException("Persisted user management is unavailable");
+    await this.userStore.updatePin(operatorId, createPinHash(input.newPin));
+  }
+
+  async resetPin(id: string, newPin: string): Promise<void> {
+    validatePin(newPin);
+    if (!this.userStore) throw new UnauthorizedException("Persisted user management is unavailable");
+    const user = await this.userStore.updatePin(id, createPinHash(newPin));
+    if (!user) throw new NotFoundException("User not found");
+    await this.refreshTokenStore.revokeForOperator(id);
+  }
+
   async refresh(refreshToken: string | undefined): Promise<AuthSession> {
     if (!refreshToken) throw new UnauthorizedException("Missing refresh token");
 
@@ -119,6 +137,7 @@ export class AuthService {
     readonly pin: string;
   }): Promise<PublicUserRecord> {
     if (!this.userStore) throw new UnauthorizedException("Persisted user management is unavailable");
+    validatePin(input.pin);
     const user = await this.userStore.createUser({
       displayName: input.displayName.trim(),
       role: input.role,
@@ -259,4 +278,8 @@ export function createPinHash(pin: string): string {
 
 export function randomAuthSecret(): string {
   return randomBytes(32).toString("base64url");
+}
+
+function validatePin(pin: string): void {
+  if (!isValidPin(pin)) throw new BadRequestException("PIN must be exactly 4 numeric digits");
 }

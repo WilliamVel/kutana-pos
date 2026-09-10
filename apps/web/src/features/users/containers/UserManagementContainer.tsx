@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import type { AuthRole } from "@kutana/shared/auth/model/auth-session.js";
+import { isValidPin, type AuthRole } from "@kutana/shared/auth/model/auth-session.js";
 import type { ManagedAuthUser } from "@kutana/shared/auth/model/user-management.js";
 import { useUserManagement } from "../../../composition/PortsProvider.js";
 import { Button } from "../../../design-system/atoms/Button.js";
@@ -14,6 +14,7 @@ export function UserManagementContainer(): JSX.Element {
   const [pin, setPin] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+      const [resetPins, setResetPins] = useState<Record<string, string>>({});
 
   const load = useCallback(async (): Promise<void> => {
     setUsers(await usersPort.listUsers());
@@ -25,7 +26,7 @@ export function UserManagementContainer(): JSX.Element {
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    if (!displayName.trim() || pin.length < 4) return;
+    if (!displayName.trim() || !isValidPin(pin)) return;
     setBusy(true);
     setMessage(null);
     try {
@@ -42,7 +43,24 @@ export function UserManagementContainer(): JSX.Element {
     }
   }
 
-  async function deactivate(user: ManagedAuthUser): Promise<void> {
+  async function resetPin(user: ManagedAuthUser): Promise<void> {
+        const newPin = resetPins[user.id] ?? "";
+        if (!isValidPin(newPin)) return;
+        setBusy(true);
+        setMessage(null);
+        try {
+          if (!usersPort.resetPin) throw new Error("La función de restablecimiento no está disponible.");
+          await usersPort.resetPin({ userId: user.id, newPin });
+          setResetPins((pins) => ({ ...pins, [user.id]: "" }));
+          setMessage(`PIN de ${user.displayName} restablecido.`);
+        } catch (error) {
+          setMessage(error instanceof Error ? error.message : "No se pudo restablecer el PIN.");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function deactivate(user: ManagedAuthUser): Promise<void> {
     setBusy(true);
     setMessage(null);
     try {
@@ -72,7 +90,7 @@ export function UserManagementContainer(): JSX.Element {
               <option value="admin">Administrador</option>
             </select>
           </label>
-          <Button type="submit" onClick={() => undefined} disabled={busy || !displayName.trim() || pin.length < 4}>
+          <Button type="submit" onClick={() => undefined} disabled={busy || !displayName.trim() || !isValidPin(pin)}>
             Crear usuario
           </Button>
         </form>
@@ -90,10 +108,16 @@ export function UserManagementContainer(): JSX.Element {
                 {user.deactivatedAt ? <span className={styles.inactive}>Desactivado</span> : null}
               </div>
               {!user.deactivatedAt ? (
-                <Button variant="secondary" onClick={() => void deactivate(user)} disabled={busy}>
+                    <>
+                <Input label={`Nuevo PIN para ${user.displayName}`} type="password" inputMode="numeric" value={resetPins[user.id] ?? ""} onChange={(value) => setResetPins((pins) => ({ ...pins, [user.id]: value }))} />
+                    <Button variant="secondary" onClick={() => void resetPin(user)} disabled={busy || !isValidPin(resetPins[user.id] ?? "")}>
+                      Restablecer PIN
+                    </Button>
+                    <Button variant="secondary" onClick={() => void deactivate(user)} disabled={busy}>
                   Desactivar
                 </Button>
-              ) : null}
+              </>
+                  ) : null}
             </li>
           ))}
         </ul>

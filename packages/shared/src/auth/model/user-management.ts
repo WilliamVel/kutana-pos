@@ -12,3 +12,8 @@ export interface CreateManagedAuthUserInput {
   readonly role: AuthRole;
   readonly pin: string;
 }
+
+export interface ResetManagedAuthUserPinInput {
+  readonly userId: string;
+  readonly newPin: string;
+}

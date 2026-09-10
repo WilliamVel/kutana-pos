@@ -8,6 +8,7 @@ export interface TopBarProps {
   readonly currentScreen: ScreenId;
   readonly onNavigate: (screen: ScreenId) => void;
   readonly onLogout: () => void;
+  readonly onChangePin?: () => void;
   readonly session: AuthSession;
 }
 
@@ -15,7 +16,7 @@ export interface TopBarProps {
  * Main app navigation. Desktop keeps the tab bar visible; small screens expose
  * the same navigation and account actions behind a hamburger button.
  */
-export function TopBar({ currentScreen, onNavigate, onLogout, session }: TopBarProps): JSX.Element {
+export function TopBar({ currentScreen, onNavigate, onLogout, onChangePin = () => undefined, session }: TopBarProps): JSX.Element {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const screens = screensForRole(session.role);
@@ -97,7 +98,11 @@ export function TopBar({ currentScreen, onNavigate, onLogout, session }: TopBarP
                   <p className={styles.accountHint}>{roleLabel}</p>
                 </div>
               </div>
-              <button type="button" className={styles.logoutButton} onClick={logout}>
+              <button type="button" className={styles.logoutButton} onClick={() => { setIsAccountOpen(false); onChangePin(); }}
+                  >
+                    Cambiar PIN
+                  </button>
+                  <button type="button" className={styles.logoutButton} onClick={logout}>
                 Cerrar sesión
               </button>
             </div>

@@ -25,6 +25,7 @@ export interface AuthUserStore {
   readonly listUsers: () => Promise<readonly AuthUserRecord[]>;
   readonly createUser: (input: CreateAuthUserInput) => Promise<AuthUserRecord>;
   readonly deactivateUser: (id: string) => Promise<AuthUserRecord | null>;
+  readonly updatePin: (id: string, pinHash: string) => Promise<AuthUserRecord | null>;
 }
 
 interface AuthUserRow {
@@ -88,6 +89,16 @@ export class PostgresAuthUserStore implements AuthUserStore {
        WHERE id = $1
        RETURNING id, display_name, role, pin_hash, deactivated_at`,
       [id],
+    );
+    return result.rows[0] ? mapRow(result.rows[0]) : null;
+  }
+
+  async updatePin(id: string, pinHash: string): Promise<AuthUserRecord | null> {
+    const result = await this.pool.query<AuthUserRow>(
+      `UPDATE auth_users SET pin_hash = $2, updated_at = now()
+       WHERE id = $1 AND deactivated_at IS NULL
+       RETURNING id, display_name, role, pin_hash, deactivated_at`,
+      [id, pinHash],
     );
     return result.rows[0] ? mapRow(result.rows[0]) : null;
   }

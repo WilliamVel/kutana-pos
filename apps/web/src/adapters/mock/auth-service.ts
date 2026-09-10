@@ -1,4 +1,5 @@
 import type { AuthSession, LoginCredentials } from "@kutana/shared/auth/model/auth-session.js";
+import { isValidPin } from "@kutana/shared/auth/model/auth-session.js";
 import type { AuthService } from "@kutana/shared/auth/ports/auth-service.js";
 
 const DEMO_OPERATORS = [
@@ -18,6 +19,7 @@ const DEMO_OPERATORS = [
 
 export class MockAuthService implements AuthService {
   private session: AuthSession | null = null;
+  private readonly pins = new Map<string, string>(DEMO_OPERATORS.map((operator) => [operator.operatorId, operator.pin]));
 
   currentSession(): AuthSession | null {
     return this.session;
@@ -26,7 +28,7 @@ export class MockAuthService implements AuthService {
   async login(credentials: LoginCredentials): Promise<AuthSession> {
     const operator = DEMO_OPERATORS.find(
       (candidate) =>
-        credentials.operator.trim() === candidate.displayName && credentials.pin === candidate.pin,
+        credentials.operator.trim() === candidate.displayName && credentials.pin === this.pins.get(candidate.operatorId),
     );
     if (!operator) throw new Error("Invalid operator credentials");
 
@@ -40,6 +42,18 @@ export class MockAuthService implements AuthService {
       refreshExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };
     return this.session;
+  }
+
+  async changePin(input: { readonly currentPin: string; readonly newPin: string }): Promise<void> {
+    if (!isValidPin(input.newPin) || !this.session || this.pins.get(this.session.operatorId) !== input.currentPin) {
+      throw new Error("PIN inválido");
+    }
+    this.pins.set(this.session.operatorId, input.newPin);
+  }
+
+  async resetPin(userId: string, newPin: string): Promise<void> {
+    if (!isValidPin(newPin) || !this.pins.has(userId)) throw new Error("PIN inválido");
+    this.pins.set(userId, newPin);
   }
 
   async refresh(): Promise<AuthSession | null> {
