@@ -1,11 +1,20 @@
 import type { AuthSession, LoginCredentials } from "@kutana/shared/auth/model/auth-session.js";
 import type { AuthService } from "@kutana/shared/auth/ports/auth-service.js";
 
-const DEMO_OPERATOR = {
-  operatorId: "operator-mina",
-  displayName: "Mina",
-  pin: "1234",
-} as const;
+const DEMO_OPERATORS = [
+  {
+    operatorId: "operator-mina",
+    displayName: "Mina",
+    role: "admin",
+    pin: "1234",
+  },
+  {
+    operatorId: "operator-ollie",
+    displayName: "Ollie",
+    role: "operator",
+    pin: "2468",
+  },
+] as const;
 
 export class MockAuthService implements AuthService {
   private session: AuthSession | null = null;
@@ -15,19 +24,19 @@ export class MockAuthService implements AuthService {
   }
 
   async login(credentials: LoginCredentials): Promise<AuthSession> {
-    if (
-      credentials.operator.trim() !== DEMO_OPERATOR.displayName ||
-      credentials.pin !== DEMO_OPERATOR.pin
-    ) {
-      throw new Error("Invalid operator credentials");
-    }
+    const operator = DEMO_OPERATORS.find(
+      (candidate) =>
+        credentials.operator.trim() === candidate.displayName && credentials.pin === candidate.pin,
+    );
+    if (!operator) throw new Error("Invalid operator credentials");
 
     this.session = {
-      operatorId: DEMO_OPERATOR.operatorId,
-      displayName: DEMO_OPERATOR.displayName,
-      token: "mock-auth-token-mina",
+      operatorId: operator.operatorId,
+      displayName: operator.displayName,
+      role: operator.role,
+      token: `mock-auth-token-${operator.operatorId}`,
       expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      refreshToken: "mock-refresh-token-mina",
+      refreshToken: `mock-refresh-token-${operator.operatorId}`,
       refreshExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };
     return this.session;
@@ -37,9 +46,9 @@ export class MockAuthService implements AuthService {
     if (!this.session) return null;
     this.session = {
       ...this.session,
-      token: `mock-auth-token-mina-${Date.now()}`,
+      token: `mock-auth-token-${this.session.operatorId}-${Date.now()}`,
       expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      refreshToken: `mock-refresh-token-mina-${Date.now()}`,
+      refreshToken: `mock-refresh-token-${this.session.operatorId}-${Date.now()}`,
       refreshExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };
     return this.session;

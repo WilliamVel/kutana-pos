@@ -24,6 +24,7 @@ import {
   useOrders,
   usePaymentMethods,
   usePayments,
+  usePaymentClosure,
   usePersonalAccounts,
   useTables,
 } from "../../../composition/PortsProvider.js";
@@ -89,6 +90,7 @@ export function SplitBillContainer({
   const customersPort = useCustomers();
   const accountsPort = usePersonalAccounts();
   const paymentsPort = usePayments();
+  const paymentClosure = usePaymentClosure();
   const debtsPort = useCustomerDebts();
   const methods = usePaymentMethods();
   const events = useOrderEvents();
@@ -318,18 +320,14 @@ export function SplitBillContainer({
             ? "Mesa cerrada con deuda personal pendiente."
             : "Mesa cerrada con todo pagado.",
         );
-        const saved = await orders.save(result.order, order.version);
-        await tables.save(
-          { ...table, status: "free", currentOrderId: null },
-          table.version,
-        );
+        const sale = await paymentClosure.closeOrder(order.id);
         events.publish({
           type: "order.closed",
-          orderId: saved.id,
+          orderId: sale.orderId,
           tableId,
-          version: saved.version,
+          version: result.order.version,
           at: new Date().toISOString(),
-          payload: saved,
+          payload: result.order,
         });
       }
     });

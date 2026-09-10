@@ -1,4 +1,5 @@
 import type { AuthService } from "@kutana/shared/auth/ports/auth-service.js";
+import type { UserManagementService } from "@kutana/shared/auth/ports/user-management-service.js";
 import type { OrderRepository } from "@kutana/shared/ordering/ports/order-repository.js";
 import type { OrderEvents } from "@kutana/shared/ordering/ports/order-events.js";
 import type { TableRepository } from "@kutana/shared/ordering/ports/table-repository.js";
@@ -7,6 +8,7 @@ import type { CustomerRepository } from "@kutana/shared/billing/ports/customer-r
 import type { PersonalAccountRepository } from "@kutana/shared/billing/ports/personal-account-repository.js";
 import type { TicketRepository } from "@kutana/shared/billing/ports/ticket-repository.js";
 import type { PaymentRepository } from "@kutana/shared/payments/ports/payment-repository.js";
+import type { PaymentClosureService } from "@kutana/shared/billing/ports/payment-closure-service.js";
 import type { PaymentMethodRepository } from "@kutana/shared/payments/ports/payment-method-repository.js";
 import type { ProductRepository } from "@kutana/shared/catalog/ports/product-repository.js";
 import type { CategoryRepository } from "@kutana/shared/catalog/ports/category-repository.js";
@@ -26,6 +28,7 @@ import type { StockRepository } from "@kutana/shared/inventory/ports/stock-repos
  */
 export interface Ports {
   readonly auth?: AuthService;
+  readonly userManagement: UserManagementService;
   readonly orders: OrderRepository;
   readonly tables: TableRepository;
   /**
@@ -37,6 +40,7 @@ export interface Ports {
   readonly personalAccounts: PersonalAccountRepository;
   readonly customerDebts: CustomerDebtRepository;
   readonly payments: PaymentRepository;
+  readonly paymentClosure: PaymentClosureService;
   readonly paymentMethods: PaymentMethodRepository;
   readonly products: ProductRepository;
   readonly categories: CategoryRepository;

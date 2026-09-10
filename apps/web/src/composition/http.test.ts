@@ -53,6 +53,7 @@ describe("buildHttpPorts", () => {
       "customers",
       "events",
       "orders",
+      "paymentClosure",
       "paymentMethods",
       "payments",
       "personalAccounts",
@@ -60,6 +61,7 @@ describe("buildHttpPorts", () => {
       "stock",
       "tables",
       "tickets",
+      "userManagement",
     ]);
 
     await ports.customers.listAll();

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MockAuthService } from "../adapters/mock/auth-service.js";
+import { MockUserManagementService } from "../adapters/mock/user-management-service.js";
 import { MockOrderRepository } from "../adapters/mock/order-repository.js";
 import { MockTableRepository } from "../adapters/mock/table-repository.js";
 import { MockCustomerDebtRepository } from "../adapters/mock/customer-debt-repository.js";
@@ -7,6 +8,7 @@ import { MockCustomerRepository } from "../adapters/mock/customer-repository.js"
 import { MockTicketRepository } from "../adapters/mock/ticket-repository.js";
 import { MockPaymentMethodRepository } from "../adapters/mock/payment-method-repository.js";
 import { MockPaymentRepository } from "../adapters/mock/payment-repository.js";
+import { MockPaymentClosureService } from "../adapters/mock/payment-closure-service.js";
 import { MockPersonalAccountRepository } from "../adapters/mock/personal-account-repository.js";
 import { MockCategoryRepository } from "../adapters/mock/category-repository.js";
 import { MockProductRepository } from "../adapters/mock/product-repository.js";
@@ -19,6 +21,7 @@ describe("buildMockPorts", () => {
     const ports = buildMockPorts();
 
     expect(ports.auth).toBeInstanceOf(MockAuthService);
+    expect(ports.userManagement).toBeInstanceOf(MockUserManagementService);
     expect(ports.orders).toBeInstanceOf(MockOrderRepository);
     expect(ports.tables).toBeInstanceOf(MockTableRepository);
     expect(ports.tickets).toBeInstanceOf(MockTicketRepository);
@@ -26,6 +29,7 @@ describe("buildMockPorts", () => {
     expect(ports.personalAccounts).toBeInstanceOf(MockPersonalAccountRepository);
     expect(ports.customerDebts).toBeInstanceOf(MockCustomerDebtRepository);
     expect(ports.payments).toBeInstanceOf(MockPaymentRepository);
+        expect(ports.paymentClosure).toBeInstanceOf(MockPaymentClosureService);
     expect(ports.paymentMethods).toBeInstanceOf(MockPaymentMethodRepository);
     expect(ports.products).toBeInstanceOf(MockProductRepository);
     expect(ports.categories).toBeInstanceOf(MockCategoryRepository);

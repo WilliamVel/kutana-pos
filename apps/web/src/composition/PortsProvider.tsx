@@ -49,6 +49,10 @@ export function useAuth(): AuthService {
   return auth;
 }
 
+export function useUserManagement(): Ports["userManagement"] {
+  return usePorts().userManagement;
+}
+
 export function useOrders(): Ports["orders"] {
   return usePorts().orders;
 }
@@ -76,6 +80,10 @@ export function useCustomerDebts(): Ports["customerDebts"] {
 
 export function usePayments(): Ports["payments"] {
   return usePorts().payments;
+}
+
+export function usePaymentClosure(): Ports["paymentClosure"] {
+  return usePorts().paymentClosure;
 }
 
 export function useProducts(): Ports["products"] {

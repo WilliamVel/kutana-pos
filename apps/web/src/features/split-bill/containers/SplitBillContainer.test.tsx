@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createCustomer } from "@kutana/shared/billing/model/personal-account.js";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../../composition/mock.js";
@@ -204,7 +204,52 @@ describe("SplitBillContainer", () => {
     expect(screen.getByRole("region", { name: "Productos pendientes" })).toHaveTextContent("2 sin asignar");
   });
 
-  it("marks unresolved closure attempts as review state", async () => {
+  it("delegates a valid closure to the payment-closure port", async () => {
+      const ports = await renderContainer();
+      const closeOrder = vi.spyOn(ports.paymentClosure, "closeOrder");
+
+      fireEvent.change(screen.getByLabelText("Cuenta con nombre libre"), {
+        target: { value: "Juan P." },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Crear cuenta libre" }));
+      await waitFor(() =>
+        expect(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).toBeInTheDocument(),
+      );
+      const order = await ports.orders.findByTable("table-1");
+      const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
+      fireEvent.click(screen.getByRole("button", { name: "Seleccionar cuenta Juan P." }));
+      fireEvent.change(screen.getByLabelText(`Cantidad para ${order!.lineItems[0]!.nameSnapshot}`), {
+        target: { value: "2" },
+      });
+      fireEvent.click(screen.getAllByRole("button", { name: "Agregar" })[0]!);
+      await waitFor(() => expect(screen.getByText("1 sin asignar")).toBeInTheDocument());
+      fireEvent.change(screen.getByLabelText(`Cantidad para ${order!.lineItems[1]!.nameSnapshot}`), {
+        target: { value: "1" },
+      });
+      fireEvent.click(
+        within(screen.getByRole("article", { name: "Asignar Loaded Nachos" })).getByRole("button", {
+          name: "Agregar",
+        }),
+      );
+      await waitFor(() =>
+        expect(screen.getByRole("region", { name: "Productos pendientes" })).toHaveTextContent(
+          "0 sin asignar",
+        ),
+      );
+      fireEvent.click(
+        within(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).getByRole(
+          "button",
+          { name: "Cobrar" },
+        ),
+      );
+      await waitFor(async () =>
+        expect((await ports.personalAccounts.findById(account.id))?.status).toBe("paid"),
+      );
+      await ports.paymentClosure.closeOrder(order!.id);
+      expect(closeOrder).toHaveBeenCalledWith(order!.id);
+    });
+
+    it("marks unresolved closure attempts as review state", async () => {
     const ports = await renderContainer();
 
     fireEvent.click(screen.getByRole("button", { name: "Revisar cierre de mesa" }));

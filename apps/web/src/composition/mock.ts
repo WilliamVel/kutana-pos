@@ -5,12 +5,14 @@ import { MockCustomerRepository } from "../adapters/mock/customer-repository.js"
 import { MockOrderEvents } from "../adapters/mock/order-events.js";
 import { MockOrderRepository } from "../adapters/mock/order-repository.js";
 import { MockPaymentMethodRepository } from "../adapters/mock/payment-method-repository.js";
+import { MockPaymentClosureService } from "../adapters/mock/payment-closure-service.js";
 import { MockPaymentRepository } from "../adapters/mock/payment-repository.js";
 import { MockPersonalAccountRepository } from "../adapters/mock/personal-account-repository.js";
 import { MockProductRepository } from "../adapters/mock/product-repository.js";
 import { MockStockRepository } from "../adapters/mock/stock-repository.js";
 import { MockTableRepository } from "../adapters/mock/table-repository.js";
 import { MockTicketRepository } from "../adapters/mock/ticket-repository.js";
+import { MockUserManagementService } from "../adapters/mock/user-management-service.js";
 import { buildSeedFixtures } from "../adapters/mock/seed-fixtures.js";
 import type { Ports } from "./ports.js";
 
@@ -29,6 +31,7 @@ export function buildMockPorts(): Ports {
   const fixtures = buildSeedFixtures();
 
   const auth = new MockAuthService();
+  const userManagement = new MockUserManagementService();
   const orders = new MockOrderRepository();
   const tables = new MockTableRepository();
   const tickets = new MockTicketRepository();
@@ -41,6 +44,7 @@ export function buildMockPorts(): Ports {
   const categories = new MockCategoryRepository();
   const stock = new MockStockRepository();
   const events = new MockOrderEvents();
+    const paymentClosure = new MockPaymentClosureService(orders, tables);
 
   seedCategories(categories, fixtures);
   seedOrders(orders, fixtures);
@@ -48,6 +52,7 @@ export function buildMockPorts(): Ports {
 
   return {
     auth,
+    userManagement,
     orders,
     tables,
     tickets,
@@ -55,6 +60,7 @@ export function buildMockPorts(): Ports {
     personalAccounts,
     customerDebts,
     payments,
+    paymentClosure,
     products,
     categories,
     stock,

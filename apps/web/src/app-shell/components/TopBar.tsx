@@ -1,21 +1,26 @@
 import { useState } from "react";
+import type { AuthSession } from "@kutana/shared/auth/model/auth-session.js";
 import { Icon } from "../../design-system/atoms/Icon.js";
-import { SCREENS, type ScreenId } from "../screens.js";
+import { screensForRole, type ScreenId } from "../screens.js";
 import styles from "./TopBar.module.css";
 
 export interface TopBarProps {
   readonly currentScreen: ScreenId;
   readonly onNavigate: (screen: ScreenId) => void;
   readonly onLogout: () => void;
+  readonly session: AuthSession;
 }
 
 /**
  * Main app navigation. Desktop keeps the tab bar visible; small screens expose
  * the same navigation and account actions behind a hamburger button.
  */
-export function TopBar({ currentScreen, onNavigate, onLogout }: TopBarProps): JSX.Element {
+export function TopBar({ currentScreen, onNavigate, onLogout, session }: TopBarProps): JSX.Element {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const screens = screensForRole(session.role);
+  const initials = initialsFor(session.displayName);
+  const roleLabel = session.role === "admin" ? "Administrador" : "Operador";
 
   const navigate = (screen: ScreenId): void => {
     onNavigate(screen);
@@ -47,7 +52,7 @@ export function TopBar({ currentScreen, onNavigate, onLogout }: TopBarProps): JS
       </div>
 
       <nav id="main-navigation" className={`${styles.tabs} ${isMenuOpen ? styles.tabsOpen : ""}`}>
-        {SCREENS.map((screen) => (
+        {screens.map((screen) => (
           <button
             key={screen.id}
             type="button"
@@ -71,11 +76,11 @@ export function TopBar({ currentScreen, onNavigate, onLogout }: TopBarProps): JS
             onClick={() => setIsAccountOpen((open) => !open)}
           >
             <span className={styles.accountAvatar} aria-hidden="true">
-              OP
+              {initials}
             </span>
             <span className={styles.accountCopy}>
               <span className={styles.accountEyebrow}>Cuenta</span>
-              <span className={styles.accountName}>Operador</span>
+              <span className={styles.accountName}>{session.displayName}</span>
             </span>
             <span className={styles.accountChevron} aria-hidden="true">
               ▾
@@ -85,11 +90,11 @@ export function TopBar({ currentScreen, onNavigate, onLogout }: TopBarProps): JS
             <div id="account-actions" className={styles.accountActions}>
               <div className={styles.accountSummary}>
                 <span className={styles.accountAvatarLarge} aria-hidden="true">
-                  OP
+                  {initials}
                 </span>
                 <div>
                   <p className={styles.accountStatus}>Sesión activa</p>
-                  <p className={styles.accountHint}>Ingreso de operador habilitado</p>
+                  <p className={styles.accountHint}>{roleLabel}</p>
                 </div>
               </div>
               <button type="button" className={styles.logoutButton} onClick={logout}>
@@ -101,4 +106,14 @@ export function TopBar({ currentScreen, onNavigate, onLogout }: TopBarProps): JS
       </nav>
     </header>
   );
+}
+
+function initialsFor(displayName: string): string {
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase())
+    .join("")
+    .slice(0, 2);
+  return initials || "OP";
 }

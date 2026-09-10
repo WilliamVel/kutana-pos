@@ -22,6 +22,7 @@ import { RegisterPaymentContainer } from "./features/register/containers/Registe
 import { SplitBillContainer } from "./features/split-bill/containers/SplitBillContainer.js";
 import { PendingDebtsContainer } from "./features/pending-debts/containers/PendingDebtsContainer.js";
 import { CustomerManagementContainer } from "./features/customers/containers/CustomerManagementContainer.js";
+import { UserManagementContainer } from "./features/users/containers/UserManagementContainer.js";
 
 /** Center-column sub-state of the unified Register workspace. */
 type CenterView = "account" | "payment" | "assignment";
@@ -64,6 +65,8 @@ export function App(): JSX.Element {
   }, []);
 
   const navigate = (next: ScreenId): void => {
+    if (!session) return;
+    if (next === "users" && session.role !== "admin") return;
     if (next === "register") resetCenter();
     setEditingProduct(null);
     setScreen(next);
@@ -153,6 +156,7 @@ export function App(): JSX.Element {
       topBar={
         <TopBar
           currentScreen={screen}
+          session={session}
           onNavigate={navigate}
           onLogout={() => {
             auth.logout();
@@ -199,6 +203,8 @@ export function App(): JSX.Element {
       {screen === "customers" ? <CustomerManagementContainer /> : null}
 
       {screen === "pending-debts" ? <PendingDebtsContainer /> : null}
+
+      {screen === "users" && session.role === "admin" ? <UserManagementContainer /> : null}
 
       {screen === "register" ? (
         <RegisterWorkspace

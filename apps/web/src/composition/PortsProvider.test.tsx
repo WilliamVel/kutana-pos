@@ -72,6 +72,7 @@ function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
       listByTicket: async () => [],
       record: async (payment) => payment,
     } as Ports["payments"],
+    paymentClosure: { closeOrder: async () => ({}) as never },
     products: {
       findById: async () => null,
       findBySku: async () => null,
@@ -92,6 +93,21 @@ function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
       recordMovement: async (item) => item,
     } as Ports["stock"],
     paymentMethods: { listAll: async () => TEST_METHODS } as Ports["paymentMethods"],
+    userManagement: {
+      listUsers: async () => [],
+      createUser: async (user) => ({
+        id: "user-1",
+        displayName: user.displayName,
+        role: user.role,
+        deactivatedAt: null,
+      }),
+      deactivateUser: async (id) => ({
+        id,
+        displayName: "Deactivated User",
+        role: "operator",
+        deactivatedAt: "2025-01-01T00:00:00.000Z",
+      }),
+    } as Ports["userManagement"],
     events: { subscribe: () => () => {}, publish: () => {} } as Ports["events"],
     ...overrides,
   };
