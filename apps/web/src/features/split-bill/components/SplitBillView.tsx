@@ -362,7 +362,7 @@ export function SplitBillView({
                 </div>
               </dl>
               <div className={styles.accountActions}>
-                <ButtonRow>
+                <ButtonRow className={styles.accountActionsRow}>
                   <Button
                     onClick={() => onPayAccount(account.id)}
                     disabled={

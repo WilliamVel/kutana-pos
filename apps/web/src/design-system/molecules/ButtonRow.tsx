@@ -7,6 +7,8 @@ export interface ButtonRowProps {
    * child is stretched to an even fraction of the available width.
    */
   readonly children: ReactNode;
+  /** Optional hook for a context-specific layout variant. */
+  readonly className?: string;
 }
 
 /**
@@ -15,6 +17,6 @@ export interface ButtonRowProps {
  * to edge in equal slices (half and half for two buttons). Used for order,
  * account-assignment, and payment actions.
  */
-export function ButtonRow({ children }: ButtonRowProps): JSX.Element {
-  return <div className={styles.row}>{children}</div>;
+export function ButtonRow({ children, className }: ButtonRowProps): JSX.Element {
+  return <div className={[styles.row, className].filter(Boolean).join(" ")}>{children}</div>;
 }

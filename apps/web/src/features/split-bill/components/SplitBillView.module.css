@@ -415,6 +415,15 @@
     position: static;
   }
 
+  /* Keep Step 3 actions tappable without shrinking or clipping labels. */
+  .accountActionsRow {
+    flex-wrap: wrap;
+  }
+
+  .accountActionsRow > * {
+    flex: 1 1 14rem;
+  }
+
   .removeAccountButton {
     width: 2.25rem;
     height: 2.25rem;
