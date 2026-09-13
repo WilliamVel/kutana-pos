@@ -90,7 +90,11 @@ export function App(): JSX.Element {
             tableId={selectedTableId}
             ticketId={selectedTicketId ?? undefined}
             personalAccountId={selectedAccountId ?? undefined}
-            onPaymentComplete={resetCenter}
+            onPaymentComplete={() => {
+              resetCenter();
+              setSelectedTableId(null);
+              setOrdersReloadKey((key) => key + 1);
+            }}
           />
           <Button variant="secondary" onClick={resetCenter}>
             Volver al pedido
@@ -220,6 +224,7 @@ export function App(): JSX.Element {
           list={
             <>
               <NewOrderContainer
+                reloadKey={ordersReloadKey}
                 onCreated={(tableId) => {
                   selectTable(tableId);
                   setOrdersReloadKey((key) => key + 1);
@@ -228,6 +233,11 @@ export function App(): JSX.Element {
               <OrdersOverviewContainer
                 selectedTableId={selectedTableId}
                 onSelectTable={selectTable}
+                onOrderRemoved={() => {
+                  resetCenter();
+                  setSelectedTableId(null);
+                  setOrdersReloadKey((key) => key + 1);
+                }}
                 reloadKey={ordersReloadKey}
               />
             </>

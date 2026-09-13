@@ -147,6 +147,48 @@ export class PostgresOrderRepository implements OrderRepository {
       client.release();
     }
   }
+
+  async deleteEmpty(orderId: string, expectedVersion: number): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const existing = await client.query<OrderRow>(
+        "SELECT id, table_id, status, opened_at, closed_at, customer_id, version FROM orders WHERE id = $1 FOR UPDATE",
+        [orderId],
+      );
+      const order = existing.rows[0];
+      if (!order) {
+        await client.query("COMMIT");
+        return;
+      }
+      if (order.version !== expectedVersion) {
+        throw new ConflictError<Order>(
+          `Order ${orderId} version conflict: expected ${expectedVersion}, stored ${order.version}`,
+          mapOrder(order, await selectItems(client, orderId)),
+        );
+      }
+      const items = await selectItems(client, orderId);
+      if (items.length > 0) throw new Error(`Order ${orderId} is not empty`);
+      const payments = await client.query(
+        "SELECT 1 FROM payments WHERE ticket_id IN (SELECT id FROM tickets WHERE order_id = $1) LIMIT 1",
+        [orderId],
+      );
+      if (payments.rows.length > 0) throw new Error(`Order ${orderId} has payments and cannot be removed`);
+
+      await client.query("UPDATE restaurant_tables SET status = 'free', current_order_id = NULL, version = version + 1 WHERE current_order_id = $1", [orderId]);
+      await client.query("DELETE FROM account_line_allocations WHERE account_id IN (SELECT id FROM personal_accounts WHERE order_id = $1)", [orderId]);
+      await client.query("DELETE FROM personal_accounts WHERE order_id = $1", [orderId]);
+      await client.query("DELETE FROM allocations WHERE ticket_id IN (SELECT id FROM tickets WHERE order_id = $1)", [orderId]);
+      await client.query("DELETE FROM tickets WHERE order_id = $1", [orderId]);
+      await client.query("DELETE FROM orders WHERE id = $1", [orderId]);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 async function insertLineItem(client: PoolClient, item: LineItem): Promise<void> {

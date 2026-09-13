@@ -16,4 +16,6 @@ export interface TableRepository {
   findById(id: string): Promise<Table | null>;
   /** Throws ConflictError<Table> if the stored version !== expectedVersion. */
   save(table: Table, expectedVersion: number): Promise<Table>;
+  /** Removes a table only when it is free and has no active order. */
+  deleteFree(tableId: string, expectedVersion: number): Promise<void>;
 }

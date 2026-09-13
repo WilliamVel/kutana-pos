@@ -18,7 +18,6 @@ const STATUS_MAP: Record<DomainOrderStatus, OrderStatus> = {
 
 function isActiveVisibleOrder(order: Order): boolean {
   return (
-    order.lineItems.length > 0 &&
     order.status !== "paid" &&
     order.status !== "closed_with_pending"
   );
@@ -39,6 +38,7 @@ function toRow(table: Table, order: Order | null): OrdersOverviewRow | null {
 export interface OrdersOverviewContainerProps {
   readonly selectedTableId: string | null;
   readonly onSelectTable: (tableId: string) => void;
+  readonly onOrderRemoved?: () => void;
   /**
    * Bump this to force a full table-list + rows reload. The `OrderEvents`
    * subscription is keyed by each table's `currentOrderId` captured at load
@@ -58,6 +58,7 @@ export interface OrdersOverviewContainerProps {
 export function OrdersOverviewContainer({
   selectedTableId,
   onSelectTable,
+  onOrderRemoved,
   reloadKey = 0,
 }: OrdersOverviewContainerProps): JSX.Element {
   const tables = useTables();
@@ -96,6 +97,23 @@ export function OrdersOverviewContainer({
     };
   }, [tables, refreshTable, reloadKey]);
 
+  async function removeEmptyOrder(tableId: string): Promise<void> {
+    const table = await tables.findById(tableId);
+    const order = await orders.findByTable(tableId);
+    if (!table || !order || order.lineItems.length > 0) return;
+
+    await orders.deleteEmpty(order.id, order.version);
+    // The HTTP adapter frees the table atomically with the order deletion.
+    // The mock adapter only removes the order, so keep this fallback for it
+    // without attempting a stale table update against PostgreSQL.
+    const updatedTable = await tables.findById(tableId);
+    if (updatedTable?.currentOrderId === order.id) {
+      await tables.save({ ...updatedTable, status: "free", currentOrderId: null }, updatedTable.version);
+    }
+    setRows((current) => current.filter((row) => row.tableId !== tableId));
+    onOrderRemoved?.();
+  }
+
   useEffect(() => {
     const unsubscribes = tableList.map((table) => {
       // The mock OrderEvents port is keyed by orderId, but a table's order
@@ -120,6 +138,7 @@ export function OrdersOverviewContainer({
       rows={rows.sort((a, b) => a.tableLabel.localeCompare(b.tableLabel))}
       selectedTableId={selectedTableId}
       onSelectTable={onSelectTable}
+      onRemoveEmptyOrder={(tableId) => void removeEmptyOrder(tableId)}
     />
   );
 }

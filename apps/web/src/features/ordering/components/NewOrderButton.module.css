@@ -24,7 +24,14 @@
   list-style: none;
 }
 
+.tableOption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .tableButton {
+  flex: 1;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
@@ -36,6 +43,24 @@
 
 .tableButton:hover {
   border-color: var(--border-strong);
+}
+
+.removeButton {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.removeButton:hover,
+.removeButton:focus-visible {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
 }
 
 .createForm {

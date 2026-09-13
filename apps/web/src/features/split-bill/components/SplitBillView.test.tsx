@@ -8,6 +8,7 @@ import {
 
 const LINE: AccountAssignmentLine = {
   id: "line-a",
+  lineItemIds: ["line-a"],
   name: "KUTANA Pilsener 500ml",
   quantity: 2,
   unitPriceCents: 350,
@@ -147,7 +148,7 @@ describe("SplitBillView", () => {
       "Elegí quién necesita una cuenta propia antes de asignar productos.",
     );
     expect(screen.getByRole("region", { name: "Asignar productos" })).toHaveTextContent(
-      "Elegí una cuenta y sumale los productos pendientes desde la lista.",
+      "Seleccioná una cuenta y asignale cantidades. Si repetís un producto, la cantidad se acumula.",
     );
     expect(screen.getByRole("region", { name: "Productos pendientes" })).toHaveTextContent(
       "KUTANA Pilsener 500ml",

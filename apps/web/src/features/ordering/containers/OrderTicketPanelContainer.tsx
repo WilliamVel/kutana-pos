@@ -5,8 +5,9 @@ import type {
   OrderStatus as DomainOrderStatus,
 } from "@kutana/shared/ordering/model/order.js";
 import type { Table } from "@kutana/shared/ordering/model/table.js";
+import type { AccountLineAllocation, PersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
 import { removeLineItem } from "@kutana/shared/ordering/services/line-item-service.js";
-import { useOrderEvents, useOrders, useTables } from "../../../composition/PortsProvider.js";
+import { useOrderEvents, useOrders, usePersonalAccounts, useTables } from "../../../composition/PortsProvider.js";
 import { OrderTicketPanel, type OrderTicketPanelLine } from "../components/OrderTicketPanel.js";
 import type { OrderStatus } from "../../../design-system/molecules/StatusPill.js";
 
@@ -31,7 +32,10 @@ function lineGroupKey(line: LineItem): string {
   ].join("|");
 }
 
-function aggregateLines(lines: readonly LineItem[]): OrderTicketPanelLine[] {
+function aggregateLines(
+  lines: readonly LineItem[],
+  paidLineItemIds: ReadonlySet<string> = new Set(),
+): OrderTicketPanelLine[] {
   const groups = new Map<string, OrderTicketPanelLine>();
 
   for (const line of lines) {
@@ -44,6 +48,7 @@ function aggregateLines(lines: readonly LineItem[]): OrderTicketPanelLine[] {
         id: line.id,
         quantity: existing.quantity + line.quantity,
         totalCents: existing.totalCents + line.totalCents,
+        paymentStatus: existing.paymentStatus === "paid" && paidLineItemIds.has(line.id) ? "paid" : undefined,
       });
       continue;
     }
@@ -56,6 +61,7 @@ function aggregateLines(lines: readonly LineItem[]): OrderTicketPanelLine[] {
       totalCents: line.totalCents,
       pourSizeMl: line.pourSizeMl as OrderTicketPanelLine["pourSizeMl"],
       isAdjustment: line.isAdjustment,
+      paymentStatus: paidLineItemIds.has(line.id) ? "paid" : undefined,
     });
   }
 
@@ -77,10 +83,13 @@ export function OrderTicketPanelContainer({
 }: OrderTicketPanelContainerProps): JSX.Element | null {
   const tables = useTables();
   const orders = useOrders();
+  const personalAccounts = usePersonalAccounts();
   const events = useOrderEvents();
 
   const [table, setTable] = useState<Table | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
+  const [accounts, setAccounts] = useState<PersonalAccount[]>([]);
+  const [accountAllocations, setAccountAllocations] = useState<AccountLineAllocation[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,13 +101,25 @@ export function OrderTicketPanelContainer({
       const foundOrder = await orders.findByTable(tableId);
       if (cancelled) return;
       setOrder(foundOrder);
+      if (!foundOrder) {
+        setAccounts([]);
+        setAccountAllocations([]);
+        return;
+      }
+      const [foundAccounts, foundAllocations] = await Promise.all([
+        personalAccounts.listByOrder(foundOrder.id),
+        personalAccounts.listAllocationsByOrder(foundOrder.id),
+      ]);
+      if (cancelled) return;
+      setAccounts(foundAccounts);
+      setAccountAllocations(foundAllocations);
     }
 
     void load();
     return () => {
       cancelled = true;
     };
-  }, [tableId, tables, orders]);
+  }, [tableId, tables, orders, personalAccounts]);
 
   useEffect(() => {
     if (!order) return;
@@ -157,7 +178,18 @@ export function OrderTicketPanelContainer({
 
   if (!table || !order) return null;
 
-  const lines = aggregateLines(order.lineItems);
+  const paidAccountIds = new Set(accounts.filter((account) => account.status === "paid").map((account) => account.id));
+  const paidLineItemIds = new Set(
+    order.lineItems
+      .filter((line) => {
+        const paidQuantity = accountAllocations
+          .filter((allocation) => allocation.lineItemId === line.id && paidAccountIds.has(allocation.accountId))
+          .reduce((sum, allocation) => sum + allocation.quantity, 0);
+        return paidQuantity >= line.quantity;
+      })
+      .map((line) => line.id),
+  );
+  const lines = aggregateLines(order.lineItems, paidLineItemIds);
   const subtotalCents = order.lineItems.reduce(
     (sum, line) => sum + line.unitPriceCents * line.quantity,
     0,

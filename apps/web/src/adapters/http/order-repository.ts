@@ -25,4 +25,11 @@ export class HttpOrderRepository implements OrderRepository {
       body: { order, expectedVersion },
     });
   }
+
+  deleteEmpty(orderId: string, expectedVersion: number): Promise<void> {
+    return this.http.request<void>(`/ordering/orders/${encodePathSegment(orderId)}`, {
+      method: "DELETE",
+      query: { expectedVersion },
+    });
+  }
 }

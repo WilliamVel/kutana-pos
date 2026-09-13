@@ -11,6 +11,7 @@ interface OrderRow { id: string; table_id: string; status: "active" | "needs_che
 interface LineRow { id: string; order_id: string; product_id: string; name_snapshot: string; unit_price_cents: number; quantity: string | number; tax_cents: number; total_cents: number; created_at: Date | string; }
 interface AccountRow { id: string; order_id: string; customer_id: string | null; free_name: string | null; status: PersonalAccount["status"]; created_at: Date | string; closed_at: Date | string | null; version: number; }
 interface AllocationRow { id: string; account_id: string; line_item_id: string; quantity: string | number; }
+interface TicketAllocationRow { id: string; ticket_id: string; line_item_id: string; share_bp: number; }
 interface PaymentRow { id: string; account_id: string | null; customer_id: string | null; ticket_id: string | null; method_code: string; amount_cents: number; tendered_cents: number | null; change_cents: number | null; recorded_at: Date | string; }
 interface SaleRow { id: string; public_uuid: string; order_id: string; completed_at: Date | string; currency_code: "USD"; subtotal_cents: number; tax_total_cents: number; discount_total_cents: number; total_cents: number; paid_cents: number; pending_cents: number; status: "paid" | "pending"; table_id: string | null; opened_at: Date | string | null; closed_at: Date | string; closed_by_user_id: string | null; customer_id: string | null; }
 const iso = (value: Date | string): string => value instanceof Date ? value.toISOString() : new Date(value).toISOString();
@@ -41,6 +42,10 @@ export class PaymentClosureService {
       const allocations = (await client.query<AllocationRow>("SELECT a.id, a.account_id, a.line_item_id, a.quantity FROM account_line_allocations a INNER JOIN personal_accounts p ON p.id = a.account_id WHERE p.order_id = $1 ORDER BY a.line_item_id, a.id FOR UPDATE", [orderId])).rows;
       const accountIds = accounts.map((account) => account.id);
       await client.query("SELECT id FROM tickets WHERE order_id = $1 FOR UPDATE", [orderId]);
+      const ticketAllocations = (await client.query<TicketAllocationRow>(
+        "SELECT id, ticket_id, line_item_id, share_bp FROM allocations WHERE ticket_id IN (SELECT id FROM tickets WHERE order_id = $1) ORDER BY line_item_id, id",
+        [orderId],
+      )).rows;
       const payments = (await client.query<PaymentRow>(
         "SELECT id, account_id, customer_id, ticket_id, method_code, amount_cents, tendered_cents, change_cents, recorded_at FROM payments WHERE account_id = ANY($1::text[]) OR ticket_id IN (SELECT id FROM tickets WHERE order_id = $2) ORDER BY recorded_at, id FOR UPDATE",
         [accountIds, orderId],
@@ -48,7 +53,20 @@ export class PaymentClosureService {
 
       const domainOrder = { id: row.id, tableId: row.table_id, status: row.status, lineItems: lines.map((line) => ({ id: line.id, orderId: line.order_id, productId: line.product_id, nameSnapshot: line.name_snapshot, unitPriceCents: line.unit_price_cents, quantity: Number(line.quantity), pourSizeMl: null, taxRateBp: 0, taxCents: line.tax_cents, totalCents: line.total_cents, isAdjustment: false, createdAt: iso(line.created_at) })), openedAt: iso(row.opened_at), closedAt: row.closed_at ? iso(row.closed_at) : null, customerId: row.customer_id, version: row.version };
       const domainAccounts: PersonalAccount[] = accounts.map((account) => ({ id: account.id, orderId: account.order_id, owner: account.customer_id ? { kind: "customer", customerId: account.customer_id } : { kind: "free_name", freeName: account.free_name ?? "" }, status: account.status, createdAt: iso(account.created_at), closedAt: account.closed_at ? iso(account.closed_at) : null, version: account.version }));
-      const closure = closeOrderWithPersonalAccounts({ order: domainOrder, accounts: domainAccounts, allocations: allocations.map((a) => ({ id: a.id, accountId: a.account_id, lineItemId: a.line_item_id, quantity: Number(a.quantity) })), payments: payments.filter((p) => p.account_id !== null).map((p) => ({ accountId: p.account_id!, amountCents: p.amount_cents })) });
+      const accountAllocatedLineItemIds = new Set(allocations.map((allocation) => allocation.line_item_id));
+      const closure = closeOrderWithPersonalAccounts({
+        order: domainOrder,
+        accounts: domainAccounts,
+        allocations: [
+          ...allocations.map((a) => ({ id: a.id, accountId: a.account_id, lineItemId: a.line_item_id, quantity: Number(a.quantity) })),
+          // Account allocations supersede the legacy ticket allocation for a
+          // line; counting both would make a paid split look over-assigned.
+          ...ticketAllocations
+            .filter((a) => !accountAllocatedLineItemIds.has(a.line_item_id))
+            .map((a) => ({ id: a.id, accountId: `ticket:${a.ticket_id}`, lineItemId: a.line_item_id, quantity: a.share_bp / 10_000 })),
+        ],
+        payments: payments.filter((p) => p.account_id !== null).map((p) => ({ accountId: p.account_id!, amountCents: p.amount_cents })),
+      });
       if (closure.kind !== "closed") throw new ConflictException(`Order ${orderId} requires review before closure`);
 
       const closedAt = closure.order.closedAt!;

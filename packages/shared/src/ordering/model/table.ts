@@ -1,5 +1,5 @@
 import { createUuid } from "../../platform/uuid.js";
-export type TableStatus = "free" | "active" | "needs_check" | "paid";
+export type TableStatus = "free" | "active" | "needs_check" | "paid" | "retired";
 
 export interface Table {
   readonly id: string;

@@ -41,4 +41,19 @@ export class MockOrderRepository implements OrderRepository {
       return next;
     });
   }
+
+  async deleteEmpty(orderId: string, expectedVersion: number): Promise<void> {
+    return simulateLatency(() => {
+      const stored = [...this.ordersByTable.values()].find((order) => order.id === orderId);
+      if (!stored) return;
+      if (stored.version !== expectedVersion) {
+        throw new ConflictError<Order>(
+          `Order ${orderId} version conflict: expected ${expectedVersion}, stored ${stored.version}`,
+          stored,
+        );
+      }
+      if (stored.lineItems.length > 0) throw new Error(`Order ${orderId} is not empty`);
+      this.ordersByTable.delete(stored.tableId);
+    });
+  }
 }

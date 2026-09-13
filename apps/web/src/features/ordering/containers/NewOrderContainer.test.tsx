@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { createTable } from "@kutana/shared/ordering/model/table.js";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../../composition/mock.js";
 import { NewOrderContainer } from "./NewOrderContainer.js";
@@ -44,6 +45,24 @@ describe("NewOrderContainer", () => {
 
     // The table is no longer offered once occupied.
     await waitFor(() => expect(screen.queryByText("Table 4")).not.toBeInTheDocument());
+  });
+
+  it("restores a retired table when creating the same name again", async () => {
+    const ports = buildMockPorts();
+    const retired = await ports.tables.save({ ...createTable({ id: "retired-bar", label: "Barra" }), status: "retired" }, 0);
+    const onCreated = vi.fn();
+    render(
+      <PortsProvider value={ports}>
+        <NewOrderContainer onCreated={onCreated} />
+      </PortsProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Nueva orden" }));
+    fireEvent.change(screen.getByLabelText("Nombre de mesa"), { target: { value: " barra " } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear mesa" }));
+
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(retired.id));
+    expect((await ports.tables.findById(retired.id))?.status).toBe("active");
   });
 
   it("creates a new table on demand before opening its order", async () => {

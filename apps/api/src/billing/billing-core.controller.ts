@@ -21,7 +21,7 @@ import type {
 import type { Ticket } from "@kutana/shared/billing/model/ticket.js";
 import type { Sale } from "@kutana/shared/billing/model/sale.js";
 import type { TokenPayload } from "../auth/auth.service.js";
-    import { RequireRole } from "../auth/roles.decorator.js";
+import { RequireRole } from "../auth/roles.decorator.js";
 import { PaymentClosureService } from "./payment-closure.service.js";
 import {
   SalesAnalyticsService,
@@ -64,28 +64,28 @@ export class BillingCoreController {
   ) {}
 
   @RequireRole("admin")
-      @Get("analytics/daily-sales")
+  @Get("analytics/daily-sales")
   dailySales(@Query() query: AnalyticsDateQuery): Promise<DailySalesTotal[]> {
     if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
     return this.salesAnalytics.dailySales(query);
   }
 
   @RequireRole("admin")
-      @Get("analytics/product-mix")
+  @Get("analytics/product-mix")
   productMix(@Query() query: AnalyticsDateQuery): Promise<ProductMixRow[]> {
     if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
     return this.salesAnalytics.productMix(query);
   }
 
   @RequireRole("admin")
-      @Get("analytics/payment-mix")
+  @Get("analytics/payment-mix")
   paymentMix(@Query() query: AnalyticsDateQuery): Promise<PaymentMixRow[]> {
     if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
     return this.salesAnalytics.paymentMix(query);
   }
 
   @RequireRole("admin")
-      @Get("analytics/pending-exposure")
+  @Get("analytics/pending-exposure")
   pendingExposure(@Query() query: AnalyticsDateQuery): Promise<PendingExposureRow[]> {
     if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
     return this.salesAnalytics.pendingExposure(query);
@@ -179,6 +179,22 @@ export class BillingCoreController {
       body.allocations,
       body.expectedVersion,
     );
+  }
+
+  @Delete("personal-accounts/:id/allocations/:allocationId")
+  removePersonalAccountAllocation(
+    @Param("id") id: string,
+    @Param("allocationId") allocationId: string,
+    @Query("expectedVersion") expectedVersion?: string,
+  ): Promise<PersonalAccount> {
+    if (!expectedVersion?.trim()) {
+      throw new BadRequestException("expectedVersion query parameter must be an integer");
+    }
+    const parsedExpectedVersion = Number(expectedVersion);
+    if (!Number.isInteger(parsedExpectedVersion)) {
+      throw new BadRequestException("expectedVersion query parameter must be an integer");
+    }
+    return this.personalAccounts.removeAllocation(id, allocationId, parsedExpectedVersion);
   }
 
   @Delete("personal-accounts/:id")

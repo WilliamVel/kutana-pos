@@ -17,6 +17,7 @@ export interface OrdersOverviewProps {
   readonly rows: readonly OrdersOverviewRow[];
   readonly selectedTableId: string | null;
   readonly onSelectTable: (tableId: string) => void;
+  readonly onRemoveEmptyOrder?: (tableId: string) => void;
 }
 
 /**
@@ -29,6 +30,7 @@ export function OrdersOverview({
   rows,
   selectedTableId,
   onSelectTable,
+  onRemoveEmptyOrder = () => {},
 }: OrdersOverviewProps): JSX.Element {
   if (rows.length === 0) {
     return <p className={styles.empty}>No hay órdenes abiertas.</p>;
@@ -37,20 +39,31 @@ export function OrdersOverview({
   return (
     <div className={styles.list}>
       {rows.map((row) => (
-        <button
-          key={row.tableId}
-          type="button"
-          className={styles.row}
-          aria-pressed={row.tableId === selectedTableId}
-          onClick={() => onSelectTable(row.tableId)}
-        >
-          <span>
-            <strong>{row.tableLabel}</strong>
-            <div className={styles.meta}>{row.itemCount} productos</div>
-          </span>
-          <StatusPill status={row.status} />
-          <PriceTag cents={row.totalCents} />
-        </button>
+        <div key={row.tableId} className={styles.row} data-selected={row.tableId === selectedTableId}>
+          <button
+            type="button"
+            className={styles.rowMain}
+            aria-pressed={row.tableId === selectedTableId}
+            onClick={() => onSelectTable(row.tableId)}
+          >
+            <span>
+              <strong>{row.tableLabel}</strong>
+              <span className={styles.meta}>{row.itemCount} productos</span>
+            </span>
+            <StatusPill status={row.status} />
+            <PriceTag cents={row.totalCents} />
+          </button>
+          {row.itemCount === 0 ? (
+            <button
+              type="button"
+              className={styles.removeButton}
+              aria-label={`Eliminar orden vacía de ${row.tableLabel}`}
+              onClick={() => onRemoveEmptyOrder(row.tableId)}
+            >
+              ×
+            </button>
+          ) : null}
+        </div>
       ))}
     </div>
   );

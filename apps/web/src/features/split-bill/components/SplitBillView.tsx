@@ -12,11 +12,18 @@ import styles from "./SplitBillView.module.css";
 
 export interface AccountAssignmentLine {
   readonly id: string;
+  readonly lineItemIds: readonly string[];
   readonly name: string;
   readonly quantity: number;
   readonly unitPriceCents: number;
   readonly totalCents: number;
   readonly unassignedQuantity: number;
+}
+
+export interface AssignedAccountLine {
+  readonly allocationIds: readonly string[];
+  readonly name: string;
+  readonly quantity: number;
 }
 
 export interface AccountAssignmentAccount {
@@ -27,6 +34,7 @@ export interface AccountAssignmentAccount {
   readonly totalCents: number;
   readonly paidCents: number;
   readonly remainingCents: number;
+  readonly assignedLines?: readonly AssignedAccountLine[];
 }
 
 export interface AccountAllocationDraft {
@@ -54,6 +62,7 @@ export interface SplitBillViewProps {
   readonly onPayAccount: (accountId: string) => void;
   readonly onMarkPending: (accountId: string) => void;
   readonly onDeleteAccount: (accountId: string) => void;
+  readonly onRemoveAllocation?: (accountId: string, allocationIds: readonly string[]) => void;
   readonly onAttemptClose: () => void;
 }
 
@@ -108,6 +117,7 @@ export function SplitBillView({
   onPayAccount,
   onMarkPending,
   onDeleteAccount,
+  onRemoveAllocation,
   onAttemptClose,
 }: SplitBillViewProps): JSX.Element {
   const selectedAccount =
@@ -186,7 +196,7 @@ export function SplitBillView({
         <SectionHeader
           label="Paso 2"
           title="Asignar productos"
-          description="Elegí una cuenta y sumale los productos pendientes desde la lista."
+          description="Seleccioná una cuenta y asignale cantidades. Si repetís un producto, la cantidad se acumula."
         />
         {lines.length === 0 ? (
           <div role="alert" className={styles.review}>
@@ -361,6 +371,44 @@ export function SplitBillView({
                   </dd>
                 </div>
               </dl>
+              <section
+                className={styles.assignedProducts}
+                aria-label={`Productos asignados a ${account.ownerLabel}`}
+              >
+                <div className={styles.assignedProductsHeader}>
+                  <h4>Productos asignados</h4>
+                  <span>{account.assignedLines?.length ?? 0}</span>
+                </div>
+                {account.assignedLines && account.assignedLines.length > 0 ? (
+                  <ul className={styles.assignedProductsList}>
+                    {account.assignedLines.map((assignedLine) => (
+                      <li key={assignedLine.allocationIds.join("-")}>
+                        <span>
+                          <strong>{assignedLine.name}</strong>
+                          <small>{assignedLine.quantity} unidad(es)</small>
+                        </span>
+                        <Button
+                          variant="secondary"
+                          onClick={() =>
+                            onRemoveAllocation?.(account.id, assignedLine.allocationIds)
+                          }
+                          disabled={
+                            disabled ||
+                            account.paidCents > 0 ||
+                            account.status === "pending" ||
+                            account.status === "paid"
+                          }
+                          aria-label={`Quitar ${assignedLine.name} de la cuenta de ${account.ownerLabel}`}
+                        >
+                          Quitar producto
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className={styles.noAssignedProducts}>Todavía no hay productos asignados.</p>
+                )}
+              </section>
               <div className={styles.accountActions}>
                 <ButtonRow className={styles.accountActionsRow}>
                   <Button

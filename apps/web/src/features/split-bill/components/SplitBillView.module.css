@@ -211,6 +211,21 @@
   color: var(--text-secondary);
 }
 
+.selectedAccountPanel .balanceGrid {
+  grid-template-columns: 1fr;
+}
+
+.selectedAccountPanel .balanceGrid div {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.selectedAccountPanel .balanceGrid dd {
+  text-align: right;
+}
+
 .accountPicker {
   display: flex;
   flex-direction: column;
@@ -322,6 +337,93 @@
   min-width: 0;
 }
 
+.assignedProducts {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.assignedProductsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.assignedProductsHeader h4 {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.assignedProductsHeader > span {
+  display: inline-flex;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.assignedProductsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assignedProductsList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+
+.assignedProductsList li > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.assignedProductsList strong,
+.assignedProductsList small {
+  overflow-wrap: anywhere;
+}
+
+.assignedProductsList small,
+.noAssignedProducts {
+  color: var(--text-secondary);
+}
+
+.assignedProductsList button {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.875rem;
+}
+
+.noAssignedProducts {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
 /* Actions get their own full-width line so the labels never wrap or clip. */
 .accountActions {
   grid-column: 1 / -1;
@@ -346,13 +448,14 @@
 .balanceGrid {
   display: grid;
   min-width: 0;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(7rem, 100%), 1fr));
   gap: var(--space-2);
   margin: 0;
 }
 
 .balanceGrid div {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
@@ -369,7 +472,9 @@
 }
 
 .balanceGrid dd {
+  min-width: 0;
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .emptyState {

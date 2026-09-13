@@ -27,12 +27,14 @@ interface AccountLineAllocationRow {
   quantity: string | number;
 }
 
-const accountColumns = "id, order_id, customer_id, free_name, status, created_at, closed_at, version";
+const accountColumns =
+  "id, order_id, customer_id, free_name, status, created_at, closed_at, version";
 
 const iso = (value: Date | string): string =>
   value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 
-const nullableIso = (value: Date | string | null): string | null => (value === null ? null : iso(value));
+const nullableIso = (value: Date | string | null): string | null =>
+  value === null ? null : iso(value);
 
 const mapOwner = (row: PersonalAccountRow): PersonalAccountOwner =>
   row.customer_id !== null
@@ -168,6 +170,43 @@ export class PostgresPersonalAccountRepository implements PersonalAccountReposit
       await upsertAllocations(client, allocations);
       await client.query("COMMIT");
       return mapAccount(saved);
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async removeAllocation(
+    accountId: string,
+    allocationId: string,
+    expectedVersion: number,
+  ): Promise<PersonalAccount> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const existing = await client.query<PersonalAccountRow>(
+        `SELECT ${accountColumns} FROM personal_accounts WHERE id = $1 FOR UPDATE`,
+        [accountId],
+      );
+      if (!existing.rows[0]) throw new Error(`PersonalAccount ${accountId} not found`);
+      if (existing.rows[0].version !== expectedVersion) {
+        throw new ConflictError<PersonalAccount>(
+          `PersonalAccount ${accountId} version conflict: expected ${expectedVersion}, stored ${existing.rows[0].version}`,
+          mapAccount(existing.rows[0]),
+        );
+      }
+      await client.query(`DELETE FROM account_line_allocations WHERE id = $1 AND account_id = $2`, [
+        allocationId,
+        accountId,
+      ]);
+      const result = await client.query<PersonalAccountRow>(
+        `UPDATE personal_accounts SET version = version + 1 WHERE id = $1 RETURNING ${accountColumns}`,
+        [accountId],
+      );
+      await client.query("COMMIT");
+      return mapAccount(result.rows[0]!);
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;

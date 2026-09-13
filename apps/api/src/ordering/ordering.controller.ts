@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Put, Query, Sse } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Put, Query, Sse } from "@nestjs/common";
 import type { Order } from "@kutana/shared/ordering/model/order.js";
 import type { Table } from "@kutana/shared/ordering/model/table.js";
 import type { Observable } from "rxjs";
@@ -40,6 +40,14 @@ export class OrderingController {
     return this.tables.save({ ...body.table, id }, body.expectedVersion);
   }
 
+  @Delete("tables/:id")
+  deleteFreeTable(@Param("id") id: string, @Query("expectedVersion") expectedVersion?: string): Promise<void> {
+    if (!expectedVersion?.trim() || !Number.isInteger(Number(expectedVersion))) {
+      throw new Error("expectedVersion query parameter must be an integer");
+    }
+    return this.tables.deleteFree(id, Number(expectedVersion));
+  }
+
   @Get("orders")
   listOrders(@Query("tableId") tableId?: string): Promise<Order[] | Order | null> {
     if (tableId) {
@@ -64,6 +72,17 @@ export class OrderingController {
     });
 
     return savedOrder;
+  }
+
+  @Delete("orders/:id")
+  async deleteEmptyOrder(
+    @Param("id") id: string,
+    @Query("expectedVersion") expectedVersion?: string,
+  ): Promise<void> {
+    if (!expectedVersion?.trim() || !Number.isInteger(Number(expectedVersion))) {
+      throw new Error("expectedVersion query parameter must be an integer");
+    }
+    await this.orders.deleteEmpty(id, Number(expectedVersion));
   }
 
   @Sse("orders/:id/events")

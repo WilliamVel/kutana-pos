@@ -37,4 +37,17 @@ export class MockTableRepository implements TableRepository {
       return next;
     });
   }
+
+  async deleteFree(tableId: string, expectedVersion: number): Promise<void> {
+    return simulateLatency(() => {
+      const stored = this.tablesById.get(tableId);
+      if (!stored || stored.version !== expectedVersion) {
+        throw new Error(`Table ${tableId} version conflict`);
+      }
+      if (stored.status !== "free" || stored.currentOrderId) {
+        throw new Error(`Table ${tableId} is not free`);
+      }
+      this.tablesById.set(tableId, { ...stored, status: "retired", version: stored.version + 1 });
+    });
+  }
 }

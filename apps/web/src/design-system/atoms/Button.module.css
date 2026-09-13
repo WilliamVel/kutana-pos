@@ -7,25 +7,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: none;
+  min-height: 3rem;
+  padding: 0.625rem 1rem;
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
+  /* The primary pairing requires bold large-text sizing for WCAG AA. */
+  font-size: 1.1875rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  touch-action: manipulation;
   transition:
     filter 120ms ease,
     box-shadow 120ms ease,
     transform 120ms ease;
-  /*
-   * Font size/weight are load-bearing for accessibility: the primary
-   * variant's fg/bg pairing (--action-primary-fg on --action-primary-bg)
-   * measures ~3.4:1, which only clears WCAG AA at the "large text"
-   * threshold. WCAG defines that threshold as 14pt bold = 18.66px, so
-   * 18px bold would NOT qualify — this is set to 20px to clear it with
-   * margin. Never shrink this below 18.66px without also switching to
-   * the secondary variant's pairing (~13.8:1, safe at any size).
-   */
-  font-size: 1.25rem;
-  font-weight: 700;
-  padding: 0.75rem 1.5rem;
 }
 
 .button:hover:not(:disabled) {
@@ -50,11 +45,16 @@
 }
 
 .primary {
+  /* Keep the terracotta pairing at the WCAG large-text threshold. */
+  min-height: 3.125rem;
+  font-size: 1.1875rem;
   background-color: var(--action-primary-bg);
   color: var(--text-on-action);
+  box-shadow: var(--shadow-sm);
 }
 
 .secondary {
   background-color: var(--action-secondary-bg);
   color: var(--text-on-action);
+  font-size: 1rem;
 }

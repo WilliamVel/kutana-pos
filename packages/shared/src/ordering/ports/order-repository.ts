@@ -12,4 +12,6 @@ export interface OrderRepository {
   listAll(): Promise<Order[]>;
   /** Throws ConflictError<Order> if the stored version !== expectedVersion. */
   save(order: Order, expectedVersion: number): Promise<Order>;
+  /** Removes an order only when it is empty; throws on version or payment conflicts. */
+  deleteEmpty(orderId: string, expectedVersion: number): Promise<void>;
 }

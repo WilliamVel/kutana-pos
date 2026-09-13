@@ -13,7 +13,9 @@ export class HttpPersonalAccountRepository implements PersonalAccountRepository 
   }
 
   findById(id: string): Promise<PersonalAccount | null> {
-    return this.http.request<PersonalAccount | null>(`/billing/personal-accounts/${encodePathSegment(id)}`);
+    return this.http.request<PersonalAccount | null>(
+      `/billing/personal-accounts/${encodePathSegment(id)}`,
+    );
   }
 
   listByOrder(orderId: string): Promise<PersonalAccount[]> {
@@ -37,10 +39,13 @@ export class HttpPersonalAccountRepository implements PersonalAccountRepository 
     allocations: readonly AccountLineAllocation[],
     expectedVersion: number,
   ): Promise<PersonalAccount> {
-    return this.http.request<PersonalAccount>(`/billing/personal-accounts/${encodePathSegment(account.id)}`, {
-      method: "PUT",
-      body: { account, allocations, expectedVersion },
-    });
+    return this.http.request<PersonalAccount>(
+      `/billing/personal-accounts/${encodePathSegment(account.id)}`,
+      {
+        method: "PUT",
+        body: { account, allocations, expectedVersion },
+      },
+    );
   }
 
   async delete(id: string, expectedVersion: number): Promise<void> {
@@ -48,5 +53,16 @@ export class HttpPersonalAccountRepository implements PersonalAccountRepository 
       method: "DELETE",
       query: { expectedVersion },
     });
+  }
+
+  removeAllocation(
+    accountId: string,
+    allocationId: string,
+    expectedVersion: number,
+  ): Promise<PersonalAccount> {
+    return this.http.request<PersonalAccount>(
+      `/billing/personal-accounts/${encodePathSegment(accountId)}/allocations/${encodePathSegment(allocationId)}`,
+      { method: "DELETE", query: { expectedVersion } },
+    );
   }
 }

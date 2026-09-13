@@ -42,6 +42,15 @@
   font-size: 0.8125rem;
 }
 
+.statusLabel {
+  padding: 0.15rem 0.4rem;
+  border-radius: var(--radius-sm);
+  background: var(--order-paid-bg);
+  color: var(--order-paid-fg);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
 .adjustmentLabel {
   color: var(--text-secondary);
   font-size: 0.8125rem;

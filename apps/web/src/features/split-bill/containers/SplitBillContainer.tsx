@@ -34,6 +34,7 @@ import {
   type AccountAllocationDraft,
   type AccountAssignmentAccount,
   type AccountAssignmentLine,
+  type AssignedAccountLine,
 } from "../components/SplitBillView.js";
 import styles from "./SplitBillContainer.module.css";
 
@@ -59,19 +60,42 @@ function toLines(
   order: Order,
   allocations: readonly AccountLineAllocation[],
 ): AccountAssignmentLine[] {
-  return order.lineItems.map((line) => {
+  const grouped = new Map<string, AccountAssignmentLine>();
+
+  for (const line of order.lineItems) {
+    const key = [
+      line.productId,
+      line.nameSnapshot,
+      line.unitPriceCents,
+      line.pourSizeMl ?? "",
+      line.taxRateBp,
+    ].join("|");
     const assigned = allocations
       .filter((allocation) => allocation.lineItemId === line.id)
       .reduce((sum, allocation) => sum + allocation.quantity, 0);
-    return {
-      id: line.id,
-      name: line.nameSnapshot,
-      quantity: line.quantity,
-      unitPriceCents: line.unitPriceCents,
-      totalCents: line.totalCents,
-      unassignedQuantity: line.quantity - assigned,
-    };
-  });
+    const existing = grouped.get(key);
+    if (existing) {
+      grouped.set(key, {
+        ...existing,
+        lineItemIds: [...existing.lineItemIds, line.id],
+        quantity: existing.quantity + line.quantity,
+        totalCents: existing.totalCents + line.totalCents,
+        unassignedQuantity: existing.unassignedQuantity + line.quantity - assigned,
+      });
+    } else {
+      grouped.set(key, {
+        id: line.id,
+        lineItemIds: [line.id],
+        name: line.nameSnapshot,
+        quantity: line.quantity,
+        unitPriceCents: line.unitPriceCents,
+        totalCents: line.totalCents,
+        unassignedQuantity: line.quantity - assigned,
+      });
+    }
+  }
+
+  return [...grouped.values()];
 }
 
 function toAccountPayments(payments: readonly AccountPaymentCache[]): AccountPaymentAmount[] {
@@ -171,6 +195,31 @@ export function SplitBillContainer({
   if (!table || !order) return null;
 
   const accountRows: AccountAssignmentAccount[] = accounts.map((account) => {
+    const assignedLinesByProduct = new Map<string, AssignedAccountLine>();
+    for (const allocation of allocations.filter(
+      (candidate) => candidate.accountId === account.id,
+    )) {
+      const line = order.lineItems.find((candidate) => candidate.id === allocation.lineItemId);
+      const name = line?.nameSnapshot ?? allocation.lineItemId;
+      const key = [
+        line?.productId ?? allocation.lineItemId,
+        name,
+        line?.unitPriceCents ?? "",
+        line?.taxRateBp ?? "",
+      ].join("|");
+      const existing = assignedLinesByProduct.get(key);
+      assignedLinesByProduct.set(
+        key,
+        existing
+          ? {
+              ...existing,
+              allocationIds: [...existing.allocationIds, allocation.id],
+              quantity: existing.quantity + allocation.quantity,
+            }
+          : { allocationIds: [allocation.id], name, quantity: allocation.quantity },
+      );
+    }
+    const assignedLines = [...assignedLinesByProduct.values()];
     const balance = accountBalance({
       accountId: account.id,
       lineItems: order.lineItems,
@@ -183,6 +232,7 @@ export function SplitBillContainer({
       owner: account.owner,
       status: account.status,
       ownerLabel: ownerLabel(account, customers),
+      assignedLines,
     };
   });
 
@@ -205,15 +255,36 @@ export function SplitBillContainer({
   const assignQuantity = (draft = allocationDraft): void => {
     void runMutation(async () => {
       const quantity = Number(draft.quantity);
-      const next = createAccountLineAllocation({
-        accountId: draft.accountId,
-        lineItemId: draft.lineItemId,
-        quantity,
-      });
-      const result = addAccountLineAllocation({ allocations, lineItems: order.lineItems, next });
+      const groupedLine = toLines(order, allocations).find((line) => line.id === draft.lineItemId);
       const account = accounts.find((candidate) => candidate.id === draft.accountId);
-      if (!account) return;
-      await accountsPort.save(account, result.allocations, account.version);
+      if (!groupedLine || !account) return;
+
+      let nextAllocations = [...allocations];
+      let remainingToAssign = quantity;
+      for (const lineItemId of groupedLine.lineItemIds) {
+        if (remainingToAssign <= 0) break;
+        const lineItem = order.lineItems.find((line) => line.id === lineItemId);
+        if (!lineItem) continue;
+        const alreadyAssigned = nextAllocations
+          .filter((allocation) => allocation.lineItemId === lineItemId)
+          .reduce((sum, allocation) => sum + allocation.quantity, 0);
+        const available = Math.max(0, lineItem.quantity - alreadyAssigned);
+        const quantityForLine = Math.min(available, remainingToAssign);
+        if (quantityForLine <= 0) continue;
+        const next = createAccountLineAllocation({
+          accountId: draft.accountId,
+          lineItemId,
+          quantity: quantityForLine,
+        });
+        nextAllocations = addAccountLineAllocation({
+          allocations: nextAllocations,
+          lineItems: order.lineItems,
+          next,
+        }).allocations;
+        remainingToAssign -= quantityForLine;
+      }
+      if (remainingToAssign > 0) return;
+      await accountsPort.save(account, nextAllocations, account.version);
       setAllocationDraft({ ...draft, quantity: "1" });
     });
   };
@@ -267,6 +338,21 @@ export function SplitBillContainer({
             accountId: saved.id,
           }),
         );
+      }
+    });
+  };
+
+  const removeAllocation = (accountId: string, allocationIds: readonly string[]): void => {
+    void runMutation(async () => {
+      const account = accounts.find((candidate) => candidate.id === accountId);
+      if (!account || account.status === "pending" || account.status === "paid") return;
+      let version = account.version;
+      for (const allocationId of allocationIds) {
+        await accountsPort.removeAllocation(accountId, allocationId, version);
+        version += 1;
+      }
+      if (allocationDraft.accountId === accountId) {
+        setAllocationDraft({ ...allocationDraft, accountId: "" });
       }
     });
   };
@@ -357,6 +443,7 @@ export function SplitBillContainer({
         onPayAccount={payAccount}
         onMarkPending={markPending}
         onDeleteAccount={deleteAccount}
+        onRemoveAllocation={removeAllocation}
         onAttemptClose={attemptClose}
       />
     </div>

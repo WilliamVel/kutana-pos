@@ -12,4 +12,9 @@ export interface PersonalAccountRepository {
     expectedVersion: number,
   ): Promise<PersonalAccount>;
   delete(id: string, expectedVersion: number): Promise<void>;
+  removeAllocation(
+    accountId: string,
+    allocationId: string,
+    expectedVersion: number,
+  ): Promise<PersonalAccount>;
 }

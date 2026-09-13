@@ -50,4 +50,21 @@ export class PostgresTableRepository implements TableRepository {
       current,
     );
   }
+
+  async deleteFree(tableId: string, expectedVersion: number): Promise<void> {
+    // Retire instead of deleting: historical orders keep their table FK.
+    const result = await this.pool.query(
+      `UPDATE restaurant_tables
+       SET status = 'retired', version = version + 1
+       WHERE id = $1 AND version = $2 AND status = 'free' AND current_order_id IS NULL`,
+      [tableId, expectedVersion],
+    );
+    if (result.rowCount === 1) return;
+    const current = await this.findById(tableId);
+    if (!current) return;
+    throw new ConflictError<Table>(
+      `Table ${tableId} is not free or has a version conflict`,
+      current,
+    );
+  }
 }

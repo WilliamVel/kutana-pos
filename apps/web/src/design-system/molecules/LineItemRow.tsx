@@ -12,6 +12,7 @@ export interface LineItemRowProps {
   readonly totalCents: number;
   readonly pourSizeMl?: PourSize | null;
   readonly isAdjustment?: boolean;
+  readonly statusLabel?: string;
   /** When provided, renders a compact "remove this line" control. */
   readonly onRemove?: () => void;
 }
@@ -27,6 +28,7 @@ export function LineItemRow({
   totalCents,
   pourSizeMl,
   isAdjustment = false,
+  statusLabel,
   onRemove,
 }: LineItemRowProps): JSX.Element {
   return (
@@ -36,6 +38,7 @@ export function LineItemRow({
         <span className={styles.quantity}>x{quantity}</span>
         {pourSizeMl ? <span className={styles.pourSize}>{pourSizeMl}ml</span> : null}
         {isAdjustment ? <span className={styles.adjustmentLabel}>Adjustment</span> : null}
+        {statusLabel ? <span className={styles.statusLabel}>{statusLabel}</span> : null}
       </div>
       <div className={styles.trailing}>
         <PriceTag cents={totalCents} />

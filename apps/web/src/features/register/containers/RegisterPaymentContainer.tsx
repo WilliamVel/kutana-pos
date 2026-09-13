@@ -23,6 +23,7 @@ import {
   useCustomers,
   useOrders,
   usePaymentMethods,
+  usePaymentClosure,
   usePayments,
   usePersonalAccounts,
   useTables,
@@ -52,6 +53,73 @@ function ownerLabel(account: PersonalAccount, customers: readonly Customer[]): s
 
 function toAccountPayments(accountId: string, payments: readonly Payment[]): AccountPaymentAmount[] {
   return payments.map((payment) => ({ accountId, amountCents: payment.amountCents }));
+}
+
+function unpaidLineItems(
+  order: Order,
+  accounts: readonly PersonalAccount[],
+  allocations: readonly AccountLineAllocation[],
+): Order["lineItems"] {
+  const paidAccountIds = new Set(accounts.filter((account) => account.status === "paid").map((account) => account.id));
+  return order.lineItems.flatMap((line) => {
+    const paidQuantity = allocations
+      .filter((allocation) => allocation.lineItemId === line.id && paidAccountIds.has(allocation.accountId))
+      .reduce((sum, allocation) => sum + allocation.quantity, 0);
+    const remainingQuantity = line.quantity - paidQuantity;
+    if (remainingQuantity <= 0) return [];
+    if (paidQuantity <= 0) return [line];
+    return [{
+      ...line,
+      quantity: remainingQuantity,
+      taxCents: Math.round((line.taxCents / line.quantity) * remainingQuantity),
+      totalCents: Math.round((line.totalCents / line.quantity) * remainingQuantity),
+    }];
+  });
+}
+
+function accountLinesForDisplay(
+  order: Order,
+  allocations: readonly AccountLineAllocation[],
+  accountId: string,
+): RegisterPaymentPanelLine[] {
+  const grouped = new Map<string, RegisterPaymentPanelLine>();
+  for (const allocation of allocations.filter((item) => item.accountId === accountId)) {
+    const line = order.lineItems.find((candidate) => candidate.id === allocation.lineItemId);
+    if (!line) continue;
+    const key = [line.productId, line.nameSnapshot, line.unitPriceCents, line.pourSizeMl ?? "", line.taxRateBp].join("|");
+    const totalCents = Math.round((line.totalCents / line.quantity) * allocation.quantity);
+    const existing = grouped.get(key);
+    if (existing) {
+      grouped.set(key, {
+        ...existing,
+        quantity: existing.quantity + allocation.quantity,
+        totalCents: existing.totalCents + totalCents,
+      });
+    } else {
+      grouped.set(key, {
+        id: allocation.id,
+        name: line.nameSnapshot,
+        quantity: allocation.quantity,
+        unitPriceCents: line.unitPriceCents,
+        totalCents,
+        pourSizeMl: line.pourSizeMl as RegisterPaymentPanelLine["pourSizeMl"],
+        isAdjustment: line.isAdjustment,
+      });
+    }
+  }
+  return [...grouped.values()];
+}
+
+function allQuantitiesAssigned(
+  order: Order,
+  allocations: readonly AccountLineAllocation[],
+): boolean {
+  return order.lineItems.every((line) => {
+    const assigned = allocations
+      .filter((allocation) => allocation.lineItemId === line.id)
+      .reduce((sum, allocation) => sum + allocation.quantity, 0);
+    return assigned >= line.quantity;
+  });
 }
 
 function paymentMethodLabel(code: string, fallback: string): string {
@@ -84,6 +152,7 @@ export function RegisterPaymentContainer({
   const accountsPort = usePersonalAccounts();
   const customersPort = useCustomers();
   const paymentsPort = usePayments();
+  const paymentClosure = usePaymentClosure();
   const methodRegistry = usePaymentMethods();
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -92,12 +161,16 @@ export function RegisterPaymentContainer({
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [accountAllocations, setAccountAllocations] = useState<AccountLineAllocation[]>([]);
+  const [orderAccounts, setOrderAccounts] = useState<PersonalAccount[]>([]);
+  const [orderAccountAllocations, setOrderAccountAllocations] = useState<AccountLineAllocation[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [selectedMethodCode, setSelectedMethodCode] = useState<string>(
     methodRegistry[0]?.code ?? "",
   );
   const [tenderedCents, setTenderedCents] = useState<number | null>(null);
   const [amountToPayCents, setAmountToPayCents] = useState<number | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedMethodCode && methodRegistry[0]) {
@@ -132,6 +205,10 @@ export function RegisterPaymentContainer({
 
       const existingTickets = await tickets.listByOrder(foundOrder.id);
       let orderAllocations = await tickets.listAllocationsByOrder(foundOrder.id);
+      const [foundAccounts, foundAccountAllocations] = await Promise.all([
+        accountsPort.listByOrder(foundOrder.id),
+        accountsPort.listAllocationsByOrder(foundOrder.id),
+      ]);
       let activeTicket = ticketId
         ? (existingTickets.find((candidate) => candidate.id === ticketId) ?? null)
         : (existingTickets.find((candidate) => candidate.status !== "paid") ?? null);
@@ -147,6 +224,8 @@ export function RegisterPaymentContainer({
       if (cancelled || !activeTicket) return;
       setTicket(activeTicket);
       setAllocations(orderAllocations);
+      setOrderAccounts(foundAccounts);
+      setOrderAccountAllocations(foundAccountAllocations);
 
       const ticketPayments = await paymentsPort.listByTicket(activeTicket.id);
       if (!cancelled) setPayments(ticketPayments);
@@ -163,28 +242,19 @@ export function RegisterPaymentContainer({
   const activeAccountAllocations = personalAccount
     ? accountAllocations.filter((allocation) => allocation.accountId === personalAccount.id)
     : [];
-  const accountLines: RegisterPaymentPanelLine[] = activeAccountAllocations.flatMap((allocation) => {
-    const line = order.lineItems.find((candidate) => candidate.id === allocation.lineItemId);
-    if (!line) return [];
-    return [{
-      id: allocation.id,
-      name: line.nameSnapshot,
-      quantity: allocation.quantity,
-      unitPriceCents: line.unitPriceCents,
-      totalCents: Math.round((line.totalCents / line.quantity) * allocation.quantity),
-      pourSizeMl: line.pourSizeMl as RegisterPaymentPanelLine["pourSizeMl"],
-      isAdjustment: line.isAdjustment,
-    }];
-  });
+  const accountLines = personalAccount
+    ? accountLinesForDisplay(order, activeAccountAllocations, personalAccount.id)
+    : [];
 
   const isWholeTablePayment = !personalAccount && ticketId === undefined;
   const allocatedLineItemIds = ticket
     ? new Set(allocations.filter((allocation) => allocation.ticketId === ticket.id).map((a) => a.lineItemId))
     : new Set<string>();
+  const remainingOrderLineItems = unpaidLineItems(order, orderAccounts, orderAccountAllocations);
   const ticketLineItems = ticket
     ? isWholeTablePayment
-      ? order.lineItems
-      : order.lineItems.filter((line) => allocatedLineItemIds.has(line.id))
+      ? remainingOrderLineItems
+      : remainingOrderLineItems.filter((line) => allocatedLineItemIds.has(line.id))
     : [];
   const ticketLines: RegisterPaymentPanelLine[] = ticketLineItems.map((line) => ({
     id: line.id,
@@ -236,6 +306,39 @@ export function RegisterPaymentContainer({
       (tenderedCents !== null && tenderedCents >= effectiveAmountToPayCents));
 
   async function handleConfirmPayment(): Promise<void> {
+    console.info("[RegisterPayment] Confirmar pago presionado", {
+      target: personalAccount ? { kind: "personal_account", accountId: personalAccount.id } : { kind: "ticket", ticketId: ticket?.id },
+      methodCode: selectedMethodCode || null,
+      amountCents: effectiveAmountToPayCents,
+      tenderedCents,
+      canConfirm,
+    });
+
+    if (!canConfirm || !selectedMethod) {
+      console.warn("[RegisterPayment] Pago no confirmado: datos incompletos o inválidos", {
+        selectedMethodCode: selectedMethodCode || null,
+        amountCents: effectiveAmountToPayCents,
+        remainingBalanceCents,
+        tenderedCents,
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    setErrorMessage(null);
+    try {
+      await processPayment();
+      console.info("[RegisterPayment] Pago procesado correctamente");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("[RegisterPayment] Error al procesar pago", error);
+      setErrorMessage(`No se pudo procesar el pago: ${message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  async function processPayment(): Promise<void> {
     if (!selectedMethod) return;
 
     if (personalAccount) {
@@ -264,7 +367,22 @@ export function RegisterPaymentContainer({
         personalAccount.version,
       );
       setPersonalAccount(saved);
-      if (status === "paid") onPaymentComplete?.();
+      if (status === "paid") {
+        const [finalAccounts, finalAllocations] = await Promise.all([
+          accountsPort.listByOrder(order!.id),
+          accountsPort.listAllocationsByOrder(order!.id),
+        ]);
+        if (
+          finalAccounts.length > 0 &&
+          finalAccounts.every((account) => account.status === "paid") &&
+          allQuantitiesAssigned(order!, finalAllocations)
+        ) {
+          // Once every product belongs to a paid account, close the parent
+          // order too so it no longer appears as an unpaid table.
+          await paymentClosure.closeOrder(order!.id);
+        }
+        onPaymentComplete?.();
+      }
       return;
     }
 
@@ -297,6 +415,11 @@ export function RegisterPaymentContainer({
         : allocations;
       const saved = await tickets.save(paidTicket, allocationsToSave, ticket.version);
       setTicket(saved);
+      if (isWholeTablePayment) {
+        // A paid ticket is not enough: close the order and free the table so
+        // the order disappears from the open-orders list.
+        await paymentClosure.closeOrder(order!.id);
+      }
       onPaymentComplete?.();
     }
   }
@@ -324,6 +447,8 @@ export function RegisterPaymentContainer({
       changeDueCents={changeDueCents}
       onConfirmPayment={() => void handleConfirmPayment()}
       canConfirm={canConfirm}
+      isProcessing={isProcessing}
+      errorMessage={errorMessage}
     />
   );
 }

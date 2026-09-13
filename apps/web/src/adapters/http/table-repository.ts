@@ -23,4 +23,11 @@ export class HttpTableRepository implements TableRepository {
       body: { table, expectedVersion },
     });
   }
+
+  deleteFree(tableId: string, expectedVersion: number): Promise<void> {
+    return this.http.request<void>(`/ordering/tables/${encodePathSegment(tableId)}`, {
+      method: "DELETE",
+      query: { expectedVersion },
+    });
+  }
 }

@@ -35,11 +35,13 @@ function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
       findByTable: async () => null,
       listAll: async () => [],
       save: async (order) => order,
+      deleteEmpty: async () => {},
     } as Ports["orders"],
     tables: {
       listAll: async () => [],
       findById: async () => null,
       save: async (table) => table,
+      deleteFree: async () => {},
     } as Ports["tables"],
     tickets: {
       findById: async () => null,
@@ -61,6 +63,7 @@ function makeFakePorts(overrides: Partial<Ports> = {}): Ports {
       listAllocationsByOrder: async () => [],
       save: async (account) => account,
       delete: async () => {},
+      removeAllocation: async () => ({}) as never,
     } as Ports["personalAccounts"],
     customerDebts: {
       listByCustomer: async () => [],

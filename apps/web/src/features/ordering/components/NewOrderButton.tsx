@@ -10,6 +10,7 @@ export interface NewOrderButtonTable {
 export interface NewOrderButtonProps {
   readonly freeTables: readonly NewOrderButtonTable[];
   readonly onSelectTable: (tableId: string) => void;
+  readonly onRemoveTable?: (tableId: string) => void;
   readonly onCreateTable?: (label: string) => void;
   /** Optional short, non-technical status line (e.g. after a conflict). */
   readonly message?: string | null;
@@ -24,6 +25,7 @@ export interface NewOrderButtonProps {
 export function NewOrderButton({
   freeTables,
   onSelectTable,
+  onRemoveTable,
   onCreateTable,
   message,
 }: NewOrderButtonProps): JSX.Element {
@@ -52,13 +54,25 @@ export function NewOrderButton({
             <ul className={styles.picker} aria-label="Mesas libres">
               {freeTables.map((table) => (
                 <li key={table.id}>
-                  <button
-                    type="button"
-                    className={styles.tableButton}
-                    onClick={() => onSelectTable(table.id)}
-                  >
-                    {table.label}
-                  </button>
+                  <div className={styles.tableOption}>
+                    <button
+                      type="button"
+                      className={styles.tableButton}
+                      onClick={() => onSelectTable(table.id)}
+                    >
+                      {table.label}
+                    </button>
+                    {onRemoveTable ? (
+                      <button
+                        type="button"
+                        className={styles.removeButton}
+                        aria-label={`Eliminar mesa ${table.label}`}
+                        onClick={() => onRemoveTable(table.id)}
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </div>
                 </li>
               ))}
             </ul>

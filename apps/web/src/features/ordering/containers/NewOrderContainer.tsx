@@ -8,6 +8,7 @@ import { NewOrderButton } from "../components/NewOrderButton.js";
 export interface NewOrderContainerProps {
   /** Called with the table id after its new (empty) order is created. */
   readonly onCreated: (tableId: string) => void;
+  readonly reloadKey?: number;
 }
 
 /**
@@ -17,7 +18,7 @@ export interface NewOrderContainerProps {
  * all-orders view picks up the new row. Follows the codebase's
  * read -> apply-domain-fn -> save -> catch-`ConflictError` seam.
  */
-export function NewOrderContainer({ onCreated }: NewOrderContainerProps): JSX.Element {
+export function NewOrderContainer({ onCreated, reloadKey = 0 }: NewOrderContainerProps): JSX.Element {
   const tables = useTables();
   const orders = useOrders();
   const events = useOrderEvents();
@@ -32,7 +33,7 @@ export function NewOrderContainer({ onCreated }: NewOrderContainerProps): JSX.El
 
   useEffect(() => {
     void loadFreeTables();
-  }, [loadFreeTables]);
+  }, [loadFreeTables, reloadKey]);
 
   async function createOrderForTable(table: Table): Promise<void> {
     try {
@@ -62,13 +63,32 @@ export function NewOrderContainer({ onCreated }: NewOrderContainerProps): JSX.El
   }
 
   async function createTableAndOrder(label: string): Promise<void> {
-    const savedTable = await tables.save(createTable({ label }), 0);
+    const normalizedLabel = label.trim().toLocaleLowerCase();
+    const retiredTable = (await tables.listAll()).find(
+      (table) => table.status === "retired" && table.label.trim().toLocaleLowerCase() === normalizedLabel,
+    );
+    const savedTable = retiredTable
+      ? await tables.save({ ...retiredTable, status: "free", currentOrderId: null }, retiredTable.version)
+      : await tables.save(createTable({ label }), 0);
     await createOrderForTable(savedTable);
+  }
+
+  async function removeFreeTable(tableId: string): Promise<void> {
+    try {
+      const table = await tables.findById(tableId);
+      if (!table || table.status !== "free" || table.currentOrderId) return;
+      await tables.deleteFree(table.id, table.version);
+      await loadFreeTables();
+      setMessage(null);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo eliminar la mesa.");
+    }
   }
 
   return (
     <NewOrderButton
       freeTables={freeTables.map((table) => ({ id: table.id, label: table.label }))}
+      onRemoveTable={(tableId) => void removeFreeTable(tableId)}
       onSelectTable={(tableId) => {
         const table = freeTables.find((candidate) => candidate.id === tableId);
         if (table) void createOrderForTable(table);

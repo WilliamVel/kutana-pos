@@ -62,6 +62,8 @@ export interface RegisterPaymentPanelProps {
   readonly changeDueCents: number | null;
   readonly onConfirmPayment: () => void;
   readonly canConfirm: boolean;
+  readonly isProcessing?: boolean;
+  readonly errorMessage?: string | null;
 }
 
 function parseDollarsToCents(input: string): number {
@@ -103,6 +105,8 @@ export function RegisterPaymentPanel({
   changeDueCents,
   onConfirmPayment,
   canConfirm,
+  isProcessing = false,
+  errorMessage = null,
 }: RegisterPaymentPanelProps): JSX.Element {
   const selectedMethod = methods.find((method) => method.code === selectedMethodCode);
   const showTenderedInput = selectedMethod?.requiresTendered ?? false;
@@ -208,8 +212,9 @@ export function RegisterPaymentPanel({
             </div>
           ) : null}
 
-          <Button onClick={onConfirmPayment} disabled={!canConfirm}>
-            Confirmar pago
+          {errorMessage ? <p role="alert">{errorMessage}</p> : null}
+          <Button onClick={onConfirmPayment} disabled={!canConfirm || isProcessing}>
+            {isProcessing ? "Procesando pago…" : "Confirmar pago"}
           </Button>
         </section>
       </div>

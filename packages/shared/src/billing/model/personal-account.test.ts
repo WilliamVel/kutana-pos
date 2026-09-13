@@ -9,7 +9,12 @@ import {
   derivePersonalAccountStatus,
 } from "./personal-account.js";
 
-function lineItem(input: { id: string; quantity: number; unitPriceCents: number; taxRateBp?: number }) {
+function lineItem(input: {
+  id: string;
+  quantity: number;
+  unitPriceCents: number;
+  taxRateBp?: number;
+}) {
   return createLineItem({
     id: input.id,
     orderId: "order-1",
@@ -69,12 +74,12 @@ describe("PersonalAccount", () => {
     expect(derivePersonalAccountStatus({ totalCents: 1000, paidCents: 0, isPending: false })).toBe(
       "open",
     );
-    expect(derivePersonalAccountStatus({ totalCents: 1000, paidCents: 400, isPending: false })).toBe(
-      "partially_paid",
-    );
-    expect(derivePersonalAccountStatus({ totalCents: 1000, paidCents: 1000, isPending: false })).toBe(
-      "paid",
-    );
+    expect(
+      derivePersonalAccountStatus({ totalCents: 1000, paidCents: 400, isPending: false }),
+    ).toBe("partially_paid");
+    expect(
+      derivePersonalAccountStatus({ totalCents: 1000, paidCents: 1000, isPending: false }),
+    ).toBe("paid");
     expect(derivePersonalAccountStatus({ totalCents: 1000, paidCents: 400, isPending: true })).toBe(
       "pending",
     );
@@ -99,6 +104,19 @@ describe("AccountLineAllocation", () => {
 
     expect(result.allocations).toEqual([allocation]);
     expect(result.remainingQuantityByLineItem[item.id]).toBe(2);
+
+    const accumulated = addAccountLineAllocation({
+      allocations: result.allocations,
+      lineItems: [item],
+      next: createAccountLineAllocation({
+        accountId: "account-1",
+        lineItemId: item.id,
+        quantity: 1,
+      }),
+    });
+    expect(accumulated.allocations).toHaveLength(1);
+    expect(accumulated.allocations[0]).toMatchObject({ id: "allocation-1", quantity: 2 });
+    expect(accumulated.remainingQuantityByLineItem[item.id]).toBe(1);
   });
 
   it("rejects over-allocation beyond the source line item quantity", () => {

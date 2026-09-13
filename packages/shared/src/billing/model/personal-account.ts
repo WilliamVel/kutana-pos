@@ -93,7 +93,9 @@ export function createPersonalAccount(input: {
     id: input.id ?? createUuid(),
     orderId: input.orderId,
     owner:
-      customerId !== null ? { kind: "customer", customerId } : { kind: "free_name", freeName: freeName! },
+      customerId !== null
+        ? { kind: "customer", customerId }
+        : { kind: "free_name", freeName: freeName! },
     status: "open",
     createdAt: input.createdAt ?? new Date().toISOString(),
     closedAt: null,
@@ -108,7 +110,9 @@ export function createAccountLineAllocation(input: {
   id?: string;
 }): AccountLineAllocation {
   if ("amountCents" in input) {
-    throw new ValidationError("AccountLineAllocation supports quantity only, not amount-based splits");
+    throw new ValidationError(
+      "AccountLineAllocation supports quantity only, not amount-based splits",
+    );
   }
   if (!Number.isFinite(input.quantity) || input.quantity <= 0) {
     throw new ValidationError("AccountLineAllocation quantity must be positive");
@@ -131,7 +135,18 @@ export function addAccountLineAllocation(input: {
     throw new ValidationError(`LineItem ${input.next.lineItemId} does not exist`);
   }
 
-  const allocations = [...input.allocations, input.next];
+  const existing = input.allocations.find(
+    (allocation) =>
+      allocation.accountId === input.next.accountId &&
+      allocation.lineItemId === input.next.lineItemId,
+  );
+  const allocations = existing
+    ? input.allocations.map((allocation) =>
+        allocation.id === existing.id
+          ? { ...allocation, quantity: allocation.quantity + input.next.quantity }
+          : allocation,
+      )
+    : [...input.allocations, input.next];
   const remainingQuantityByLineItem = remainingQuantities(input.lineItems, allocations);
   const remainingQuantity = remainingQuantityByLineItem[lineItem.id] ?? lineItem.quantity;
   if (remainingQuantity < 0) {

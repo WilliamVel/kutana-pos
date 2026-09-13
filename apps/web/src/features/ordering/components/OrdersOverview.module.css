@@ -16,17 +16,12 @@
 
 .row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-4);
+  align-items: stretch;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background-color: var(--surface-raised);
   box-shadow: var(--shadow-sm);
-  cursor: pointer;
   color: var(--text-primary);
-  text-align: left;
   transition:
     box-shadow 120ms ease,
     border-color 120ms ease;
@@ -37,14 +32,55 @@
   border-color: var(--border-strong);
 }
 
-.row[aria-pressed="true"] {
+.row[data-selected="true"] {
   border-color: var(--border-strong);
   background-color: var(--surface-sunken);
 }
 
+.rowMain {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.rowMain > span {
+  min-width: 0;
+}
+
 .meta {
+  display: block;
   color: var(--text-secondary);
   font-size: 0.85rem;
+}
+
+.removeButton {
+  align-self: center;
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-right: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.removeButton:hover,
+.removeButton:focus-visible {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
 }
 
 .empty {

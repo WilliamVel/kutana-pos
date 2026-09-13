@@ -41,7 +41,7 @@ export function LoginPanel({ onLogin, notice = null }: LoginPanelProps): JSX.Ele
         <img className={styles.logo} src="/LOGOkutana.svg" alt="KUTANA" />
         <div className={styles.copy}>
           <h1 id="login-title" className={styles.title}>
-            Ingreso de operador
+            Login
           </h1>
           <p className={styles.subtitle}>Iniciá sesión para abrir el espacio de caja.</p>
         </div>

@@ -14,6 +14,7 @@ export interface OrderTicketPanelLine {
   readonly totalCents: number;
   readonly pourSizeMl: PourSize | null;
   readonly isAdjustment: boolean;
+  readonly paymentStatus?: "paid";
 }
 
 export interface OrderTicketPanelProps {
@@ -72,6 +73,7 @@ export function OrderTicketPanel({
               totalCents={line.totalCents}
               pourSizeMl={line.pourSizeMl}
               isAdjustment={line.isAdjustment}
+              statusLabel={line.paymentStatus}
               onRemove={
                 onRemoveLine && !line.isAdjustment
                   ? () => onRemoveLine(line.id)

@@ -74,6 +74,36 @@ export class MockPersonalAccountRepository implements PersonalAccountRepository 
     });
   }
 
+  async removeAllocation(
+    accountId: string,
+    allocationId: string,
+    expectedVersion: number,
+  ): Promise<PersonalAccount> {
+    return simulateLatency(() => {
+      const account = this.accountsById.get(accountId);
+      if (!account || account.version !== expectedVersion) {
+        throw new ConflictError<PersonalAccount>(
+          `PersonalAccount ${accountId} version conflict`,
+          account ?? {
+            id: accountId,
+            orderId: "unknown-order",
+            owner: { kind: "free_name", freeName: "Unknown account" },
+            status: "open",
+            createdAt: new Date().toISOString(),
+            closedAt: null,
+            version: expectedVersion,
+          },
+        );
+      }
+      const allocation = this.allocationsById.get(allocationId);
+      if (!allocation || allocation.accountId !== accountId) return account;
+      this.allocationsById.delete(allocationId);
+      const next = { ...account, version: expectedVersion + 1 };
+      this.accountsById.set(accountId, next);
+      return next;
+    });
+  }
+
   async delete(id: string, expectedVersion: number): Promise<void> {
     return simulateLatency(() => {
       const stored = this.accountsById.get(id) ?? null;

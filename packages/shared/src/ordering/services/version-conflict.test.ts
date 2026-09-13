@@ -36,6 +36,10 @@ class StubOrderRepository implements OrderRepository {
     this.stored.set(order.id, order);
     return order;
   }
+
+  async deleteEmpty(orderId: string): Promise<void> {
+    this.stored.delete(orderId);
+  }
 }
 
 describe("OrderRepository.save — version-conflict port contract", () => {
