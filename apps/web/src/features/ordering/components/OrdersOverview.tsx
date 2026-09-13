@@ -8,8 +8,12 @@ export interface OrdersOverviewRow {
   readonly tableLabel: string;
   readonly status: OrderStatus;
   readonly itemCount: number;
-  /** Integer cents. */
+  /** Integer cents — current balance remaining. */
   readonly totalCents: number;
+  /** Integer cents already paid through personal accounts. */
+  readonly paidCents?: number;
+  /** Integer cents before partial payments. */
+  readonly originalTotalCents?: number;
   readonly openedAt: string;
 }
 
@@ -51,7 +55,11 @@ export function OrdersOverview({
               <span className={styles.meta}>{row.itemCount} productos</span>
             </span>
             <StatusPill status={row.status} />
-            <PriceTag cents={row.totalCents} />
+            <span className={styles.balance}>
+              <small>Saldo pendiente</small>
+              <PriceTag cents={row.totalCents} />
+              {row.paidCents !== undefined && row.paidCents > 0 ? <small>Pagado: <PriceTag cents={row.paidCents} /></small> : null}
+            </span>
           </button>
           {row.itemCount === 0 ? (
             <button

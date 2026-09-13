@@ -7,7 +7,7 @@ import type {
 import type { Table } from "@kutana/shared/ordering/model/table.js";
 import type { AccountLineAllocation, PersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
 import { removeLineItem } from "@kutana/shared/ordering/services/line-item-service.js";
-import { useOrderEvents, useOrders, usePersonalAccounts, useTables } from "../../../composition/PortsProvider.js";
+import { useOrderEvents, useOrders, usePayments, usePersonalAccounts, useTables } from "../../../composition/PortsProvider.js";
 import { OrderTicketPanel, type OrderTicketPanelLine } from "../components/OrderTicketPanel.js";
 import type { OrderStatus } from "../../../design-system/molecules/StatusPill.js";
 
@@ -84,12 +84,14 @@ export function OrderTicketPanelContainer({
   const tables = useTables();
   const orders = useOrders();
   const personalAccounts = usePersonalAccounts();
+  const payments = usePayments();
   const events = useOrderEvents();
 
   const [table, setTable] = useState<Table | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
   const [accounts, setAccounts] = useState<PersonalAccount[]>([]);
   const [accountAllocations, setAccountAllocations] = useState<AccountLineAllocation[]>([]);
+  const [accountPaidCents, setAccountPaidCents] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,16 +112,20 @@ export function OrderTicketPanelContainer({
         personalAccounts.listByOrder(foundOrder.id),
         personalAccounts.listAllocationsByOrder(foundOrder.id),
       ]);
+      const paidCents = (
+        await Promise.all(foundAccounts.map((account) => payments.listByTarget({ kind: "personal_account", accountId: account.id })))
+      ).flat().reduce((sum, payment) => sum + payment.amountCents, 0);
       if (cancelled) return;
       setAccounts(foundAccounts);
       setAccountAllocations(foundAllocations);
+      setAccountPaidCents(paidCents);
     }
 
     void load();
     return () => {
       cancelled = true;
     };
-  }, [tableId, tables, orders, personalAccounts]);
+  }, [tableId, tables, orders, personalAccounts, payments]);
 
   useEffect(() => {
     if (!order) return;
@@ -198,7 +204,10 @@ export function OrderTicketPanelContainer({
   // never recomputed from the current catalog rate (spec: "Tax Persisted
   // at Sale Time").
   const taxCents = order.lineItems.reduce((sum, line) => sum + line.taxCents, 0);
-  const totalCents = order.lineItems.reduce((sum, line) => sum + line.totalCents, 0);
+  const totalCents = Math.max(
+    0,
+    order.lineItems.reduce((sum, line) => sum + line.totalCents, 0) - accountPaidCents,
+  );
 
   return (
     <OrderTicketPanel

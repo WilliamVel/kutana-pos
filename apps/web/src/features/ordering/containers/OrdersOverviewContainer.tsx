@@ -4,7 +4,7 @@ import type {
   OrderStatus as DomainOrderStatus,
 } from "@kutana/shared/ordering/model/order.js";
 import type { Table } from "@kutana/shared/ordering/model/table.js";
-import { useOrderEvents, useOrders, useTables } from "../../../composition/PortsProvider.js";
+import { useOrderEvents, useOrders, usePayments, usePersonalAccounts, useTables } from "../../../composition/PortsProvider.js";
 import { OrdersOverview, type OrdersOverviewRow } from "../components/OrdersOverview.js";
 import type { OrderStatus } from "../../../design-system/molecules/StatusPill.js";
 
@@ -23,14 +23,27 @@ function isActiveVisibleOrder(order: Order): boolean {
   );
 }
 
-function toRow(table: Table, order: Order | null): OrdersOverviewRow | null {
+async function toRow(
+  table: Table,
+  order: Order | null,
+  personalAccounts: ReturnType<typeof usePersonalAccounts>,
+  payments: ReturnType<typeof usePayments>,
+): Promise<OrdersOverviewRow | null> {
   if (!order || !isActiveVisibleOrder(order)) return null;
+  const originalTotalCents = order.lineItems.reduce((sum, line) => sum + line.totalCents, 0);
+  const accounts = await personalAccounts.listByOrder(order.id);
+  const accountPayments = await Promise.all(
+    accounts.map((account) => payments.listByTarget({ kind: "personal_account", accountId: account.id })),
+  );
+  const paidCents = accountPayments.flat().reduce((sum, payment) => sum + payment.amountCents, 0);
   return {
     tableId: table.id,
     tableLabel: table.label,
     status: STATUS_MAP[order.status],
     itemCount: order.lineItems.length,
-    totalCents: order.lineItems.reduce((sum, line) => sum + line.totalCents, 0),
+    totalCents: Math.max(0, originalTotalCents - paidCents),
+    paidCents,
+    originalTotalCents,
     openedAt: order.openedAt,
   };
 }
@@ -63,6 +76,8 @@ export function OrdersOverviewContainer({
 }: OrdersOverviewContainerProps): JSX.Element {
   const tables = useTables();
   const orders = useOrders();
+  const personalAccounts = usePersonalAccounts();
+  const payments = usePayments();
   const events = useOrderEvents();
 
   const [rows, setRows] = useState<OrdersOverviewRow[]>([]);
@@ -71,14 +86,14 @@ export function OrdersOverviewContainer({
   const refreshTable = useCallback(
     async (table: Table) => {
       const order = await orders.findByTable(table.id);
-      const row = toRow(table, order);
+      const row = await toRow(table, order, personalAccounts, payments);
       setRows((current) => {
         const withoutTable = current.filter((existing) => existing.tableId !== table.id);
         return row ? [...withoutTable, row] : withoutTable;
       });
       return order;
     },
-    [orders],
+    [orders, payments, personalAccounts],
   );
 
   useEffect(() => {

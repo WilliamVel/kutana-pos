@@ -56,6 +56,22 @@
   min-width: 0;
 }
 
+.balance {
+  display: flex;
+  min-width: 7rem;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.balance small {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .meta {
   display: block;
   color: var(--text-secondary);
