@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type {
   Customer,
   PersonalAccountOwner,
@@ -26,6 +27,13 @@ export interface AssignedAccountLine {
   readonly quantity: number;
 }
 
+export interface AccountPaymentDetail {
+  readonly id: string;
+  readonly amountCents: number;
+  readonly methodLabel: string;
+  readonly recordedAt: string;
+}
+
 export interface AccountAssignmentAccount {
   readonly id: string;
   readonly ownerLabel: string;
@@ -35,6 +43,7 @@ export interface AccountAssignmentAccount {
   readonly paidCents: number;
   readonly remainingCents: number;
   readonly assignedLines?: readonly AssignedAccountLine[];
+  readonly payments?: readonly AccountPaymentDetail[];
 }
 
 export interface AccountAllocationDraft {
@@ -45,6 +54,9 @@ export interface AccountAllocationDraft {
 
 export interface SplitBillViewProps {
   readonly tableLabel: string;
+  readonly tableTotalCents?: number;
+  readonly tablePaidCents?: number;
+  readonly tableRemainingCents?: number;
   readonly customers: readonly Customer[];
   readonly selectedCustomerId: string;
   readonly freeName: string;
@@ -100,6 +112,9 @@ function formatAccountStatus(status: PersonalAccountStatus): string {
 
 export function SplitBillView({
   tableLabel,
+  tableTotalCents = 0,
+  tablePaidCents = 0,
+  tableRemainingCents = 0,
   customers,
   selectedCustomerId,
   freeName,
@@ -120,8 +135,12 @@ export function SplitBillView({
   onRemoveAllocation,
   onAttemptClose,
 }: SplitBillViewProps): JSX.Element {
+  const [detailsAccountId, setDetailsAccountId] = useState<string | null>(null);
+  const detailsAccount = accounts.find((account) => account.id === detailsAccountId) ?? null;
   const selectedAccount =
     accounts.find((account) => account.id === allocationDraft.accountId) ?? null;
+  const formatDate = (value: string): string =>
+    new Intl.DateTimeFormat("es", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 
   return (
     <div className={styles.screen}>
@@ -132,6 +151,11 @@ export function SplitBillView({
           <p className={styles.headerCopy}>
             Creá cuentas por persona, asigná cantidades y después cobrá o dejá saldos pendientes.
           </p>
+          <dl className={styles.tableSummary} aria-label="Resumen de la mesa">
+            <div><dt>Total mesa</dt><dd><PriceTag cents={tableTotalCents} /></dd></div>
+            <div><dt>Pagado</dt><dd><PriceTag cents={tablePaidCents} /></dd></div>
+            <div className={styles.tableRemaining}><dt>Saldo pendiente</dt><dd><PriceTag cents={tableRemainingCents} /></dd></div>
+          </dl>
         </div>
         <Button variant="secondary" onClick={onAttemptClose} disabled={disabled}>
           Revisar cierre de mesa
@@ -350,6 +374,16 @@ export function SplitBillView({
               <div className={styles.accountIdentity}>
                 <strong>{account.ownerLabel}</strong>
                 <span>{formatAccountStatus(account.status)}</span>
+                {(account.payments?.length ?? 0) > 0 ? (
+                  <button
+                    type="button"
+                    className={styles.paymentDetailsButton}
+                    onClick={() => setDetailsAccountId(account.id)}
+                    aria-label={`Ver pagos de ${account.ownerLabel}`}
+                  >
+                    Ver pagos ({account.payments?.length ?? 0})
+                  </button>
+                ) : null}
               </div>
               <dl className={styles.balanceGrid}>
                 <div>
@@ -446,6 +480,43 @@ export function SplitBillView({
           ))}
         </div>
       </section>
+
+      {detailsAccount ? (
+        <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setDetailsAccountId(null)}>
+          <section
+            className={styles.paymentModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="payment-details-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className={styles.paymentModalHeader}>
+              <div>
+                <p className={styles.eyebrow}>Historial de pagos</p>
+                <h3 id="payment-details-title">{detailsAccount.ownerLabel}</h3>
+              </div>
+              <button type="button" className={styles.closeModalButton} onClick={() => setDetailsAccountId(null)} aria-label="Cerrar detalle de pagos">×</button>
+            </div>
+            <div className={styles.paymentModalTotal}>
+              <span>Total pagado</span><PriceTag cents={detailsAccount.paidCents} />
+            </div>
+            <ul className={styles.paymentList}>
+              {(detailsAccount.payments ?? []).map((payment) => (
+                <li key={payment.id}>
+                  <span><strong>{payment.methodLabel}</strong><small>{formatDate(payment.recordedAt)}</small></span>
+                  <PriceTag cents={payment.amountCents} />
+                </li>
+              ))}
+            </ul>
+            <section className={styles.modalProducts} aria-label={`Productos de ${detailsAccount.ownerLabel}`}>
+              <h4>Productos de la cuenta</h4>
+              {detailsAccount.assignedLines?.map((line) => (
+                <p key={line.allocationIds.join("-")}><span>{line.name} × {line.quantity}</span><span>Asignado</span></p>
+              ))}
+            </section>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

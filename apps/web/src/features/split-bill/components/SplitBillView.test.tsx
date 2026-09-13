@@ -119,6 +119,23 @@ describe("SplitBillView", () => {
     expect(props.onAttemptClose).toHaveBeenCalled();
   });
 
+  it("opens payment details for a customer or free-name account", () => {
+    renderView({
+      accounts: [{
+        ...ACCOUNT,
+        payments: [{ id: "payment-1", amountCents: 200, methodLabel: "Efectivo", recordedAt: "2026-01-02T12:00:00.000Z" }],
+        assignedLines: [{ allocationIds: ["allocation-1"], name: "KUTANA Pilsener 500ml", quantity: 1 }],
+      }],
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver pagos de Juan P." }));
+
+    expect(screen.getByRole("dialog", { name: "Juan P." })).toHaveTextContent("Efectivo");
+    expect(screen.getByRole("dialog", { name: "Juan P." })).toHaveTextContent("KUTANA Pilsener 500ml");
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar detalle de pagos" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("allows clicking the selected account again to clear the selection", () => {
     const props = renderView({
       allocationDraft: { accountId: "account-a", lineItemId: "", quantity: "1" },

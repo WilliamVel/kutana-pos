@@ -493,6 +493,149 @@
   color: var(--order-needs-check-fg);
 }
 
+.tableSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(7rem, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+}
+
+.tableSummary div {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+.tableSummary dt,
+.tableSummary dd {
+  margin: 0;
+}
+
+.tableSummary dt {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.tableSummary dd {
+  margin-top: var(--space-1);
+  font-weight: 700;
+}
+
+.tableRemaining {
+  border: 1px solid var(--order-needs-check-fg);
+}
+
+.paymentDetailsButton {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-emphasis);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.modalBackdrop {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(0 0 0 / 45%);
+}
+
+.paymentModal {
+  width: min(100%, 34rem);
+  max-height: min(90vh, 42rem);
+  overflow-y: auto;
+  padding: var(--space-5);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+
+.paymentModalHeader,
+.paymentModalTotal,
+.paymentList li,
+.modalProducts p {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.paymentModalHeader h3 {
+  margin: 0;
+}
+
+.closeModalButton {
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.paymentModalTotal {
+  margin: var(--space-4) 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font-weight: 700;
+}
+
+.paymentList,
+.modalProducts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.paymentList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.paymentList li {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.paymentList li span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.paymentList small {
+  color: var(--text-secondary);
+}
+
+.modalProducts {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.modalProducts h4 {
+  margin: 0 0 var(--space-2);
+}
+
+.modalProducts p {
+  margin: 0;
+  padding: var(--space-2) 0;
+  color: var(--text-secondary);
+}
+
 @media (max-width: 64rem) {
   .screen {
     overflow: visible;

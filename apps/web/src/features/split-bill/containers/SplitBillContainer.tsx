@@ -35,6 +35,7 @@ import {
   type AccountAssignmentAccount,
   type AccountAssignmentLine,
   type AssignedAccountLine,
+  type AccountPaymentDetail,
 } from "../components/SplitBillView.js";
 import styles from "./SplitBillContainer.module.css";
 
@@ -45,7 +46,7 @@ export interface SplitBillContainerProps {
 
 interface AccountPaymentCache {
   readonly accountId: string;
-  readonly paidCents: number;
+  readonly payments: readonly Payment[];
 }
 
 function ownerLabel(account: PersonalAccount, customers: readonly Customer[]): string {
@@ -99,10 +100,9 @@ function toLines(
 }
 
 function toAccountPayments(payments: readonly AccountPaymentCache[]): AccountPaymentAmount[] {
-  return payments.map((payment) => ({
-    accountId: payment.accountId,
-    amountCents: payment.paidCents,
-  }));
+  return payments.flatMap((entry) =>
+    entry.payments.map((payment) => ({ accountId: entry.accountId, amountCents: payment.amountCents })),
+  );
 }
 
 export function SplitBillContainer({
@@ -151,9 +151,7 @@ export function SplitBillContainer({
     const accountPayments = await Promise.all(
       orderAccounts.map(async (account) => ({
         accountId: account.id,
-        paidCents: (
-          await paymentsPort.listByTarget({ kind: "personal_account", accountId: account.id })
-        ).reduce((sum, payment) => sum + payment.amountCents, 0),
+        payments: await paymentsPort.listByTarget({ kind: "personal_account", accountId: account.id }),
       })),
     );
 
@@ -226,6 +224,13 @@ export function SplitBillContainer({
       allocations,
       payments: toAccountPayments(payments),
     });
+    const accountPayments = payments.find((entry) => entry.accountId === account.id)?.payments ?? [];
+    const paymentDetails: AccountPaymentDetail[] = accountPayments.map((payment) => ({
+      id: payment.id,
+      amountCents: payment.amountCents,
+      methodLabel: methods.find((method) => method.code === payment.methodCode)?.label ?? payment.methodCode,
+      recordedAt: payment.recordedAt,
+    }));
     return {
       ...balance,
       id: account.id,
@@ -233,8 +238,12 @@ export function SplitBillContainer({
       status: account.status,
       ownerLabel: ownerLabel(account, customers),
       assignedLines,
+      payments: paymentDetails,
     };
   });
+  const tableTotalCents = order.lineItems.reduce((sum, line) => sum + line.totalCents, 0);
+  const tablePaidCents = accountRows.reduce((sum, account) => sum + account.paidCents, 0);
+  const tableRemainingCents = Math.max(0, tableTotalCents - tablePaidCents);
 
   const createCustomerAccount = (): void => {
     void runMutation(async () => {
@@ -426,6 +435,9 @@ export function SplitBillContainer({
       ) : null}
       <SplitBillView
         tableLabel={table.label}
+        tableTotalCents={tableTotalCents}
+        tablePaidCents={tablePaidCents}
+        tableRemainingCents={tableRemainingCents}
         customers={customers}
         selectedCustomerId={selectedCustomerId}
         freeName={freeName}
