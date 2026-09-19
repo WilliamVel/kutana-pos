@@ -14,24 +14,25 @@ describe("LoginPanel", () => {
     );
 
     expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute("src", "/LOGOkutana.svg");
-    expect(screen.getByRole("heading", { name: "Ingreso de operador" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ingresar" })).toBeDisabled();
   });
 
   it("posts credentials through the HTTP auth port when the operator clicks sign in", async () => {
     const onLogin = vi.fn();
-    const fetchImpl = vi.fn(async () =>
-      new Response(
-        JSON.stringify({
-          operatorId: "operator-mina",
-          displayName: "Mina",
-          token: "signed-token",
-          expiresAt: "2026-01-01T00:15:00.000Z",
-          refreshToken: "refresh-token",
-          refreshExpiresAt: "2026-01-08T00:00:00.000Z",
-        }),
-        { status: 201, headers: { "Content-Type": "application/json" } },
-      ),
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            operatorId: "operator-mina",
+            displayName: "Mina",
+            token: "signed-token",
+            expiresAt: "2026-01-01T00:15:00.000Z",
+            refreshToken: "refresh-token",
+            refreshExpiresAt: "2026-01-08T00:00:00.000Z",
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        ),
     ) as unknown as typeof fetch;
 
     render(

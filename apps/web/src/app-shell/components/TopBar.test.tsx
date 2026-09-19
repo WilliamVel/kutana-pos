@@ -26,7 +26,7 @@ describe("TopBar", () => {
 
     expect(screen.getByRole("heading", { name: "KUTANA" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute("src", "/LOGOkutana.svg");
-    for (const label of ["Inventario", "Órdenes", "Clientes", "Cuentas por cobrar", "Usuarios", "Analítica"]) {
+    for (const label of ["Inventario", "Órdenes", "Clientes", "Cuentas por cobrar", "Más"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
     expect(screen.getByRole("button", { name: /Cuenta\s+Mina/ })).toBeInTheDocument();
@@ -78,8 +78,9 @@ describe("TopBar", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Cuenta\s+Mina/ }));
 
-    expect(screen.getByText("Sesión activa")).toBeInTheDocument();
+    expect(screen.getByText(/Sesión activa/)).toBeInTheDocument();
     expect(screen.getByText("Administrador")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Usuarios" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
 

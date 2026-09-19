@@ -29,6 +29,8 @@
   --surface-page: #f5f0e1; /* KUTANA beige */
   --surface-raised: #ffffff; /* cards, panels, modals */
   --surface-sunken: #ede6d3; /* recessed panels (e.g. list rows) */
+  --surface-nav: rgba(255, 255, 255, 0.88);
+  --surface-active: rgba(214, 92, 43, 0.1);
 
   /* --- Text ---------------------------------------------------------
    * --text-primary on --surface-page: 12.15:1 (AA normal + large: pass)
@@ -62,6 +64,7 @@
    * body-text alias for this color; see the file-level note above.
    */
   --accent-emphasis: #d65c2b; /* KUTANA terracotta — large headings/wordmark only */
+  --accent-strong: #a8421c;
 
   /* --- Borders --------------------------------------------------------
    * Decorative only — WCAG 1.4.11 (3:1) applies to meaningful UI-component
@@ -72,6 +75,8 @@
    */
   --border-subtle: rgba(29, 49, 36, 0.15);
   --border-strong: rgba(29, 49, 36, 0.4);
+  --border-active: rgba(214, 92, 43, 0.28);
+  --focus-ring: #a8421c;
 
   /* --- Stock status ----------------------------------------------------
    * fg/bg ratios: in-stock 11.70:1, low-stock 6.57:1, out-of-stock 6.54:1

@@ -1,26 +1,38 @@
 .screen {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
-  padding: var(--space-6);
+  overflow: auto;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  background: var(--surface-page);
 }
 
 .card {
-  width: min(100%, 28rem);
+  width: min(100%, 28.75rem);
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  padding: var(--space-7);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: 1.125rem;
   background: var(--surface-raised);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .card {
+    background: color-mix(in srgb, var(--surface-raised) 86%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
 }
 
 .logo {
-  width: min(100%, 14rem);
+  width: clamp(6.25rem, 25vw, 8.75rem);
   height: auto;
   align-self: center;
+  object-fit: contain;
 }
 
 .copy {
@@ -30,10 +42,19 @@
   text-align: center;
 }
 
+.eyebrow {
+  margin: 0 0 var(--space-1);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .title {
   margin: 0;
   color: var(--text-primary);
-  font-size: 1.75rem;
+  font-size: clamp(1.5rem, 4vw, 1.75rem);
   line-height: 1.2;
 }
 
@@ -46,4 +67,151 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.input {
+  width: 100%;
+  min-height: 3.25rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  padding: 0.75rem 1rem;
+  font: inherit;
+  font-size: 1rem;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.input:focus-visible,
+.visibilityButton:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.input:focus-visible {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--status-out-of-stock-fg);
+}
+
+.pinControl {
+  position: relative;
+}
+
+.pinControl .input {
+  padding-right: 6rem;
+  letter-spacing: 0.12em;
+}
+
+.visibilityButton {
+  position: absolute;
+  top: 50%;
+  right: 0.375rem;
+  min-width: 5rem;
+  min-height: 2.75rem;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.visibilityButton:hover {
+  background: var(--surface-active);
+}
+
+.fieldError,
+.error {
+  color: var(--status-out-of-stock-fg);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.notice,
+.error,
+.helper {
+  margin: calc(var(--space-2) * -1) 0 0;
+}
+
+.notice,
+.helper {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.error {
+  padding: var(--space-3);
+  border: 1px solid var(--status-out-of-stock-fg);
+  border-radius: var(--radius-md);
+  background: var(--status-out-of-stock-bg);
+}
+
+.submitRow {
+  margin-top: var(--space-1);
+}
+
+.submitRow button {
+  width: 100%;
+  min-height: 3.5rem;
+}
+
+.loadingLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: login-spin 700ms linear infinite;
+}
+
+@keyframes login-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 30rem) {
+  .card {
+    gap: var(--space-4);
+    padding: var(--space-5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .input,
+  .spinner {
+    transition: none;
+    animation: none;
+  }
 }
