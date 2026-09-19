@@ -2,4 +2,6 @@
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.45;
 }

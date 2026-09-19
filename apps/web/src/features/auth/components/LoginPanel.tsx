@@ -39,7 +39,7 @@ export function LoginPanel({ onLogin, notice = null }: LoginPanelProps): JSX.Ele
       onLogin(await auth.login({ operator, pin }));
     } catch {
       setError(
-        "Operador o PIN inválido. Si olvidaste tu PIN, pedile a un administrador que lo restablezca.",
+        "Usuario o PIN inválido. Si olvidaste tu PIN, pedile a un administrador que lo restablezca.",
       );
       window.requestAnimationFrame(() => {
         pinRef.current?.focus();
@@ -51,13 +51,13 @@ export function LoginPanel({ onLogin, notice = null }: LoginPanelProps): JSX.Ele
   };
 
   const operatorError =
-    !isOperatorValid && operator.length > 0 ? "Ingresa tu nombre o código de operador." : undefined;
+    !isOperatorValid && operator.length > 0 ? "Ingresa tu nombre o código de usuario." : undefined;
   const pinError = !isPinValid && pin.length > 0 ? "El PIN debe tener 4 dígitos." : undefined;
 
   return (
     <main className={styles.screen} aria-labelledby="login-title">
       <section className={styles.card}>
-        <img className={styles.logo} src="/LOGOkutana.svg" alt="KUTANA" />
+        <img className={styles.logo} src="/Kutana_navbar_transparente.svg" alt="KUTANA" />
         <div className={styles.copy}>
           <p className={styles.eyebrow}>Espacio de caja</p>
           <h1 id="login-title" className={styles.title}>
@@ -69,7 +69,7 @@ export function LoginPanel({ onLogin, notice = null }: LoginPanelProps): JSX.Ele
         <form className={styles.form} onSubmit={submit} noValidate>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="login-operator">
-              Operador
+              Usuario
             </label>
             <input
               id="login-operator"
@@ -77,7 +77,7 @@ export function LoginPanel({ onLogin, notice = null }: LoginPanelProps): JSX.Ele
               className={styles.input}
               value={operator}
               onChange={(event) => setOperator(event.target.value)}
-              placeholder="Nombre o código de operador"
+              placeholder="Nombre o código de usuario"
               autoComplete="username"
               autoFocus
               aria-invalid={Boolean(operatorError)}
@@ -138,7 +138,7 @@ export function LoginPanel({ onLogin, notice = null }: LoginPanelProps): JSX.Ele
             </p>
           ) : null}
           {!canSubmit && !isSubmitting && !error ? (
-            <p className={styles.helper}>Completa operador y PIN para continuar.</p>
+            <p className={styles.helper}>Completa usuario y PIN para continuar.</p>
           ) : null}
           <div className={styles.submitRow}>
             <Button type="submit" disabled={!canSubmit} onClick={() => undefined}>

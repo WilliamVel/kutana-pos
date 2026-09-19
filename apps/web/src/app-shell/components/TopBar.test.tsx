@@ -25,7 +25,10 @@ describe("TopBar", () => {
     );
 
     expect(screen.getByRole("heading", { name: "KUTANA" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute("src", "/LOGOkutana.svg");
+    expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute(
+      "src",
+      "/Kutana_navbar_transparente.svg",
+    );
     for (const label of ["Inventario", "Órdenes", "Clientes", "Cuentas por cobrar", "Más"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
@@ -103,5 +106,16 @@ describe("TopBar", () => {
     fireEvent.click(menuButton);
 
     expect(menuButton).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Órdenes" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Más" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Usuarios" })).not.toBeInTheDocument();
+    expect(document.querySelector('[data-icon="close"]')).not.toBeNull();
+    expect(document.body.style.overflow).toBe("hidden");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(menuButton).toHaveAttribute("aria-expanded", "false");
+    expect(document.activeElement).toBe(menuButton);
+    expect(document.body.style.overflow).toBe("");
   });
 });

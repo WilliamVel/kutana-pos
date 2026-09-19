@@ -41,8 +41,17 @@ export function TopBar({
     (screen) => !PRIMARY_SCREEN_IDS.includes(screen.id) && screen.id !== "users",
   );
   const initials = initialsFor(session.displayName);
-  const roleLabel = session.role === "admin" ? "Administrador" : "Operador";
+  const roleLabel = session.role === "admin" ? "Administrador" : "Usuario";
   const isMoreActive = moreScreens.some((screen) => screen.id === currentScreen);
+
+  useEffect(() => {
+    if (!isMenuOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMenuOpen]);
 
   useEffect(() => {
     if (!isMoreOpen && !isAccountOpen && !isMenuOpen) return undefined;
@@ -83,9 +92,14 @@ export function TopBar({
     setIsAccountOpen(false);
   };
 
+  const closeMobileMenu = (): void => {
+    setIsMenuOpen(false);
+    menuButtonRef.current?.focus();
+  };
+
   const logout = (): void => {
     setIsAccountOpen(false);
-    setIsMenuOpen(false);
+    closeMobileMenu();
     onLogout();
   };
 
@@ -108,7 +122,10 @@ export function TopBar({
     <header className={styles.bar}>
       <div className={styles.brandRow}>
         <h1 className={styles.wordmark}>
-          <img className={styles.logo} src="/LOGOkutana.svg" alt="KUTANA" />
+          <picture>
+            <source media="(max-width: 48rem)" srcSet="/Kutana_navbar_transparente.svg" />
+            <img className={styles.logo} src="/Kutana_navbar_transparente.svg" alt="KUTANA" />
+          </picture>
         </h1>
         <button
           ref={menuButtonRef}
@@ -119,9 +136,24 @@ export function TopBar({
           aria-expanded={isMenuOpen}
           onClick={() => setIsMenuOpen((open) => !open)}
         >
-          <Icon name="menu" size={21} />
+          <span
+            className={`${styles.menuGlyph} ${isMenuOpen ? styles.menuGlyphOpen : ""}`}
+            aria-hidden="true"
+          >
+            <Icon name="menu" size={24} />
+            <Icon name="close" size={24} />
+          </span>
         </button>
       </div>
+
+      {isMenuOpen ? (
+        <button
+          type="button"
+          className={styles.menuBackdrop}
+          aria-label="Cerrar menú de navegación"
+          onClick={closeMobileMenu}
+        />
+      ) : null}
 
       <nav
         id="main-navigation"

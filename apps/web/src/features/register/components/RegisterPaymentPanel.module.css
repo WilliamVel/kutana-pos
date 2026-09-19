@@ -33,7 +33,7 @@
 .eyebrow {
   color: var(--accent-strong) !important;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -142,7 +142,7 @@
 .methodFieldset legend {
   margin-bottom: var(--space-2);
   color: var(--text-primary);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .methods {

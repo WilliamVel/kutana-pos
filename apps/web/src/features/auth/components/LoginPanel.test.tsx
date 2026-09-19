@@ -13,7 +13,7 @@ describe("LoginPanel", () => {
       </PortsProvider>,
     );
 
-    expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute("src", "/LOGOkutana.svg");
+    expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute("src", "/Kutana_navbar_transparente.svg");
     expect(screen.getByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ingresar" })).toBeDisabled();
   });
@@ -41,7 +41,7 @@ describe("LoginPanel", () => {
       </PortsProvider>,
     );
 
-    fireEvent.change(screen.getByLabelText("Operador"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Mina" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
 
@@ -64,11 +64,11 @@ describe("LoginPanel", () => {
       </PortsProvider>,
     );
 
-    fireEvent.change(screen.getByLabelText("Operador"), { target: { value: "Anyone" } });
+    fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Anyone" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "9999" } });
     fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Operador o PIN inválido.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Usuario o PIN inválido.");
     expect(onLogin).not.toHaveBeenCalled();
   });
 });

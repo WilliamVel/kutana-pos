@@ -38,7 +38,7 @@
   margin: 0 0 var(--space-1);
   color: var(--text-secondary);
   font-size: .75rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
@@ -62,7 +62,7 @@
   margin: 0;
   color: var(--text-secondary);
   font-size: .8rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: .06em;
   text-align: center;
   text-transform: uppercase;
@@ -98,7 +98,7 @@
 
 .tableSummary dd {
   margin: 0;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .tableSummary .tableRemaining {
@@ -420,7 +420,7 @@
   color: var(--text-primary);
   text-align: center;
   font: inherit;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .quantityControl button {
@@ -491,7 +491,7 @@
 .status {
   color: var(--text-secondary);
   font-size: .75rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: .06em;
   text-transform: uppercase;
 }
@@ -523,7 +523,7 @@
 
 .accountTitle > span {
   font-size: 1.35rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .assignedProducts ul,
@@ -588,7 +588,7 @@
 
 .accountBalances dd {
   margin: var(--space-1) 0 0;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .accountActions {
@@ -729,7 +729,7 @@
   padding: var(--space-3);
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .paymentList li {

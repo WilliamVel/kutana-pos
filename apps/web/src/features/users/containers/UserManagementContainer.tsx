@@ -79,14 +79,14 @@ export function UserManagementContainer(): JSX.Element {
       <section className={styles.panel}>
         <p className={styles.eyebrow}>Administración</p>
         <h2>Usuarios</h2>
-        <p>Creá operadores y administradores. Las cuentas se desactivan sin borrar su historial.</p>
+        <p>Creá usuarios y administradores. Las cuentas se desactivan sin borrar su historial.</p>
         <form className={styles.form} aria-label="Formulario de usuario" onSubmit={(event) => void submit(event)}>
           <Input label="Nombre visible" value={displayName} onChange={setDisplayName} />
           <Input label="PIN" type="password" inputMode="numeric" value={pin} onChange={setPin} />
           <label className={styles.selectLabel}>
             Rol
             <select value={role} onChange={(event) => setRole(event.target.value as AuthRole)}>
-              <option value="operator">Operador</option>
+              <option value="operator">Usuario</option>
               <option value="admin">Administrador</option>
             </select>
           </label>
@@ -104,7 +104,7 @@ export function UserManagementContainer(): JSX.Element {
             <li key={user.id} className={styles.userRow}>
               <div>
                 <strong>{user.displayName}</strong>
-                <span>{user.role === "admin" ? "Administrador" : "Operador"}</span>
+                <span>{user.role === "admin" ? "Administrador" : "Usuario"}</span>
                 {user.deactivatedAt ? <span className={styles.inactive}>Desactivado</span> : null}
               </div>
               {!user.deactivatedAt ? (

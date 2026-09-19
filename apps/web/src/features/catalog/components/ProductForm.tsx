@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import type { StockKind, PourSize } from "@kutana/shared/catalog/model/product.js";
 import { Button } from "../../../design-system/atoms/Button.js";
 import { Input } from "../../../design-system/atoms/Input.js";
@@ -12,20 +12,20 @@ export interface ProductFormValues {
   readonly stockKind: StockKind;
   readonly pourSizeMl: PourSize | null;
   readonly description: string;
-  /** Integer cents — the form parses the user's dollars-and-cents input to this integer before submit. */
   readonly retailPriceCents: number;
-  /** Integer cents; null when the cost is unknown (never coerced to 0). */
   readonly costPriceCents: number | null;
   readonly lowStockLevel: number | null;
   readonly initialStockQuantity: number;
   readonly active: boolean;
+  /** UI-only until the catalog model gains a persisted presentation field. */
+  readonly presentation?: string;
+  /** Maps to the existing pourSizeMl field when the product uses volume. */
+  readonly contentMl?: number | null;
+  readonly trackInventory?: boolean;
+  readonly stockUnit?: "ea" | "ml" | "l";
 }
 
-export interface ProductFormCategoryOption {
-  readonly id: string;
-  readonly name: string;
-}
-
+export interface ProductFormCategoryOption { readonly id: string; readonly name: string; }
 export interface ProductFormProps {
   readonly categories: readonly ProductFormCategoryOption[];
   readonly initialValues: ProductFormValues;
@@ -36,280 +36,131 @@ export interface ProductFormProps {
 }
 
 const POUR_SIZES: PourSize[] = [330, 500, 750, 1000];
+const PRESENTATIONS = ["Botella", "Lata", "Vaso", "Jarra", "Plato", "Unidad"];
 
-/**
- * Parses a "6.50"-style dollar string into integer cents using only integer
- * arithmetic (never `parseFloat(x) * 100`, which reintroduces float error —
- * see @kutana/shared Money / design-system's formatCents for the same rule
- * applied to the read side).
- */
 function parseDollarsToCents(input: string): number {
   const [dollarsPart = "0", centsPart = "0"] = input.split(".");
   const dollars = Number.parseInt(dollarsPart, 10) || 0;
   const cents = Number.parseInt(centsPart.padEnd(2, "0").slice(0, 2), 10) || 0;
   return dollars * 100 + cents;
 }
-
 function formatCentsToDollarsInput(cents: number): string {
   const dollars = Math.trunc(cents / 100);
   const remainder = Math.abs(cents % 100);
   return `${dollars}.${remainder < 10 ? "0" : ""}${remainder}`;
 }
+function suggestedSku(name: string, presentation: string, contentMl: number | null): string {
+  const base = `${name}-${presentation}-${contentMl ?? ""}`
+    .toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return base || "PRODUCTO";
+}
 
-/**
- * Purely presentational: props in, markup out, no port access. Owns only
- * local, uncommitted edit state for the controlled fields; the container
- * (`ProductFormContainer`) decides what to do with a submitted
- * `ProductFormValues` (create vs. save via `ProductRepository`).
- *
- * NOTE — deviation from the task prompt: no image-upload port exists yet,
- * so this form does not render an image field.
- */
-export function ProductForm({
-  categories,
-  initialValues,
-  onSubmit,
-  onCancel,
-  submitLabel,
-  errors = {},
-}: ProductFormProps): JSX.Element {
-  const [values, setValues] = useState<ProductFormValues>(initialValues);
-  const stockKindFieldId = useId();
-  const categoryFieldId = useId();
-  const pourSizeFieldId = useId();
-  const activeFieldId = useId();
-  const errorCount = Object.keys(errors).length;
+export function ProductForm({ categories, initialValues, onSubmit, onCancel, submitLabel, errors = {} }: ProductFormProps): JSX.Element {
+  const initial = {
+    ...initialValues,
+    presentation: initialValues.presentation ?? (initialValues.stockKind === "volume" ? "Vaso" : "Unidad"),
+    contentMl: initialValues.contentMl ?? initialValues.pourSizeMl,
+    trackInventory: initialValues.trackInventory ?? false,
+    stockUnit: initialValues.stockUnit ?? (initialValues.stockKind === "volume" ? "ml" : "ea"),
+  };
+  const [values, setValues] = useState<ProductFormValues>(initial);
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [submitted, setSubmitted] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const nameId = useId();
+  const categoryId = useId();
+  const stockKindId = useId();
+  const stockUnitId = useId();
+  const presentationId = useId();
+  const contentId = useId();
+  const activeId = useId();
 
   function update<K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]): void {
     setValues((current) => ({ ...current, [key]: value }));
+    setDirty(true);
   }
+  function touch(key: string): void { setTouched((current) => new Set(current).add(key)); }
+  const localErrors: Partial<Record<keyof ProductFormValues, string>> = {
+    name: !values.name.trim() ? "Ingresá el nombre del producto." : undefined,
+    categoryId: !values.categoryId ? "Seleccioná una categoría." : undefined,
+    retailPriceCents: values.retailPriceCents < 0 ? "Ingresá un precio válido." : undefined,
+    ...(values.trackInventory && values.stockKind === "volume" && !values.contentMl ? { contentMl: "Indicá el contenido en mililitros." } : {}),
+    ...errors,
+  };
+  const visibleErrors = Object.fromEntries(Object.entries(localErrors).filter(([key, value]) => value && (errors[key as keyof ProductFormValues] || submitted || touched.has(key)))) as Partial<Record<keyof ProductFormValues, string>>;
+
+  useEffect(() => {
+    if (submitted && Object.keys(visibleErrors).length > 0) summaryRef.current?.focus();
+  }, [submitted]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    onSubmit(values);
+    setSubmitted(true);
+    const invalid = Object.keys(localErrors).filter((key) => localErrors[key as keyof ProductFormValues]);
+    if (invalid.length > 0) {
+      setTouched(new Set(invalid));
+      return;
+    }
+    const sku = values.sku.trim() || suggestedSku(values.name, values.presentation ?? "Unidad", values.contentMl ?? null);
+    onSubmit({ ...values, sku, pourSizeMl: values.stockKind === "volume" ? (values.contentMl as PourSize | null) : null });
   }
 
+  const shownError = (key: keyof ProductFormValues): string | undefined => visibleErrors[key];
+  const stockUnitLabel = values.stockKind === "volume" ? (values.stockUnit === "l" ? "L" : "ml") : "unidades";
+  const displayQuantity = (quantity: number): string => values.stockKind === "volume" && values.stockUnit === "l" ? String(quantity / 1000) : String(quantity);
+  const toStoredQuantity = (value: string): number => {
+    const parsed = Number(value) || 0;
+    return values.stockKind === "volume" && values.stockUnit === "l" ? parsed * 1000 : parsed;
+  };
+
   return (
-    <form
-      aria-label="Formulario de producto"
-      role="form"
-      className={styles.form}
-      onSubmit={handleSubmit}
-    >
+    <form aria-label="Formulario de producto" role="form" className={styles.form} onSubmit={handleSubmit}>
       <header className={styles.header}>
-        <p className={styles.eyebrow}>Configuración del catálogo</p>
-        <div>
-          <h2>{submitLabel === "Crear producto" ? "Agregar producto" : "Editar producto"}</h2>
-          <p>Primero cargá los datos de venta y después definí cómo impacta en el stock.</p>
-        </div>
+        <div><p className={styles.eyebrow}>Catálogo</p><h2>{submitLabel === "Crear producto" ? "Agregar producto" : "Editar producto"}</h2></div>
+        <p>Completá los datos principales. Los campos con * son obligatorios.</p>
       </header>
 
-      {errorCount > 0 ? (
-        <div className={styles.errorSummary} role="alert" aria-live="polite">
-          Revisá {errorCount === 1 ? "1 campo" : `${errorCount} campos`} e intentá de nuevo.
+      {Object.keys(visibleErrors).length > 0 ? (
+        <div ref={summaryRef} className={styles.errorSummary} role="alert" tabIndex={-1} aria-live="polite">
+          <strong>Revisá los datos del producto.</strong>
+          <ul>{Object.entries(visibleErrors).map(([key, message]) => <li key={key}>{message}</li>)}</ul>
         </div>
       ) : null}
 
-      <section className={styles.card} aria-labelledby="product-identity-heading">
-        <div className={styles.sectionHeader}>
-          <p className={styles.step}>Paso 1</p>
-          <div>
-            <h3 id="product-identity-heading">Identidad del producto</h3>
-            <p>Nombre, categoría y códigos que usa la caja.</p>
-          </div>
+      <div className={styles.layout}>
+        <div className={styles.mainColumn}>
+          <section className={styles.card} aria-labelledby="product-basic-heading">
+            <div className={styles.sectionHeader}><div><h3 id="product-basic-heading">Información básica</h3><p>Lo esencial para vender este producto.</p></div></div>
+            <Input id={nameId} label="Nombre del producto *" name="product-name" autoComplete="off" required value={values.name} onBlur={() => touch("name")} onChange={(value) => update("name", value)} error={shownError("name")} placeholder="Ej. Lager de la casa" />
+            <div className={styles.row}>
+              <div className={styles.selectField}><label className={styles.label} htmlFor={categoryId}>Categoría *</label><select id={categoryId} required className={styles.select} value={values.categoryId} onBlur={() => touch("categoryId")} onChange={(event) => update("categoryId", event.target.value)} aria-invalid={Boolean(shownError("categoryId"))} aria-describedby={shownError("categoryId") ? `${categoryId}-error` : undefined}><option value="">Seleccioná una categoría</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>{shownError("categoryId") ? <span id={`${categoryId}-error`} className={styles.error}>{shownError("categoryId")}</span> : null}</div>
+              <div className={styles.selectField}><label className={styles.label} htmlFor={presentationId}>Presentación o formato</label><select id={presentationId} className={styles.select} value={values.presentation} onChange={(event) => update("presentation", event.target.value)}>{PRESENTATIONS.map((item) => <option key={item}>{item}</option>)}</select></div>
+            </div>
+            <div className={styles.row}>
+              <div className={styles.selectField}><label className={styles.label} htmlFor={contentId}>Contenido o tamaño</label><select id={contentId} className={styles.select} value={values.contentMl ?? ""} onChange={(event) => update("contentMl", event.target.value ? Number(event.target.value) : null)}><option value="">Sin especificar</option>{POUR_SIZES.map((size) => <option key={size} value={size}>{size} ml</option>)}</select></div>
+              <Input label="Precio de venta * (USD)" name="product-retail-price" inputMode="decimal" required value={formatCentsToDollarsInput(values.retailPriceCents)} onBlur={() => touch("retailPriceCents")} onChange={(value) => update("retailPriceCents", parseDollarsToCents(value))} error={shownError("retailPriceCents")} placeholder="6.50" />
+            </div>
+          </section>
+
+          <section className={styles.card} aria-labelledby="product-stock-heading">
+            <div className={styles.sectionHeader}><div><h3 id="product-stock-heading">Control de inventario</h3><p>Activá esta opción solo si necesitás descontar existencias.</p></div><label className={styles.switch}><input type="checkbox" checked={values.trackInventory} onChange={(event) => update("trackInventory", event.target.checked)} /><span>Controlar inventario para este producto</span></label></div>
+            {values.trackInventory ? <div className={styles.stockFields}>
+              <div className={styles.selectField}><label className={styles.label} htmlFor={stockKindId}>Tipo de control</label><select id={stockKindId} className={styles.select} value={values.stockKind} onChange={(event) => update("stockKind", event.target.value as StockKind)}><option value="unit">Por unidades</option><option value="volume">Por volumen</option></select></div>
+              {values.stockKind === "volume" ? <div className={styles.selectField}><label className={styles.label} htmlFor={stockUnitId}>Unidad de medida</label><select id={stockUnitId} className={styles.select} value={values.stockUnit} onChange={(event) => update("stockUnit", event.target.value as "ml" | "l")}><option value="l">Litros (L)</option><option value="ml">Mililitros (ml)</option></select></div> : null}
+              <div className={styles.row}><Input label={`Stock inicial (${stockUnitLabel})`} type="number" inputMode="decimal" min={0} value={displayQuantity(values.initialStockQuantity)} onChange={(value) => update("initialStockQuantity", toStoredQuantity(value))} /><Input label={`Alerta de stock bajo (${stockUnitLabel})`} type="number" inputMode="decimal" min={0} value={values.lowStockLevel === null ? "" : displayQuantity(values.lowStockLevel)} onChange={(value) => update("lowStockLevel", value === "" ? null : toStoredQuantity(value))} /></div>
+            </div> : <p className={styles.muted}>Sin control de existencias. El producto estará disponible para la venta.</p>}
+          </section>
+
+          <details className={styles.moreOptions} open={moreOpen || Boolean(errors.sku || errors.barcode)} onToggle={(event) => setMoreOpen(event.currentTarget.open)}><summary>Más opciones</summary><div className={styles.moreGrid}><Input label="Costo (USD)" inputMode="decimal" value={values.costPriceCents === null ? "" : formatCentsToDollarsInput(values.costPriceCents)} onChange={(value) => update("costPriceCents", value === "" ? null : parseDollarsToCents(value))} placeholder="Opcional" /><Input label="SKU" value={values.sku} onChange={(value) => update("sku", value)} placeholder="Se sugiere automáticamente" /><Input label="Código de barras" inputMode="numeric" value={values.barcode} onChange={(value) => update("barcode", value)} error={shownError("barcode")} /><Input label="Descripción" multiline value={values.description} onChange={(value) => update("description", value)} /></div></details>
         </div>
 
-        <Input
-          label="Nombre"
-          name="product-name"
-          autoComplete="off"
-          value={values.name}
-          onChange={(value) => update("name", value)}
-          placeholder="Lager de la casa…"
-        />
-
-        <div className={styles.selectField}>
-          <label className={styles.label} htmlFor={categoryFieldId}>
-            Categoría
-          </label>
-          <select
-            id={categoryFieldId}
-            name="product-category"
-            autoComplete="off"
-            className={styles.select}
-            value={values.categoryId}
-            onChange={(event) => update("categoryId", event.target.value)}
-          >
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.row}>
-          <Input
-            label="SKU"
-            name="product-sku"
-            autoComplete="off"
-            value={values.sku}
-            onChange={(value) => update("sku", value)}
-            error={errors.sku}
-            placeholder="DRAFT-LAGER-500…"
-          />
-          <Input
-            label="Código de barras"
-            name="product-barcode"
-            autoComplete="off"
-            inputMode="numeric"
-            value={values.barcode}
-            onChange={(value) => update("barcode", value)}
-            placeholder="7501234567890…"
-          />
-        </div>
-      </section>
-
-      <section className={styles.card} aria-labelledby="product-pricing-heading">
-        <div className={styles.sectionHeader}>
-          <p className={styles.step}>Paso 2</p>
-          <div>
-            <h3 id="product-pricing-heading">Precios y notas</h3>
-            <p>El precio de venta es obligatorio; el costo y las notas son opcionales.</p>
-          </div>
-        </div>
-
-        <div className={styles.row}>
-          <Input
-            label="Precio de venta (USD)"
-            name="product-retail-price"
-            autoComplete="off"
-            inputMode="decimal"
-            value={formatCentsToDollarsInput(values.retailPriceCents)}
-            onChange={(value) => update("retailPriceCents", parseDollarsToCents(value))}
-            placeholder="6.50…"
-          />
-          <Input
-            label="Costo (USD)"
-            name="product-cost-price"
-            autoComplete="off"
-            inputMode="decimal"
-            value={
-              values.costPriceCents === null ? "" : formatCentsToDollarsInput(values.costPriceCents)
-            }
-            onChange={(value) =>
-              update("costPriceCents", value === "" ? null : parseDollarsToCents(value))
-            }
-            placeholder="4.25…"
-          />
-        </div>
-
-        <Input
-          label="Descripción"
-          name="product-description"
-          autoComplete="off"
-          value={values.description}
-          onChange={(value) => update("description", value)}
-          multiline
-          placeholder="Detalles opcionales…"
-        />
-      </section>
-
-      <section className={styles.card} aria-labelledby="product-stock-heading">
-        <div className={styles.sectionHeader}>
-          <p className={styles.step}>Paso 3</p>
-          <div>
-            <h3 id="product-stock-heading">Comportamiento de stock</h3>
-            <p>Usá stock por unidad para botellas o comida, y por volumen para cerveza tirada.</p>
-          </div>
-        </div>
-
-        <div className={styles.selectField}>
-          <label className={styles.label} htmlFor={stockKindFieldId}>
-            Tipo de stock
-          </label>
-          <select
-            id={stockKindFieldId}
-            name="product-stock-kind"
-            autoComplete="off"
-            className={styles.select}
-            value={values.stockKind}
-            onChange={(event) => update("stockKind", event.target.value as StockKind)}
-          >
-            <option value="unit">Unidad (botellas, comida)</option>
-            <option value="volume">Volumen (cerveza tirada, ml)</option>
-          </select>
-        </div>
-
-        {values.stockKind === "volume" ? (
-          <div className={styles.selectField}>
-            <label className={styles.label} htmlFor={pourSizeFieldId}>
-              Medida del vaso (ml)
-            </label>
-            <select
-              id={pourSizeFieldId}
-              name="product-pour-size"
-              autoComplete="off"
-              className={styles.select}
-              value={values.pourSizeMl ?? ""}
-              onChange={(event) => update("pourSizeMl", Number(event.target.value) as PourSize)}
-            >
-              {POUR_SIZES.map((size) => (
-                <option key={size} value={size}>
-                  {size}ml
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-
-        <div className={styles.row}>
-          <Input
-            label="Cantidad inicial de stock"
-            name="product-initial-stock"
-            autoComplete="off"
-            inputMode="numeric"
-            type="number"
-            value={String(values.initialStockQuantity)}
-            onChange={(value) => update("initialStockQuantity", Number(value) || 0)}
-            placeholder="20…"
-          />
-          <Input
-            label="Alerta de stock bajo"
-            name="product-low-stock-level"
-            autoComplete="off"
-            inputMode="numeric"
-            type="number"
-            value={values.lowStockLevel === null ? "" : String(values.lowStockLevel)}
-            onChange={(value) => update("lowStockLevel", value === "" ? null : Number(value) || 0)}
-            placeholder="5…"
-          />
-        </div>
-
-        <label className={styles.checkboxField} htmlFor={activeFieldId}>
-          <input
-            id={activeFieldId}
-            name="product-active"
-            type="checkbox"
-            aria-label="Activo"
-            checked={values.active}
-            onChange={(event) => update("active", event.target.checked)}
-          />
-          <span>
-            <strong>Activo</strong>
-            <small>Mostrar este producto en los flujos de pedido.</small>
-          </span>
-        </label>
-      </section>
-
-      <div className={styles.actions}>
-        <Button type="submit" onClick={() => {}}>
-          {submitLabel}
-        </Button>
-        <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancelar
-        </Button>
+        <aside className={styles.summary} aria-label="Resumen del producto"><h3>Resumen</h3><div className={styles.preview}><span>Producto</span><strong>{values.name || "Sin nombre"}</strong></div><dl><div><dt>Precio</dt><dd>{formatCentsToDollarsInput(values.retailPriceCents)} USD</dd></div><div><dt>Categoría</dt><dd>{categories.find((category) => category.id === values.categoryId)?.name ?? "Sin seleccionar"}</dd></div><div><dt>Presentación</dt><dd>{values.presentation || "Sin especificar"}</dd></div><div><dt>Inventario</dt><dd>{values.trackInventory ? `Controlado · ${values.stockKind === "volume" ? "volumen" : "unidades"}` : "No controlado"}</dd></div></dl></aside>
       </div>
+
+      <div className={styles.actions}><Button type="button" variant="secondary" onClick={() => { if (!dirty || window.confirm("¿Descartar los cambios sin guardar?")) onCancel(); }}>Cancelar</Button><Button type="submit" onClick={() => undefined}>{submitLabel}</Button></div>
+      <label className={styles.checkboxField} htmlFor={activeId}><input id={activeId} type="checkbox" checked={values.active} onChange={(event) => update("active", event.target.checked)} /><span><strong>Activo</strong><small>Mostrar este producto en los flujos de pedido.</small></span></label>
     </form>
   );
 }

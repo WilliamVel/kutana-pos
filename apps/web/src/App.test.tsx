@@ -13,16 +13,16 @@ describe("App", () => {
       </PortsProvider>,
     );
 
-    expect(screen.getByRole("heading", { name: "Ingreso de operador" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ingreso de usuario" })).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Operador"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Mina" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Inventario" })).toBeInTheDocument(),
     );
-    expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute("src", "/LOGOkutana.svg");
+    expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute("src", "/Kutana_navbar_transparente.svg");
     expect(screen.getByRole("button", { name: "Inventario" })).toBeInTheDocument();
   });
 
@@ -33,7 +33,7 @@ describe("App", () => {
       </PortsProvider>,
     );
 
-    fireEvent.change(screen.getByLabelText("Operador"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Mina" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
     await waitFor(() =>
@@ -52,7 +52,7 @@ describe("App", () => {
       </PortsProvider>,
     );
 
-    fireEvent.change(screen.getByLabelText("Operador"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Mina" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
     await waitFor(() =>
@@ -86,7 +86,7 @@ describe("App", () => {
       </PortsProvider>,
     );
 
-    fireEvent.change(screen.getByLabelText("Operador"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Mina" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
 
@@ -114,7 +114,7 @@ describe("App", () => {
       </PortsProvider>,
     );
 
-    fireEvent.change(screen.getByLabelText("Operador"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Mina" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
     await waitFor(() =>
@@ -123,6 +123,6 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: /Cuenta\s+Mina/ }));
     fireEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
 
-    expect(screen.getByRole("heading", { name: "Ingreso de operador" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ingreso de usuario" })).toBeInTheDocument();
   });
 });

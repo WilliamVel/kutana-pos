@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { Icon } from "../../../design-system/atoms/Icon.js";
 import styles from "./NewOrderButton.module.css";
 
 export interface NewOrderButtonTable {
@@ -62,8 +63,9 @@ export function NewOrderButton({
         return;
       }
       if (event.key !== "Tab" || !sheetRef.current) return;
-      const focusable = Array.from(sheetRef.current.querySelectorAll<HTMLElement>("button, input"))
-        .filter((element) => !element.hasAttribute("disabled"));
+      const focusable = Array.from(
+        sheetRef.current.querySelectorAll<HTMLElement>("button, input"),
+      ).filter((element) => !element.hasAttribute("disabled"));
       if (focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -90,12 +92,16 @@ export function NewOrderButton({
     setLoading(true);
     setError(null);
     try {
-      const selected = freeTables.find((table) => table.label.toLocaleLowerCase() === label.toLocaleLowerCase());
+      const selected = freeTables.find(
+        (table) => table.label.toLocaleLowerCase() === label.toLocaleLowerCase(),
+      );
       if (selected && mode === "table") await onSelectTable(selected.id);
       else if (onCreateTable) await onCreateTable(label);
       close(true);
     } catch (submissionError) {
-      setError(submissionError instanceof Error ? submissionError.message : "No se pudo crear la orden.");
+      setError(
+        submissionError instanceof Error ? submissionError.message : "No se pudo crear la orden.",
+      );
     } finally {
       setLoading(false);
     }
@@ -111,49 +117,136 @@ export function NewOrderButton({
 
   return (
     <div className={styles.wrap}>
-      <button ref={triggerRef} type="button" className={styles.trigger} aria-label="Nueva orden" onClick={() => setOpen(true)}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={styles.trigger}
+        aria-label="Nueva orden"
+        onClick={() => setOpen(true)}
+      >
         <span aria-hidden="true">+</span>
-        <span>Nueva<br />orden</span>
+        <span>
+          Nueva <br />
+          orden
+        </span>
       </button>
 
       {open ? (
-        <div className={styles.sheetBackdrop} role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) close(); }}>
+        <div
+          className={styles.sheetBackdrop}
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) close();
+          }}
+        >
           <section
             ref={sheetRef}
             className={styles.sheet}
             role="dialog"
             aria-modal="true"
             aria-labelledby="new-order-title"
-            onTouchStart={(event) => { touchStartY.current = event.touches[0]?.clientY ?? null; }}
-            onTouchEnd={(event) => { const start = touchStartY.current; const end = event.changedTouches[0]?.clientY; if (start !== null && end !== undefined && end - start > 80) close(); touchStartY.current = null; }}
+            onTouchStart={(event) => {
+              touchStartY.current = event.touches[0]?.clientY ?? null;
+            }}
+            onTouchEnd={(event) => {
+              const start = touchStartY.current;
+              const end = event.changedTouches[0]?.clientY;
+              if (start !== null && end !== undefined && end - start > 80) close();
+              touchStartY.current = null;
+            }}
           >
             <div className={styles.dragHandle} aria-hidden="true" />
             <div className={styles.sheetHeader}>
               <h2 id="new-order-title">Nueva orden</h2>
-              <button type="button" className={styles.closeButton} aria-label="Cerrar" onClick={() => close()}>×</button>
+              <button
+                type="button"
+                className={styles.closeButton}
+                aria-label="Cerrar"
+                onClick={() => close()}
+              >
+                <span className={styles.closeText} aria-hidden="true">
+                  ×
+                </span>
+                <span className={styles.closeIcon} aria-hidden="true">
+                  <Icon name="close" size={21} />
+                </span>
+              </button>
             </div>
             <form onSubmit={(event) => void submit(event)}>
               <fieldset className={styles.modeFieldset}>
                 <legend>¿Dónde se atenderá?</legend>
                 <div className={styles.modeOptions}>
-                  {([["table", "Mesa"], ["bar", "Barra"], ["takeaway", "Para llevar"]] as const).map(([value, label]) => (
-                    <button key={value} type="button" className={styles.modeButton} data-selected={mode === value} onClick={() => { setMode(value); setTableLabel(""); setError(null); inputRef.current?.focus(); }}>{label}</button>
+                  {(
+                    [
+                      ["table", "Mesa"],
+                      ["bar", "Barra"],
+                      ["takeaway", "Para llevar"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={styles.modeButton}
+                      data-selected={mode === value}
+                      onClick={() => {
+                        setMode(value);
+                        setTableLabel("");
+                        setError(null);
+                        inputRef.current?.focus();
+                      }}
+                    >
+                      {label}
+                    </button>
                   ))}
                 </div>
               </fieldset>
-              <label className={styles.inputLabel} htmlFor="new-order-label">Nombre o número</label>
-              <input ref={inputRef} id="new-order-label" className={styles.createInput} value={tableLabel} onChange={(event) => { setTableLabel(event.target.value); setError(null); }} placeholder={PLACEHOLDERS[mode]} autoComplete="off" />
-              {error || message ? <p className={styles.message} role="alert">{error ?? message}</p> : null}
-              {mode === "table" && freeTables.length === 0 ? <p className={styles.empty}>No hay mesas libres ahora.</p> : null}
+              <label className={styles.inputLabel} htmlFor="new-order-label">
+                Nombre o número
+              </label>
+              <input
+                ref={inputRef}
+                id="new-order-label"
+                className={styles.createInput}
+                value={tableLabel}
+                onChange={(event) => {
+                  setTableLabel(event.target.value);
+                  setError(null);
+                }}
+                placeholder={PLACEHOLDERS[mode]}
+                autoComplete="off"
+              />
+              {error || message ? (
+                <p className={styles.message} role="alert">
+                  {error ?? message}
+                </p>
+              ) : null}
+              {mode === "table" && freeTables.length === 0 ? (
+                <p className={styles.empty}>No hay mesas libres ahora.</p>
+              ) : null}
               {mode === "table" && freeTables.length > 0 ? (
                 <div className={styles.availableTables}>
                   <span>Mesas disponibles</span>
                   <div className={styles.chips}>
-                    {freeTables.map((table) => <button key={table.id} type="button" className={styles.chip} onClick={() => chooseTable(table)}>{table.label}</button>)}
+                    {freeTables.map((table) => (
+                      <button
+                        key={table.id}
+                        type="button"
+                        className={styles.chip}
+                        onClick={() => chooseTable(table)}
+                      >
+                        {table.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               ) : null}
-              <button type="submit" className={styles.createButton} disabled={loading || tableLabel.trim().length === 0}>{loading ? "Creando…" : "Crear orden"}</button>
+              <button
+                type="submit"
+                className={styles.createButton}
+                disabled={loading || tableLabel.trim().length === 0}
+              >
+                {loading ? "Creando…" : "Crear orden"}
+              </button>
             </form>
           </section>
         </div>

@@ -28,6 +28,10 @@ function toFormValues(product?: Product, stockItem?: StockItem | null): ProductF
       lowStockLevel: null,
       initialStockQuantity: 0,
       active: true,
+      trackInventory: false,
+      stockUnit: "ea",
+      presentation: "Unidad",
+      contentMl: null,
     };
   }
 
@@ -44,6 +48,10 @@ function toFormValues(product?: Product, stockItem?: StockItem | null): ProductF
     lowStockLevel: stockItem?.lowStockLevel ?? product.lowStockLevel,
     initialStockQuantity: stockItem?.quantity ?? 0,
     active: product.active,
+    trackInventory: product.stockItemId !== null,
+    stockUnit: product.stockKind === "volume" ? "ml" : "ea",
+    presentation: product.stockKind === "volume" ? "Vaso" : "Unidad",
+    contentMl: product.pourSizeMl,
   };
 }
 
@@ -109,6 +117,11 @@ export function ProductFormContainer({
         setErrors({ sku: "El SKU ya está en uso" });
         return;
       }
+      const existingWithBarcode = values.barcode ? await products.findByBarcode(values.barcode) : null;
+      if (existingWithBarcode && existingWithBarcode.id !== existingProduct?.id) {
+        setErrors({ barcode: "El código de barras ya está en uso" });
+        return;
+      }
       setErrors({});
 
       if (existingProduct) {
@@ -136,21 +149,28 @@ export function ProductFormContainer({
         onSaved(saved);
         return;
       }
-      const stockItem = createStockItem({
-        name: values.name,
-        kind: values.stockKind,
-        unit: values.stockKind === "volume" ? "ml" : "ea",
-        quantity: values.initialStockQuantity,
-        lowStockLevel: values.lowStockLevel,
-      });
-      const seedMovement = createStockMovement({
-        stockItemId: stockItem.id,
-        delta: 0,
-        reason: "adjustment",
-        refType: "product-created",
-        refId: stockItem.id,
-      });
-      await stock.recordMovement(stockItem, seedMovement, 0);
+      const stockItem = values.trackInventory
+        ? createStockItem({
+            name: values.name,
+            kind: values.stockKind,
+            unit: values.stockKind === "volume" ? "ml" : "ea",
+            quantity: values.initialStockQuantity,
+            lowStockLevel: values.lowStockLevel,
+          })
+        : null;
+      if (stockItem) {
+        await stock.recordMovement(
+          stockItem,
+          createStockMovement({
+            stockItemId: stockItem.id,
+            delta: 0,
+            reason: "adjustment",
+            refType: "product-created",
+            refId: stockItem.id,
+          }),
+          0,
+        );
+      }
 
       const newProduct = createProduct({
         name: values.name,
@@ -163,8 +183,8 @@ export function ProductFormContainer({
         taxRateBp: 1200,
         stockKind: values.stockKind,
         pourSizeMl: values.stockKind === "volume" ? values.pourSizeMl : null,
-        lowStockLevel: values.lowStockLevel,
-        stockItemId: stockItem.id,
+        lowStockLevel: values.trackInventory ? values.lowStockLevel : null,
+        stockItemId: stockItem?.id ?? null,
       });
       const saved = await products.save(newProduct, 0);
       onSaved(saved);
@@ -177,6 +197,10 @@ export function ProductFormContainer({
     values: ProductFormValues,
     currentProduct: Product,
   ): Promise<string | null> {
+    if (!values.trackInventory) {
+      return null;
+    }
+
     if (existingStockItem) {
       const nextStockItem: StockItem = {
         ...existingStockItem,

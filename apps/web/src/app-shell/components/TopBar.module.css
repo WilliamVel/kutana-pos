@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-5);
-  min-height: 4.75rem;
+  min-height: 3.75rem;
   padding: var(--space-2) clamp(var(--space-4), 3vw, var(--space-6));
   background: var(--surface-nav);
   border-bottom: 1px solid var(--border-subtle);
@@ -20,7 +20,13 @@
 .wordmark {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
+  min-width: 0;
   margin: 0;
+}
+.wordmark picture {
+  display: block;
+  line-height: 0;
 }
 .logo {
   display: block;
@@ -34,11 +40,37 @@
   justify-content: center;
   width: 2.75rem;
   height: 2.75rem;
+  flex: 0 0 2.75rem;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--surface-raised);
   color: var(--text-primary);
   cursor: pointer;
+}
+.menuGlyph {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.menuGlyph > svg {
+  position: absolute;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+.menuGlyph > svg:last-child {
+  opacity: 0;
+  transform: rotate(-45deg) scale(0.7);
+}
+.menuGlyphOpen > svg:first-child {
+  opacity: 0;
+  transform: rotate(45deg) scale(0.7);
+}
+.menuGlyphOpen > svg:last-child {
+  opacity: 1;
+  transform: rotate(0) scale(1);
 }
 
 .tabs {
@@ -64,7 +96,7 @@
   color: var(--text-secondary);
   font: inherit;
   font-size: 0.92rem;
-  font-weight: 650;
+  font-weight: 600;
   cursor: pointer;
   transition:
     background-color 180ms ease,
@@ -99,14 +131,17 @@
 .accountButton:focus-visible,
 .menuButton:focus-visible,
 .menuAction:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
+}
+.menuButton:focus {
+  outline: none;
 }
 .tab[aria-current="page"] {
   background: var(--surface-active);
   border-color: var(--border-active);
   color: var(--accent-strong);
-  font-weight: 750;
+  font-weight: 700;
 }
 .tab[aria-current="page"] .tabIcon {
   color: var(--accent-strong);
@@ -169,7 +204,7 @@
   background: var(--accent-emphasis);
   color: var(--surface-raised);
   font-size: 0.76rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 .accountCopy {
   display: grid;
@@ -178,7 +213,7 @@
 }
 .accountName {
   font-size: 0.9rem;
-  font-weight: 750;
+  font-weight: 700;
   line-height: 1.1;
 }
 .accountRole {
@@ -202,7 +237,7 @@
 }
 .accountSummaryName {
   color: var(--text-primary);
-  font-weight: 750;
+  font-weight: 700;
 }
 .accountHint {
   color: var(--text-secondary);
@@ -228,7 +263,8 @@
   .tab,
   .accountButton,
   .menuAction,
-  .menuButton {
+  .menuButton,
+  .menuGlyph > svg {
     transition: none;
   }
 }
@@ -248,41 +284,77 @@
 }
 @media (max-width: 48rem) {
   .bar {
-    min-height: 4.5rem;
+    min-height: calc(4.25rem + env(safe-area-inset-top));
+    height: calc(4.25rem + env(safe-area-inset-top));
     align-items: stretch;
     flex-direction: column;
     gap: 0;
-    padding: var(--space-2) var(--space-4);
+    padding: env(safe-area-inset-top) max(1rem, env(safe-area-inset-right)) 0
+      max(1rem, env(safe-area-inset-left));
+    z-index: 40;
   }
   .brandRow {
     justify-content: space-between;
-    min-height: 3.5rem;
+    min-height: 4.25rem;
+    height: 4.25rem;
   }
   .logo {
-    width: 6.25rem;
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: min(7.8125rem, 42vw);
+    max-height: 2.75rem;
+    object-fit: contain;
   }
   .menuButton {
     display: inline-flex;
+    background: var(--surface-sunken);
+    box-shadow: none;
+  }
+  .menuBackdrop {
+    position: fixed;
+    top: calc(4.25rem + env(safe-area-inset-top));
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+    border: 0;
+    background: rgba(29, 49, 36, 0.42);
+    cursor: pointer;
   }
   .tabs {
-    position: absolute;
-    top: 100%;
+    position: fixed;
+    top: calc(4.25rem + env(safe-area-inset-top));
     right: 0;
-    left: 0;
-    display: none;
+    bottom: 0;
+    left: auto;
+    display: flex;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateX(100%);
+    transition:
+      transform 230ms ease,
+      visibility 230ms ease;
     flex-direction: column;
     align-items: stretch;
-    width: auto;
-    min-height: calc(100dvh - 4.5rem);
-    padding: var(--space-2) var(--space-2) max(var(--space-3), env(safe-area-inset-bottom));
+    width: min(21.25rem, calc(100vw - 1.5rem));
+    max-width: 21.25rem;
+    height: auto;
+    height: calc(100dvh - 4.25rem - env(safe-area-inset-top));
+    min-height: 0;
+    padding: var(--space-3) var(--space-2) max(var(--space-3), env(safe-area-inset-bottom));
+    overflow-x: hidden;
     overflow-y: auto;
     background: var(--surface-raised);
     border-top: 1px solid var(--border-subtle);
+    border-left: 1px solid var(--border-subtle);
     box-shadow: var(--shadow-lg);
     z-index: 30;
   }
   .tabsOpen {
-    display: flex;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(0) !important;
   }
   .navigationItems {
     display: flex;
@@ -324,5 +396,11 @@
   }
   .accountButton > svg {
     margin-left: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabs {
+    transition: none;
   }
 }
