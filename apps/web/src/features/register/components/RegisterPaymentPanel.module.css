@@ -235,10 +235,12 @@
   }
 
   .productsPane {
-    height: min(40vh, 24rem);
+    height: auto;
+    overflow: visible;
   }
 
   .lines {
     min-height: 0;
+    overflow: visible;
   }
 }

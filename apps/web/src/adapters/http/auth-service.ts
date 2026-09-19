@@ -7,6 +7,7 @@ export const AUTH_SESSION_EXPIRED_EVENT = "kutana.auth.session-expired";
 export class HttpAuthService implements AuthService {
   private readonly http: HttpClient;
   private session: AuthSession | null = null;
+  private refreshInFlight: Promise<AuthSession | null> | null = null;
 
   constructor(options: HttpClientOptions = {}) {
     this.http = new HttpClient(options);
@@ -33,12 +34,22 @@ export class HttpAuthService implements AuthService {
   }
 
   async refresh(): Promise<AuthSession | null> {
+    if (this.refreshInFlight) return this.refreshInFlight;
     if (!this.session?.refreshToken) return null;
 
+    this.refreshInFlight = this.refreshSession();
+    try {
+      return await this.refreshInFlight;
+    } finally {
+      this.refreshInFlight = null;
+    }
+  }
+
+  private async refreshSession(): Promise<AuthSession | null> {
     try {
       const session = await this.http.request<AuthSession>("/auth/refresh", {
         method: "POST",
-        body: { refreshToken: this.session.refreshToken },
+        body: { refreshToken: this.session?.refreshToken },
         auth: false,
       });
       this.setSession(session);

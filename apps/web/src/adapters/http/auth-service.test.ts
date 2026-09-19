@@ -73,6 +73,33 @@ describe("HttpAuthService", () => {
     expect(service.currentSession()).toEqual(refreshedSession);
   });
 
+  it("shares one refresh request when refresh is called concurrently", async () => {
+    const calls: FetchCall[] = [];
+    let resolveRefresh: ((response: Response) => void) | undefined;
+    const refreshResponse = new Promise<Response>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push({ url: String(input), init: init ?? {} });
+      if (calls.length === 1) {
+        return new Response(JSON.stringify(session), { status: 200 });
+      }
+      return refreshResponse;
+    }) as unknown as typeof fetch;
+    const service = new HttpAuthService({ baseUrl: BASE_URL, fetchImpl });
+
+    await service.login({ operator: "Mina", pin: "1234" });
+    const firstRefresh = service.refresh();
+    const secondRefresh = service.refresh();
+    resolveRefresh?.(new Response(JSON.stringify(refreshedSession), { status: 200 }));
+
+    await expect(Promise.all([firstRefresh, secondRefresh])).resolves.toEqual([
+      refreshedSession,
+      refreshedSession,
+    ]);
+    expect(calls).toHaveLength(2);
+  });
+
   it("clears the stored session on logout", async () => {
     const { fetchImpl } = createFetch();
     const service = new HttpAuthService({ baseUrl: BASE_URL, fetchImpl });

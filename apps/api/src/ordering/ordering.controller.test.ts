@@ -43,7 +43,7 @@ describe("OrderingController", () => {
     };
     const orderEvents = {
       publish: vi.fn(),
-      eventsForOrder: vi.fn(),
+      eventsStream: vi.fn(),
     };
 
     return {
@@ -129,13 +129,13 @@ describe("OrderingController", () => {
     );
   });
 
-  it("exposes an SSE stream for order events by order id", () => {
+  it("exposes one global SSE stream for order events", () => {
     const { controller, orderEvents } = controllerWithMocks();
     const stream = {};
-    orderEvents.eventsForOrder.mockReturnValue(stream);
+    orderEvents.eventsStream.mockReturnValue(stream);
 
-    expect(controller.orderEvents("order-1")).toBe(stream);
-    expect(orderEvents.eventsForOrder).toHaveBeenCalledWith("order-1");
+    expect(controller.orderEvents()).toBe(stream);
+    expect(orderEvents.eventsStream).toHaveBeenCalledOnce();
   });
 
   it("compiles the ordering module with an overridden Postgres pool", async () => {

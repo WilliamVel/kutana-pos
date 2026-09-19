@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { filter, map, Observable, Subject } from "rxjs";
+import { map, Observable, Subject } from "rxjs";
 import type { OrderEvent } from "@kutana/shared/ordering/ports/order-events.js";
 
 export interface SseOrderEventMessage {
@@ -14,10 +14,7 @@ export class OrderEventsService {
     this.events.next(event);
   }
 
-  eventsForOrder(orderId: string): Observable<SseOrderEventMessage> {
-    return this.events.asObservable().pipe(
-      filter((event) => event.orderId === orderId),
-      map((event) => ({ data: event })),
-    );
+  eventsStream(): Observable<SseOrderEventMessage> {
+    return this.events.asObservable().pipe(map((event) => ({ data: event })));
   }
 }

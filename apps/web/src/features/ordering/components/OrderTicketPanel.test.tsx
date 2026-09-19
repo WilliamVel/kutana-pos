@@ -44,6 +44,25 @@ describe("OrderTicketPanel", () => {
     expect(screen.getByText("$15.12")).toBeInTheDocument(); // total
   });
 
+  it("shows paid and remaining balances when the order has partial payments", () => {
+    render(
+      <OrderTicketPanel
+        tableLabel="Table 1"
+        status="active"
+        lines={LINES}
+        subtotalCents={1350}
+        taxCents={162}
+        totalCents={512}
+        paidCents={1000}
+      />,
+    );
+
+    expect(screen.getByText("Pagado")).toBeInTheDocument();
+    expect(screen.getByText("$10.00")).toBeInTheDocument();
+    expect(screen.getByText("Saldo pendiente")).toBeInTheDocument();
+    expect(screen.getByText("$5.12")).toBeInTheDocument();
+  });
+
   it("shows an empty state when the order has no line items yet", () => {
     render(
       <OrderTicketPanel

@@ -55,16 +55,121 @@
   color: var(--text-secondary);
 }
 
+.mobileTabs { display: none; }
+.createdNotice { position: fixed; right: 1rem; bottom: 5rem; z-index: 70; padding: 0.65rem 0.9rem; border-radius: 0.7rem; background: var(--action-secondary-bg); color: var(--action-secondary-fg); font-size: 0.85rem; font-weight: 700; box-shadow: var(--shadow-md); }
+
 /* Stack the columns on narrow viewports, matching the app-shell
    breakpoint in AppShell.module.css. */
 @media (max-width: 64rem) {
   .workspace,
   .workspaceFocused {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .mobileTabs {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: grid;
+    flex: 0 0 auto;
+    align-self: stretch;
+    order: 0;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.25rem;
+    min-height: 3.5rem;
+    padding: 0.5rem 0.25rem;
+    border-radius: 0;
+    background: var(--surface-page);
+    box-shadow: 0 0.35rem 0.7rem rgb(29 49 36 / 12%);
+  }
+
+  .mobileTabs button {
+    display: inline-flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.75rem;
+    border: 0;
+    border-radius: 0.6rem;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .mobileTabs button[aria-selected="true"] {
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .mobileTabs strong {
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: var(--action-primary-bg);
+    color: var(--action-primary-fg);
+    font-size: 0.75rem;
+  }
+
+  .list {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    order: -1;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    gap: 0.45rem;
+  }
+
+  .list > :first-child { flex: 0 0 auto; }
+  .list > :last-child { min-width: 0; min-height: 0; flex: 1 1 auto; }
+  .list > :last-child > :global(.list) { width: 100%; }
+
+  .list :global(.panel) {
+    padding: 0.5rem;
+  }
+
+  .list :global(.list) {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .center,
+  .rail {
+    display: none;
+    width: 100%;
+  }
+
+  .workspace[data-mobile-view="order"] .center,
+  .workspaceFocused[data-mobile-view="order"] .center {
+    display: flex;
+  }
+
+  .workspace[data-mobile-view="products"] .list {
+    display: none;
+  }
+
+  .workspace[data-mobile-view="products"] .rail {
+    display: flex;
   }
 
   .center {
     height: auto;
+    max-height: none;
     overflow: visible;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .rail {
+    min-height: 0;
   }
 }

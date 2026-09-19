@@ -9,6 +9,7 @@ export interface NewOrderContainerProps {
   /** Called with the table id after its new (empty) order is created. */
   readonly onCreated: (tableId: string) => void;
   readonly reloadKey?: number;
+  readonly openRequest?: number;
 }
 
 /**
@@ -18,7 +19,7 @@ export interface NewOrderContainerProps {
  * all-orders view picks up the new row. Follows the codebase's
  * read -> apply-domain-fn -> save -> catch-`ConflictError` seam.
  */
-export function NewOrderContainer({ onCreated, reloadKey = 0 }: NewOrderContainerProps): JSX.Element {
+export function NewOrderContainer({ onCreated, reloadKey = 0, openRequest = 0 }: NewOrderContainerProps): JSX.Element {
   const tables = useTables();
   const orders = useOrders();
   const events = useOrderEvents();
@@ -52,11 +53,12 @@ export function NewOrderContainer({ onCreated, reloadKey = 0 }: NewOrderContaine
       setMessage(null);
       await loadFreeTables();
       onCreated(table.id);
+      window.dispatchEvent(new CustomEvent("kutana.order.created"));
     } catch (error) {
       if (error instanceof ConflictError) {
-        setMessage("That table was just taken — pick another.");
+        setMessage("Esa mesa ya está ocupada. Elige otra.");
         await loadFreeTables();
-        return;
+        throw new Error("Esa mesa ya está ocupada. Elige otra.");
       }
       throw error;
     }
@@ -91,10 +93,11 @@ export function NewOrderContainer({ onCreated, reloadKey = 0 }: NewOrderContaine
       onRemoveTable={(tableId) => void removeFreeTable(tableId)}
       onSelectTable={(tableId) => {
         const table = freeTables.find((candidate) => candidate.id === tableId);
-        if (table) void createOrderForTable(table);
+        return table ? createOrderForTable(table) : Promise.resolve();
       }}
-      onCreateTable={(label) => void createTableAndOrder(label)}
+      onCreateTable={(label) => createTableAndOrder(label)}
       message={message}
+      openRequest={openRequest}
     />
   );
 }

@@ -16,7 +16,13 @@ export interface TopBarProps {
  * Main app navigation. Desktop keeps the tab bar visible; small screens expose
  * the same navigation and account actions behind a hamburger button.
  */
-export function TopBar({ currentScreen, onNavigate, onLogout, onChangePin = () => undefined, session }: TopBarProps): JSX.Element {
+export function TopBar({
+  currentScreen,
+  onNavigate,
+  onLogout,
+  onChangePin = () => undefined,
+  session,
+}: TopBarProps): JSX.Element {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const screens = screensForRole(session.role);
@@ -26,6 +32,16 @@ export function TopBar({ currentScreen, onNavigate, onLogout, onChangePin = () =
   const navigate = (screen: ScreenId): void => {
     onNavigate(screen);
     setIsMenuOpen(false);
+  };
+
+  const toggleAccountMenu = (): void => {
+    const nextOpen = !isAccountOpen;
+    console.info("[TopBar] account menu click", {
+      currentOpen: isAccountOpen,
+      nextOpen,
+      account: session.displayName,
+    });
+    setIsAccountOpen(nextOpen);
   };
 
   const logout = (): void => {
@@ -53,20 +69,22 @@ export function TopBar({ currentScreen, onNavigate, onLogout, onChangePin = () =
       </div>
 
       <nav id="main-navigation" className={`${styles.tabs} ${isMenuOpen ? styles.tabsOpen : ""}`}>
-        {screens.map((screen) => (
-          <button
-            key={screen.id}
-            type="button"
-            className={styles.tab}
-            aria-current={screen.id === currentScreen ? "page" : undefined}
-            onClick={() => navigate(screen.id)}
-          >
-            <span className={styles.tabIcon} aria-hidden="true">
-              <Icon name={screen.icon} size={18} />
-            </span>
-            <span className={styles.tabLabel}>{screen.tabLabel}</span>
-          </button>
-        ))}
+        <div className={styles.navigationItems}>
+          {screens.map((screen) => (
+            <button
+              key={screen.id}
+              type="button"
+              className={styles.tab}
+              aria-current={screen.id === currentScreen ? "page" : undefined}
+              onClick={() => navigate(screen.id)}
+            >
+              <span className={styles.tabIcon} aria-hidden="true">
+                <Icon name={screen.icon} size={18} />
+              </span>
+              <span className={styles.tabLabel}>{screen.tabLabel}</span>
+            </button>
+          ))}
+        </div>
 
         <div className={styles.accountMenu}>
           <button
@@ -74,7 +92,7 @@ export function TopBar({ currentScreen, onNavigate, onLogout, onChangePin = () =
             className={styles.accountButton}
             aria-expanded={isAccountOpen}
             aria-controls="account-actions"
-            onClick={() => setIsAccountOpen((open) => !open)}
+            onClick={toggleAccountMenu}
           >
             <span className={styles.accountAvatar} aria-hidden="true">
               {initials}
@@ -98,11 +116,17 @@ export function TopBar({ currentScreen, onNavigate, onLogout, onChangePin = () =
                   <p className={styles.accountHint}>{roleLabel}</p>
                 </div>
               </div>
-              <button type="button" className={styles.logoutButton} onClick={() => { setIsAccountOpen(false); onChangePin(); }}
-                  >
-                    Cambiar PIN
-                  </button>
-                  <button type="button" className={styles.logoutButton} onClick={logout}>
+              <button
+                type="button"
+                className={styles.logoutButton}
+                onClick={() => {
+                  setIsAccountOpen(false);
+                  onChangePin();
+                }}
+              >
+                Cambiar PIN
+              </button>
+              <button type="button" className={styles.logoutButton} onClick={logout}>
                 Cerrar sesión
               </button>
             </div>

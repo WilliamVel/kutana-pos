@@ -26,6 +26,7 @@ import { CustomerManagementContainer } from "./features/customers/containers/Cus
 import { UserManagementContainer } from "./features/users/containers/UserManagementContainer.js";
 import { AnalyticsScreen } from "./features/analytics/AnalyticsScreen.js";
 import { canAccessScreen } from "./app-shell/screens.js";
+import styles from "./App.module.css";
 
 /** Center-column sub-state of the unified Register workspace. */
 type CenterView = "account" | "payment" | "assignment";
@@ -41,19 +42,27 @@ export function App(): JSX.Element {
   const [session, setSession] = useState<AuthSession | null>(() => auth.currentSession());
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
   const [screen, setScreen] = useState<ScreenId>("inventory");
+  const [isNavigating, setIsNavigating] = useState(false);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [centerView, setCenterView] = useState<CenterView>("account");
   const [ordersReloadKey, setOrdersReloadKey] = useState(0);
+  const [newOrderRequest, setNewOrderRequest] = useState(0);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-      const [isChangePinOpen, setIsChangePinOpen] = useState(false);
+  const [isChangePinOpen, setIsChangePinOpen] = useState(false);
 
   const resetCenter = (): void => {
     setCenterView("account");
     setSelectedTicketId(null);
     setSelectedAccountId(null);
   };
+
+  useEffect(() => {
+    if (!isNavigating) return;
+    const timeoutId = window.setTimeout(() => setIsNavigating(false), 280);
+    return () => window.clearTimeout(timeoutId);
+  }, [isNavigating, screen]);
 
   useEffect(() => {
     const expireSession = (): void => {
@@ -73,6 +82,7 @@ export function App(): JSX.Element {
     if (!canAccessScreen(next, session.role)) return;
     if (next === "register") resetCenter();
     setEditingProduct(null);
+    setIsNavigating(true);
     setScreen(next);
   };
 
@@ -166,7 +176,7 @@ export function App(): JSX.Element {
           currentScreen={screen}
           session={session}
           onNavigate={navigate}
-              onChangePin={() => setIsChangePinOpen(true)}
+          onChangePin={() => setIsChangePinOpen(true)}
           onLogout={() => {
             auth.logout();
             setSession(null);
@@ -215,24 +225,29 @@ export function App(): JSX.Element {
 
       {screen === "users" && session.role === "admin" ? <UserManagementContainer /> : null}
 
-          {screen === "analytics" && session.role === "admin" ? <AnalyticsScreen /> : null}
+      {screen === "analytics" && session.role === "admin" ? <AnalyticsScreen /> : null}
 
-          {isChangePinOpen ? <ChangePinPanel onDone={() => setIsChangePinOpen(false)} /> : null}
+      {isChangePinOpen ? <ChangePinPanel onDone={() => setIsChangePinOpen(false)} /> : null}
 
       {screen === "register" ? (
         <RegisterWorkspace
           list={
             <>
-              <NewOrderContainer
-                reloadKey={ordersReloadKey}
-                onCreated={(tableId) => {
-                  selectTable(tableId);
-                  setOrdersReloadKey((key) => key + 1);
-                }}
-              />
               <OrdersOverviewContainer
+                newOrder={
+                  <NewOrderContainer
+                    reloadKey={ordersReloadKey}
+                    openRequest={newOrderRequest}
+                    onCreated={(tableId) => {
+                      selectTable(tableId);
+                      window.dispatchEvent(new CustomEvent("kutana.mobile.products"));
+                      setOrdersReloadKey((key) => key + 1);
+                    }}
+                  />
+                }
                 selectedTableId={selectedTableId}
                 onSelectTable={selectTable}
+                onNewOrder={() => setNewOrderRequest((request) => request + 1)}
                 onOrderRemoved={() => {
                   resetCenter();
                   setSelectedTableId(null);
@@ -258,6 +273,12 @@ export function App(): JSX.Element {
             )
           }
         />
+      ) : null}
+
+      {isNavigating ? (
+        <div className={styles.navigationLoading} role="status" aria-live="polite">
+          <span className={styles.loader}>Cargando sección…</span>
+        </div>
       ) : null}
     </AppShell>
   );

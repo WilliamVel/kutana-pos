@@ -60,6 +60,9 @@ export function AddItemContainer({ tableId }: AddItemContainerProps): JSX.Elemen
       const found = await orders.findByTable(tableId);
       if (cancelled) return;
       setOrder(found);
+      window.setTimeout(() => window.dispatchEvent(new CustomEvent("kutana.order.updated", {
+        detail: { orderCount: found?.lineItems.reduce((sum, line) => sum + line.quantity, 0) ?? 0, productCount: cats.flatMap((_, index) => perCat[index] ?? []).length },
+      })), 0);
     }
 
     void load();
@@ -93,6 +96,9 @@ export function AddItemContainer({ tableId }: AddItemContainerProps): JSX.Elemen
     try {
       const saved = await orders.save(next, current.version);
       setOrder(saved);
+      window.dispatchEvent(new CustomEvent("kutana.order.updated", {
+        detail: { orderCount: saved.lineItems.reduce((sum, line) => sum + line.quantity, 0), productCount: catalog.length },
+      }));
       events.publish({
         type: "order.updated",
         orderId: saved.id,

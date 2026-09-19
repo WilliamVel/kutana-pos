@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../design-system/atoms/Button.js";
-import { useDebouncedValue } from "../../../shared/useDebouncedValue.js";
 import { PriceTag } from "../../../design-system/molecules/PriceTag.js";
 import styles from "./AddItemPanel.module.css";
 
@@ -45,8 +44,13 @@ export function AddItemPanel({
   onDismissConflict,
 }: AddItemPanelProps): JSX.Element {
   const [query, setQuery] = useState("");
-  const debouncedQuery = useDebouncedValue(query);
   const [activeCategory, setActiveCategory] = useState<string>(ALL_TAB);
+  const [addedProduct, setAddedProduct] = useState<string | null>(null);
+  const toastTimer = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
+  }, []);
 
   const categoryNames =
     categories ?? [...new Set(products.map((product) => product.categoryName))];
@@ -54,7 +58,7 @@ export function AddItemPanel({
 
   // Client-side filter only. Real server-side search (`GET /products?q=`)
   // is a Milestone-2 concern; the container keeps passing the full list.
-  const needle = debouncedQuery.trim().toLowerCase();
+  const needle = query.trim().toLowerCase();
   const visible = products.filter((product) => {
     const matchesQuery = needle ? product.name.toLowerCase().includes(needle) : true;
     const matchesCategory =
@@ -63,8 +67,8 @@ export function AddItemPanel({
   });
 
   return (
-    <section className={styles.panel} aria-label="Agregar productos a la orden">
-      <h2>Agregar productos</h2>
+    <section className={styles.panel} aria-label="Catálogo de productos">
+      <h2>Catálogo</h2>
 
       <input
         type="search"
@@ -90,6 +94,13 @@ export function AddItemPanel({
         ))}
       </div>
 
+      {addedProduct ? (
+        <div className={styles.success} role="status" aria-live="polite">
+          <span aria-hidden="true">✓</span> {addedProduct} agregado
+          <button type="button" onClick={() => setAddedProduct(null)} aria-label="Cerrar confirmación">×</button>
+        </div>
+      ) : null}
+
       {conflictMessage ? (
         <div className={styles.conflict} role="alert">
           <p>{conflictMessage}</p>
@@ -112,7 +123,15 @@ export function AddItemPanel({
                 className={styles.tile}
                 aria-label={`Agregar ${product.name}`}
                 disabled={disabled}
-                onClick={() => onAdd(product.id, 1)}
+                onClick={() => {
+                  onAdd(product.id, 1);
+                  setAddedProduct(product.name);
+                  if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
+                  toastTimer.current = window.setTimeout(() => {
+                    setAddedProduct(null);
+                    toastTimer.current = null;
+                  }, 1800);
+                }}
               >
                 {product.imageUrl ? (
                   <img

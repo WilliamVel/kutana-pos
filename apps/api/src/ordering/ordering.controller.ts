@@ -41,7 +41,10 @@ export class OrderingController {
   }
 
   @Delete("tables/:id")
-  deleteFreeTable(@Param("id") id: string, @Query("expectedVersion") expectedVersion?: string): Promise<void> {
+  deleteFreeTable(
+    @Param("id") id: string,
+    @Query("expectedVersion") expectedVersion?: string,
+  ): Promise<void> {
     if (!expectedVersion?.trim() || !Number.isInteger(Number(expectedVersion))) {
       throw new Error("expectedVersion query parameter must be an integer");
     }
@@ -85,8 +88,8 @@ export class OrderingController {
     await this.orders.deleteEmpty(id, Number(expectedVersion));
   }
 
-  @Sse("orders/:id/events")
-  orderEvents(@Param("id") id: string): Observable<SseOrderEventMessage> {
-    return this.events.eventsForOrder(id);
+  @Sse("events")
+  orderEvents(): Observable<SseOrderEventMessage> {
+    return this.events.eventsStream();
   }
 }

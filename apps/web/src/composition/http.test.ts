@@ -48,7 +48,7 @@ describe("buildHttpPorts", () => {
 
     expect(Object.keys(ports).sort()).toEqual([
       "analytics",
-          "auth",
+      "auth",
       "categories",
       "customerDebts",
       "customers",
@@ -101,7 +101,7 @@ describe("buildHttpPorts", () => {
     expect(listener).toHaveBeenCalledOnce();
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(FakeEventSource.instances.map((source) => source.url)).toEqual([
-      `${BASE_URL}/ordering/orders/order-1/events`,
+      `${BASE_URL}/ordering/events`,
     ]);
 
     unsubscribe();

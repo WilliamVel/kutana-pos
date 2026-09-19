@@ -1,5 +1,4 @@
-import { type FormEvent, useState } from "react";
-import { Button } from "../../../design-system/atoms/Button.js";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import styles from "./NewOrderButton.module.css";
 
 export interface NewOrderButtonTable {
@@ -9,96 +8,156 @@ export interface NewOrderButtonTable {
 
 export interface NewOrderButtonProps {
   readonly freeTables: readonly NewOrderButtonTable[];
-  readonly onSelectTable: (tableId: string) => void;
+  readonly onSelectTable: (tableId: string) => Promise<void> | void;
   readonly onRemoveTable?: (tableId: string) => void;
-  readonly onCreateTable?: (label: string) => void;
-  /** Optional short, non-technical status line (e.g. after a conflict). */
+  readonly onCreateTable?: (label: string) => Promise<void> | void;
   readonly message?: string | null;
+  readonly openRequest?: number;
 }
 
-/**
- * Purely presentational: a "Nueva orden" button that toggles a picker of
- * currently-free tables. Choosing one calls `onSelectTable`; the container
- * turns that into an order + an occupied table. Props in, markup out — no
- * port access.
- */
+type ServiceMode = "table" | "bar" | "takeaway";
+
+const PLACEHOLDERS: Record<ServiceMode, string> = {
+  table: "Ej. Mesa 7",
+  bar: "Ej. Barra 2",
+  takeaway: "Ej. Pedido Carlos",
+};
+
 export function NewOrderButton({
   freeTables,
   onSelectTable,
-  onRemoveTable,
   onCreateTable,
   message,
+  openRequest = 0,
 }: NewOrderButtonProps): JSX.Element {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<ServiceMode>("table");
   const [tableLabel, setTableLabel] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const sheetRef = useRef<HTMLElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const touchStartY = useRef<number | null>(null);
 
-  const createTable = (event: FormEvent<HTMLFormElement>): void => {
+  const close = (force = false): void => {
+    if (loading && !force) return;
+    setOpen(false);
+    setError(null);
+    setTableLabel("");
+    window.setTimeout(() => triggerRef.current?.focus(), 0);
+  };
+
+  useEffect(() => {
+    if (openRequest > 0) setOpen(true);
+  }, [openRequest]);
+
+  useEffect(() => {
+    if (!open) return;
+    inputRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close();
+        return;
+      }
+      if (event.key !== "Tab" || !sheetRef.current) return;
+      const focusable = Array.from(sheetRef.current.querySelectorAll<HTMLElement>("button, input"))
+        .filter((element) => !element.hasAttribute("disabled"));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open, loading]);
+
+  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     const label = tableLabel.trim();
-    if (!label || !onCreateTable) return;
-    onCreateTable(label);
-    setTableLabel("");
+    if (!label) {
+      setError("Escribe un nombre o número.");
+      inputRef.current?.focus();
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const selected = freeTables.find((table) => table.label.toLocaleLowerCase() === label.toLocaleLowerCase());
+      if (selected && mode === "table") await onSelectTable(selected.id);
+      else if (onCreateTable) await onCreateTable(label);
+      close(true);
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : "No se pudo crear la orden.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const chooseTable = (table: NewOrderButtonTable): void => {
+    if (!onCreateTable) void onSelectTable(table.id);
+    setMode("table");
+    setTableLabel(table.label);
+    setError(null);
+    inputRef.current?.focus();
   };
 
   return (
     <div className={styles.wrap}>
-      <Button variant="secondary" onClick={() => setOpen((current) => !current)}>
-        Nueva orden
-      </Button>
+      <button ref={triggerRef} type="button" className={styles.trigger} aria-label="Nueva orden" onClick={() => setOpen(true)}>
+        <span aria-hidden="true">+</span>
+        <span>Nueva<br />orden</span>
+      </button>
 
       {open ? (
-        <div className={styles.panel}>
-          {freeTables.length === 0 ? (
-            <p className={styles.empty}>No hay mesas libres ahora.</p>
-          ) : (
-            <ul className={styles.picker} aria-label="Mesas libres">
-              {freeTables.map((table) => (
-                <li key={table.id}>
-                  <div className={styles.tableOption}>
-                    <button
-                      type="button"
-                      className={styles.tableButton}
-                      onClick={() => onSelectTable(table.id)}
-                    >
-                      {table.label}
-                    </button>
-                    {onRemoveTable ? (
-                      <button
-                        type="button"
-                        className={styles.removeButton}
-                        aria-label={`Eliminar mesa ${table.label}`}
-                        onClick={() => onRemoveTable(table.id)}
-                      >
-                        ×
-                      </button>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <form className={styles.createForm} onSubmit={createTable}>
-            <label className={styles.createLabel} htmlFor="new-table-label">
-              Nombre de mesa
-            </label>
-            <div className={styles.createRow}>
-              <input
-                id="new-table-label"
-                className={styles.createInput}
-                value={tableLabel}
-                onChange={(event) => setTableLabel(event.target.value)}
-                placeholder="Barra, Mesa 7…"
-              />
-              <Button type="submit" disabled={tableLabel.trim().length === 0} onClick={() => undefined}>
-                Crear mesa
-              </Button>
+        <div className={styles.sheetBackdrop} role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) close(); }}>
+          <section
+            ref={sheetRef}
+            className={styles.sheet}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-order-title"
+            onTouchStart={(event) => { touchStartY.current = event.touches[0]?.clientY ?? null; }}
+            onTouchEnd={(event) => { const start = touchStartY.current; const end = event.changedTouches[0]?.clientY; if (start !== null && end !== undefined && end - start > 80) close(); touchStartY.current = null; }}
+          >
+            <div className={styles.dragHandle} aria-hidden="true" />
+            <div className={styles.sheetHeader}>
+              <h2 id="new-order-title">Nueva orden</h2>
+              <button type="button" className={styles.closeButton} aria-label="Cerrar" onClick={() => close()}>×</button>
             </div>
-          </form>
+            <form onSubmit={(event) => void submit(event)}>
+              <fieldset className={styles.modeFieldset}>
+                <legend>¿Dónde se atenderá?</legend>
+                <div className={styles.modeOptions}>
+                  {([["table", "Mesa"], ["bar", "Barra"], ["takeaway", "Para llevar"]] as const).map(([value, label]) => (
+                    <button key={value} type="button" className={styles.modeButton} data-selected={mode === value} onClick={() => { setMode(value); setTableLabel(""); setError(null); inputRef.current?.focus(); }}>{label}</button>
+                  ))}
+                </div>
+              </fieldset>
+              <label className={styles.inputLabel} htmlFor="new-order-label">Nombre o número</label>
+              <input ref={inputRef} id="new-order-label" className={styles.createInput} value={tableLabel} onChange={(event) => { setTableLabel(event.target.value); setError(null); }} placeholder={PLACEHOLDERS[mode]} autoComplete="off" />
+              {error || message ? <p className={styles.message} role="alert">{error ?? message}</p> : null}
+              {mode === "table" && freeTables.length === 0 ? <p className={styles.empty}>No hay mesas libres ahora.</p> : null}
+              {mode === "table" && freeTables.length > 0 ? (
+                <div className={styles.availableTables}>
+                  <span>Mesas disponibles</span>
+                  <div className={styles.chips}>
+                    {freeTables.map((table) => <button key={table.id} type="button" className={styles.chip} onClick={() => chooseTable(table)}>{table.label}</button>)}
+                  </div>
+                </div>
+              ) : null}
+              <button type="submit" className={styles.createButton} disabled={loading || tableLabel.trim().length === 0}>{loading ? "Creando…" : "Crear orden"}</button>
+            </form>
+          </section>
         </div>
       ) : null}
-
-      {message ? <p className={styles.message}>{message}</p> : null}
     </div>
   );
 }

@@ -14,8 +14,8 @@ type Listener = (event: OrderEvent) => void;
  * Vitest/jsdom but silently break `pnpm --filter web build`/`dev`. This
  * minimal implementation satisfies the exact same subscribe/publish
  * contract the design calls for, with zero Node dependency. The HTTP
- * counterpart (milestone 2) is a WebSocket subscription satisfying this
- * same interface — see design.md "Realtime Design".
+ * counterpart is a shared global SSE subscription satisfying this same
+ * interface.
  */
 export class MockOrderEvents implements OrderEvents {
   private readonly listenersByOrder = new Map<string, Set<Listener>>();

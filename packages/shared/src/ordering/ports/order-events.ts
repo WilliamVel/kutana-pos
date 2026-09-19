@@ -21,10 +21,9 @@ export type Unsubscribe = () => void;
 
 /**
  * Port contract only — the mock implementation (`apps/web`) is an
- * in-process EventEmitter; the HTTP implementation is a WebSocket
- * subscription. Both satisfy this exact same interface, which is the
- * mechanism that lets the realtime UI be fully built before any backend
- * exists (see design.md "Realtime Design").
+ * in-process EventEmitter; the HTTP implementation is an SSE subscription.
+ * Both satisfy this exact same interface, which keeps the realtime UI
+ * independent of transport details.
  */
 export interface OrderEvents {
   subscribe(orderId: string, callback: (event: OrderEvent) => void): Unsubscribe;

@@ -127,6 +127,7 @@
   }
 
   .rows {
-    max-height: 28rem;
+    max-height: none;
+    overflow: visible;
   }
 }

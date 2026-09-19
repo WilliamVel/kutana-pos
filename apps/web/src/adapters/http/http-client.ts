@@ -69,15 +69,26 @@ export class HttpClient {
       headers.set("Authorization", `Bearer ${token}`);
     }
 
+    console.info("[api] request", {
+      method: init.method,
+      url,
+      authenticated: options.auth !== false,
+      hasBearerToken: Boolean(token),
+    });
+
     let response: Response;
     try {
       response = await this.fetchImpl(url, init);
+      console.info("[api] response", { method: init.method, url, status: response.status });
     } catch (error) {
+      console.error("[api] network error", { method: init.method, url, error });
       throw error;
     }
 
     if (response.status === 401 && options.auth !== false && this.refreshSession) {
+      console.warn("[api] unauthorized, refreshing session", { url });
       const refreshedToken = await this.refreshSession();
+      console.info("[api] refresh result", { url, refreshed: Boolean(refreshedToken) });
       if (refreshedToken) {
         headers.set("Authorization", `Bearer ${refreshedToken}`);
         response = await this.fetchImpl(url, init);

@@ -457,10 +457,12 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
+  align-items: center;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   background: var(--surface-sunken);
+  text-align: center;
 }
 
 .balanceGrid dt {
@@ -501,9 +503,13 @@
 }
 
 .tableSummary div {
-  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-3);
   border-radius: var(--radius-sm);
   background: var(--surface-sunken);
+  text-align: center;
 }
 
 .tableSummary dt,
@@ -521,10 +527,17 @@
 .tableSummary dd {
   margin-top: var(--space-1);
   font-weight: 700;
+  text-align: center;
 }
 
 .tableRemaining {
   border: 1px solid var(--order-needs-check-fg);
+}
+
+@media (max-width: 40rem) {
+  .tableSummary {
+    grid-template-columns: 1fr;
+  }
 }
 
 .paymentDetailsButton {

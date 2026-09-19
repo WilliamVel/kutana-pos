@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import styles from "./RegisterWorkspace.module.css";
 
 export interface RegisterWorkspaceProps {
@@ -34,8 +34,43 @@ export function RegisterWorkspace({
   railHidden = false,
   centerOverflowVisible = false,
 }: RegisterWorkspaceProps): JSX.Element {
+  const [mobileView, setMobileView] = useState<"order" | "products">("order");
+  const [orderCount, setOrderCount] = useState(0);
+  const [createdNotice, setCreatedNotice] = useState(false);
+  const workspaceClass = railHidden ? styles.workspaceFocused : styles.workspace;
+
+  useEffect(() => {
+    const onOrderUpdated = (event: Event): void => {
+      const detail = (event as CustomEvent<{ orderCount?: number; productCount?: number }>).detail;
+      if (typeof detail.orderCount === "number") setOrderCount(detail.orderCount);
+    };
+    const onProductsRequested = (): void => setMobileView("products");
+    const onOrderCreated = (): void => {
+      setCreatedNotice(true);
+      window.setTimeout(() => setCreatedNotice(false), 2200);
+    };
+    window.addEventListener("kutana.order.updated", onOrderUpdated);
+    window.addEventListener("kutana.mobile.products", onProductsRequested);
+    window.addEventListener("kutana.order.created", onOrderCreated);
+    return () => {
+      window.removeEventListener("kutana.order.updated", onOrderUpdated);
+      window.removeEventListener("kutana.mobile.products", onProductsRequested);
+      window.removeEventListener("kutana.order.created", onOrderCreated);
+    };
+  }, []);
+
   return (
-    <div className={railHidden ? styles.workspaceFocused : styles.workspace}>
+    <div className={workspaceClass} data-mobile-view={mobileView}>
+      <div className={styles.mobileTabs} role="tablist" aria-label="Vista de la orden">
+        <button type="button" role="tab" aria-selected={mobileView === "order"} onClick={() => setMobileView("order")}>
+          <span aria-hidden="true">▤</span> Pedido <strong>{orderCount}</strong>
+        </button>
+        {!railHidden ? (
+          <button type="button" role="tab" aria-selected={mobileView === "products"} onClick={() => setMobileView("products")}>
+            <span aria-hidden="true">♧</span> Productos
+          </button>
+        ) : null}
+      </div>
       <div className={styles.list}>{list}</div>
       {center ? (
         <div className={centerOverflowVisible ? `${styles.center} ${styles.centerOverflowVisible}` : styles.center}>{center}</div>
@@ -43,6 +78,7 @@ export function RegisterWorkspace({
         <div className={styles.empty}>{emptyCenter}</div>
       )}
       {railHidden ? null : <div className={styles.rail}>{rail}</div>}
+      {createdNotice ? <div className={styles.createdNotice} role="status">Orden creada</div> : null}
     </div>
   );
 }

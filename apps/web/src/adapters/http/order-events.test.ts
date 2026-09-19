@@ -56,7 +56,7 @@ describe("HttpOrderEvents", () => {
     expect(otherOrderListener).not.toHaveBeenCalled();
   });
 
-  it("subscribes to the backend SSE stream using the HTTP base URL pattern", () => {
+  it("subscribes to one global backend SSE stream using the HTTP base URL pattern", () => {
     FakeEventSource.instances = [];
     const events = new HttpOrderEvents({
       baseUrl: "http://api.example.test/",
@@ -70,9 +70,13 @@ describe("HttpOrderEvents", () => {
     FakeEventSource.instances[0]?.emit(event);
 
     expect(FakeEventSource.instances.map((source) => source.url)).toEqual([
-      "http://api.example.test/ordering/orders/order%2F1/events?access_token=session-token",
+      "http://api.example.test/ordering/events?access_token=session-token",
     ]);
     expect(listener).toHaveBeenCalledWith(event);
+
+    const otherListener = vi.fn();
+    events.subscribe("order-2", otherListener);
+    expect(FakeEventSource.instances).toHaveLength(1);
   });
 
   it("deduplicates a backend echo after a same-tab publish", () => {
@@ -105,5 +109,6 @@ describe("HttpOrderEvents", () => {
 
     expect(listener).not.toHaveBeenCalled();
     expect(FakeEventSource.instances[0]?.close).toHaveBeenCalledOnce();
+    expect(FakeEventSource.instances).toHaveLength(1);
   });
 });

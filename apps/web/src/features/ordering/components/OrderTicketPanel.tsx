@@ -1,8 +1,17 @@
+import { useState } from "react";
 import type { PourSize } from "@kutana/shared/catalog/model/product.js";
 import { LineItemRow } from "../../../design-system/molecules/LineItemRow.js";
 import { PriceTag } from "../../../design-system/molecules/PriceTag.js";
 import { StatusPill, type OrderStatus } from "../../../design-system/molecules/StatusPill.js";
 import styles from "./OrderTicketPanel.module.css";
+
+export interface OrderPaymentDetailLine {
+  readonly id: string;
+  readonly name: string;
+  readonly quantity: number;
+  readonly payerLabels: readonly string[];
+  readonly status: "paid" | "partial" | "pending";
+}
 
 export interface OrderTicketPanelLine {
   readonly id: string;
@@ -14,7 +23,8 @@ export interface OrderTicketPanelLine {
   readonly totalCents: number;
   readonly pourSizeMl: PourSize | null;
   readonly isAdjustment: boolean;
-  readonly paymentStatus?: "paid";
+  readonly paymentStatus?: "paid" | "partial" | "pending";
+  readonly payerLabels?: readonly string[];
 }
 
 export interface OrderTicketPanelProps {
@@ -30,8 +40,15 @@ export interface OrderTicketPanelProps {
    * line's tax (spec: "Tax Persisted at Sale Time").
    */
   readonly taxCents: number;
-  /** Integer cents. */
+  /** Integer cents — current balance remaining after personal-account payments. */
   readonly totalCents: number;
+  /** Integer cents already paid through personal accounts. */
+  readonly paidCents?: number;
+  /** Number of products with a fully settled personal account. */
+  readonly paidLineCount?: number;
+  /** Number of products that still have an outstanding balance. */
+  readonly pendingLineCount?: number;
+  readonly paymentDetails?: readonly OrderPaymentDetailLine[];
   /**
    * When provided, each non-adjustment line gets a remove control. Only
    * wired for unpaid orders — the container omits it once the order is paid.
@@ -51,15 +68,24 @@ export function OrderTicketPanel({
   subtotalCents,
   taxCents,
   totalCents,
+  paidCents = 0,
+  paidLineCount = 0,
+  pendingLineCount = 0,
+  paymentDetails = [],
   onRemoveLine,
 }: OrderTicketPanelProps): JSX.Element {
+  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+  const hasPaymentDetails = paidCents > 0 || paidLineCount > 0;
+
   return (
     <section className={styles.panel} aria-label={`Resumen de orden para ${tableLabel}`}>
       <div className={styles.header}>
-        <h2>{tableLabel}</h2>
+        <div>
+          <h2>{tableLabel}</h2>
+          <p className={styles.orderMeta}>{lines.reduce((count, line) => count + line.quantity, 0)} productos</p>
+        </div>
         <StatusPill status={status} />
       </div>
-
       {lines.length === 0 ? (
         <p className={styles.empty}>Todavía no hay productos en esta orden.</p>
       ) : (
@@ -93,11 +119,61 @@ export function OrderTicketPanel({
           <span>Impuestos</span>
           <PriceTag cents={taxCents} />
         </div>
+        {paidCents > 0 ? (
+          <div className={styles.totalRow}>
+            <span>Pagado</span>
+            <PriceTag cents={paidCents} />
+          </div>
+        ) : null}
         <div className={`${styles.totalRow} ${styles.grandTotal}`}>
-          <span>Total</span>
+          <span>Saldo pendiente</span>
           <PriceTag cents={totalCents} />
         </div>
+        {hasPaymentDetails ? (
+          <>
+            <p className={styles.paymentSummary}>
+              {paidLineCount} producto(s) pagado(s) · {pendingLineCount} pendiente(s)
+            </p>
+            <button
+              type="button"
+              className={styles.paymentDetailsButton}
+              onClick={() => setShowPaymentDetails(true)}
+            >
+              Ver detalle de pagos
+            </button>
+          </>
+        ) : null}
       </div>
+      {showPaymentDetails ? (
+        <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setShowPaymentDetails(false)}>
+          <section
+            className={styles.paymentModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="order-payment-details-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className={styles.paymentModalHeader}>
+              <div>
+                <p className={styles.paymentEyebrow}>Detalle de pagos</p>
+                <h3 id="order-payment-details-title">{tableLabel}</h3>
+              </div>
+              <button type="button" className={styles.closeModalButton} onClick={() => setShowPaymentDetails(false)} aria-label="Cerrar detalle de pagos">×</button>
+            </div>
+            <ul className={styles.paymentList}>
+              {paymentDetails.map((line) => (
+                <li key={line.id}>
+                  <span>
+                    <strong>{line.name} × {line.quantity}</strong>
+                    <small>{line.payerLabels.length > 0 ? line.payerLabels.join(", ") : "Sin asignar"}</small>
+                  </span>
+                  <span>{line.status === "paid" ? "Pagado" : line.status === "partial" ? "Pago parcial" : "Pendiente"}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }

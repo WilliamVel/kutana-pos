@@ -5,10 +5,10 @@ import type {
   OrderStatus as DomainOrderStatus,
 } from "@kutana/shared/ordering/model/order.js";
 import type { Table } from "@kutana/shared/ordering/model/table.js";
-import type { AccountLineAllocation, PersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
+import type { AccountLineAllocation, Customer, PersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
 import { removeLineItem } from "@kutana/shared/ordering/services/line-item-service.js";
-import { useOrderEvents, useOrders, usePayments, usePersonalAccounts, useTables } from "../../../composition/PortsProvider.js";
-import { OrderTicketPanel, type OrderTicketPanelLine } from "../components/OrderTicketPanel.js";
+import { useCustomers, useOrderEvents, useOrders, usePayments, usePersonalAccounts, useTables } from "../../../composition/PortsProvider.js";
+import { OrderTicketPanel, type OrderPaymentDetailLine, type OrderTicketPanelLine } from "../components/OrderTicketPanel.js";
 import type { OrderStatus } from "../../../design-system/molecules/StatusPill.js";
 
 const STATUS_MAP: Record<DomainOrderStatus, OrderStatus> = {
@@ -84,14 +84,16 @@ export function OrderTicketPanelContainer({
   const tables = useTables();
   const orders = useOrders();
   const personalAccounts = usePersonalAccounts();
+  const customersPort = useCustomers();
   const payments = usePayments();
   const events = useOrderEvents();
 
   const [table, setTable] = useState<Table | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
   const [accounts, setAccounts] = useState<PersonalAccount[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [accountAllocations, setAccountAllocations] = useState<AccountLineAllocation[]>([]);
-  const [accountPaidCents, setAccountPaidCents] = useState(0);
+  const [accountPaidById, setAccountPaidById] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -103,38 +105,51 @@ export function OrderTicketPanelContainer({
       const foundOrder = await orders.findByTable(tableId);
       if (cancelled) return;
       setOrder(foundOrder);
+      window.setTimeout(() => window.dispatchEvent(new CustomEvent("kutana.order.updated", {
+        detail: { orderCount: foundOrder?.lineItems.reduce((sum, line) => sum + line.quantity, 0) ?? 0 },
+      })), 0);
       if (!foundOrder) {
         setAccounts([]);
         setAccountAllocations([]);
         return;
       }
-      const [foundAccounts, foundAllocations] = await Promise.all([
+      const [foundAccounts, foundAllocations, allCustomers] = await Promise.all([
         personalAccounts.listByOrder(foundOrder.id),
         personalAccounts.listAllocationsByOrder(foundOrder.id),
+        customersPort.listAll(),
       ]);
-      const paidCents = (
-        await Promise.all(foundAccounts.map((account) => payments.listByTarget({ kind: "personal_account", accountId: account.id })))
-      ).flat().reduce((sum, payment) => sum + payment.amountCents, 0);
+      const paymentsByAccount = await Promise.all(
+        foundAccounts.map((account) =>
+          payments.listByTarget({ kind: "personal_account", accountId: account.id }),
+        ),
+      );
       if (cancelled) return;
       setAccounts(foundAccounts);
+      setCustomers(allCustomers);
       setAccountAllocations(foundAllocations);
-      setAccountPaidCents(paidCents);
+      setAccountPaidById(Object.fromEntries(foundAccounts.map((account, index) => [
+        account.id,
+        paymentsByAccount[index]?.reduce((sum, payment) => sum + payment.amountCents, 0) ?? 0,
+      ])));
+
     }
 
     void load();
     return () => {
       cancelled = true;
     };
-  }, [tableId, tables, orders, personalAccounts, payments]);
+  }, [tableId, tables, orders, personalAccounts, customersPort, payments]);
 
   useEffect(() => {
     if (!order) return;
     return events.subscribe(order.id, (event) => {
-      setOrder(
-        event.payload.status === "paid" || event.payload.status === "closed_with_pending"
-          ? null
-          : event.payload,
-      );
+      const nextOrder = event.payload.status === "paid" || event.payload.status === "closed_with_pending"
+        ? null
+        : event.payload;
+      setOrder(nextOrder);
+      window.dispatchEvent(new CustomEvent("kutana.order.updated", {
+        detail: { orderCount: nextOrder?.lineItems.reduce((sum, line) => sum + line.quantity, 0) ?? 0 },
+      }));
     });
   }, [order?.id, events]);
 
@@ -143,8 +158,6 @@ export function OrderTicketPanelContainer({
     if (!current) {
       return;
     }
-
-    const target = current.lineItems.find((line) => line.id === lineId);
 
     const next = removeLineItem(current, lineId);
     try {
@@ -184,6 +197,12 @@ export function OrderTicketPanelContainer({
 
   if (!table || !order) return null;
 
+  const accountOwnerLabel = (account: PersonalAccount): string => {
+    if (account.owner.kind === "free_name") return account.owner.freeName;
+    const customerId = account.owner.customerId;
+    return customers.find((customer) => customer.id === customerId)?.displayName ?? customerId;
+  };
+  const accountPaidCents = Object.values(accountPaidById).reduce((sum, amount) => sum + amount, 0);
   const paidAccountIds = new Set(accounts.filter((account) => account.status === "paid").map((account) => account.id));
   const paidLineItemIds = new Set(
     order.lineItems
@@ -196,6 +215,23 @@ export function OrderTicketPanelContainer({
       .map((line) => line.id),
   );
   const lines = aggregateLines(order.lineItems, paidLineItemIds);
+  const paymentDetails: OrderPaymentDetailLine[] = order.lineItems.map((line) => {
+    const lineAllocations = accountAllocations.filter((allocation) => allocation.lineItemId === line.id);
+    const payerIds = [...new Set(lineAllocations.map((allocation) => allocation.accountId))];
+    const payerLabels = payerIds.map((accountId) => {
+      const account = accounts.find((candidate) => candidate.id === accountId);
+      return account ? accountOwnerLabel(account) : accountId;
+    });
+    const hasPaidLine = paidLineItemIds.has(line.id);
+    const hasPartialPayment = payerIds.some((accountId) => (accountPaidById[accountId] ?? 0) > 0);
+    return {
+      id: line.id,
+      name: line.nameSnapshot,
+      quantity: line.quantity,
+      payerLabels,
+      status: hasPaidLine ? "paid" : hasPartialPayment ? "partial" : "pending",
+    };
+  });
   const subtotalCents = order.lineItems.reduce(
     (sum, line) => sum + line.unitPriceCents * line.quantity,
     0,
@@ -217,6 +253,10 @@ export function OrderTicketPanelContainer({
       subtotalCents={subtotalCents}
       taxCents={taxCents}
       totalCents={totalCents}
+      paidCents={accountPaidCents}
+      paidLineCount={paymentDetails.filter((line) => line.status === "paid").length}
+      pendingLineCount={paymentDetails.filter((line) => line.status !== "paid").length}
+      paymentDetails={paymentDetails}
       onRemoveLine={
         order.status === "paid" || order.status === "closed_with_pending"
           ? undefined

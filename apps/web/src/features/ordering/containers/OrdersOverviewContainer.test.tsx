@@ -43,7 +43,7 @@ describe("OrdersOverviewContainer", () => {
     const ports = buildMockPorts();
     render(
       <PortsProvider value={ports}>
-        <OrdersOverviewContainer selectedTableId={null} onSelectTable={vi.fn()} />
+        <OrdersOverviewContainer selectedTableId="table-1" onSelectTable={vi.fn()} />
       </PortsProvider>,
     );
 
