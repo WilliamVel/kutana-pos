@@ -9,14 +9,20 @@
 .card, .moreOptions, .summary { padding: var(--space-5); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-sm); }
 .card { display: grid; gap: var(--space-4); }
 .sectionHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.inventoryHeader { display: flex; flex-direction: column; align-items: stretch; gap: 16px; width: 100%; min-width: 0; }
+.inventoryCopy { width: 100%; min-width: 0; }
+.inventoryCopy h2, .inventoryCopy p { margin: 0; }
+.inventoryCopy p { color: var(--text-secondary); }
+.inventoryToggle { position: static; display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; justify-content: initial; gap: 12px; width: 100%; max-width: 100%; min-width: 0; margin: 0; padding: 0; transform: none; box-sizing: border-box; }
+.inventoryToggle input { position: static; width: 28px; height: 28px; margin: 0; justify-self: start; flex: none; transform: none; }
+.inventoryToggleText { position: static; display: block; flex: 1 1 0; width: 100%; max-width: 100%; min-width: 0; margin: 0; white-space: normal; word-break: normal; overflow-wrap: normal; transform: none; }
 .row, .moreGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .stockFields { display: grid; gap: var(--space-4); }
 .selectField { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
 .label { color: var(--text-primary); font-weight: 600; }
 .select { width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); background: var(--surface-raised); color: var(--text-primary); }
 .select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
-.switch { display: inline-flex; align-items: center; flex: 0 0 auto; gap: var(--space-2); max-width: 19rem; color: var(--text-primary); font-weight: 600; white-space: nowrap; cursor: pointer; }
-.switch input, .statusRow input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--accent-emphasis); }
+.statusRow input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--accent-emphasis); }
 .moreOptions summary { display: flex; align-items: center; justify-content: space-between; min-height: 2.25rem; color: var(--text-primary); font-weight: 700; cursor: pointer; list-style: none; border-radius: var(--radius-md); }
 .moreOptions summary::-webkit-details-marker { display: none; }
 .moreOptions summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
@@ -49,6 +55,25 @@ dd { margin: 0; color: var(--text-primary); font-weight: 600; text-align: right;
 .actions button[data-variant="primary"] { min-width: 10.5rem; }
 .actions button[data-variant="secondary"] { min-width: 7.5rem; background: var(--surface-raised); border-color: var(--accent-strong); color: var(--accent-strong); }
 .actions button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+@media (min-width: 768px) {
+  .inventoryHeader { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 420px); align-items: start; gap: 24px; }
+  .inventoryToggle { align-self: start; }
+}
 @media (max-height: 38rem) and (min-width: 56.25rem) { .summary { position: static; } }
 @media (max-width: 56.25rem) { .layout { grid-template-columns: 1fr; } .mainColumn { max-width: none; } .summary { position: static; } }
-@media (max-width: 720px) { .sectionHeader { align-items: start; } .switch { max-width: none; white-space: normal; } .card, .moreOptions, .summary { padding: var(--space-4); } .row, .moreGrid { grid-template-columns: 1fr; } .actions { position: static; flex-direction: column-reverse; } .actions button { width: 100%; } }
+@media (max-width: 720px) {
+  .sectionHeader { display: grid; grid-template-columns: 1fr; align-items: start; justify-content: start; width: 100%; min-width: 0; gap: var(--space-3); }
+  .sectionHeader > * { min-width: 0; max-width: 100%; }
+  .sectionHeader p { font-size: .875rem; line-height: 1.35; }
+  .inventoryCopy p, .inventoryToggleText { font-size: .9rem; line-height: 1.35; }
+  .inventoryHeader, .inventoryCopy, .inventoryToggle { width: 100%; max-width: 100%; min-width: 0; }
+  .inventoryToggle { grid-template-columns: 44px minmax(0, 1fr); }
+  .inventoryToggle input { width: 28px; height: 28px; }
+  .inventoryToggleText { width: 100%; max-width: 100%; min-width: 0; }
+  .card, .moreOptions, .summary, .actions { width: 100%; max-width: 100%; box-sizing: border-box; padding: var(--space-4); }
+  .card input, .card select, .moreOptions input, .moreOptions select, .moreOptions textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+  .selectField, .row > *, .moreGrid > * { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .row, .moreGrid { grid-template-columns: minmax(0, 1fr); }
+  .actions { position: static; flex-direction: column-reverse; }
+  .actions button { width: 100%; }
+}

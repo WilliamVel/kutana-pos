@@ -147,7 +147,10 @@ export function ProductForm({ categories, initialValues, onSubmit, onCancel, sub
           </section>
 
           <section className={styles.card} aria-labelledby="product-stock-heading">
-            <div className={styles.sectionHeader}><div><h3 id="product-stock-heading">Control de inventario</h3><p>Activá esta opción solo si necesitás descontar existencias.</p></div><label className={styles.switch}><input type="checkbox" checked={values.trackInventory} onChange={(event) => update("trackInventory", event.target.checked)} /><span>Controlar inventario para este producto</span></label></div>
+            <div className={styles.inventoryHeader}>
+              <div className={styles.inventoryCopy}><h2 id="product-stock-heading">Control de inventario</h2><p>Activá esta opción solo si necesitás descontar existencias.</p></div>
+              <label className={styles.inventoryToggle}><input type="checkbox" checked={values.trackInventory} onChange={(event) => update("trackInventory", event.target.checked)} /><span className={styles.inventoryToggleText}>Controlar inventario para este producto</span></label>
+            </div>
             {values.trackInventory ? <div className={styles.stockFields}>
               <div className={styles.selectField}><label className={styles.label} htmlFor={stockKindId}>Tipo de control</label><select id={stockKindId} className={styles.select} value={values.stockKind} onChange={(event) => update("stockKind", event.target.value as StockKind)}><option value="unit">Por unidades</option><option value="volume">Por volumen</option></select></div>
               {values.stockKind === "volume" ? <div className={styles.selectField}><label className={styles.label} htmlFor={stockUnitId}>Unidad de medida</label><select id={stockUnitId} className={styles.select} value={values.stockUnit} onChange={(event) => update("stockUnit", event.target.value as "ml" | "l")}><option value="l">Litros (L)</option><option value="ml">Mililitros (ml)</option></select></div> : null}

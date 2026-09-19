@@ -36,6 +36,14 @@ describe("ProductForm", () => {
     expect(details).not.toHaveAttribute("open");
   });
 
+  it("keeps the inventory toggle as one accessible clickable label", () => {
+    renderForm();
+    const input = screen.getByLabelText("Controlar inventario para este producto");
+    const label = input.closest("label");
+    expect(label).toContainElement(input);
+    expect(label).toHaveTextContent("Controlar inventario para este producto");
+  });
+
   it("conditionally reveals inventory controls and submits integer cents", () => {
     const onSubmit = vi.fn();
     renderForm({ onSubmit });
