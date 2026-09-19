@@ -1,571 +1,647 @@
 .screen {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
   min-width: 0;
   min-height: 0;
+  flex-direction: column;
+  gap: var(--space-4);
   overflow-y: auto;
   scrollbar-width: thin;
 }
 
-.header {
+.header,
+.panelHeading,
+.accountTitle,
+.modalHeader,
+.paymentTotal,
+.paymentList li {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
-  padding-bottom: var(--space-4);
+  gap: var(--space-3);
+}
+
+.header {
+  padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .header h2,
-.sectionHeader h3,
-.subsection h4 {
+.methodChooser h3,
+.panelHeading h3,
+.accountTitle h3,
+.simpleFlow h3,
+.modalHeader h3 {
   margin: 0;
 }
 
-.headerCopy,
-.sectionHeader p,
-.accountIdentity span,
-.emptyState {
+.eyebrow {
+  margin: 0 0 var(--space-1);
   color: var(--text-secondary);
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
-.headerCopy {
-  max-width: 42rem;
-  margin: var(--space-2) 0 0;
+.heroTotal {
+  font-size: 1.35rem;
 }
 
-.eyebrow,
-.stepLabel {
+.tableSummary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(6.5rem, 1fr));
+  gap: var(--space-2);
   margin: 0;
+}
+
+.tableSummary div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+.tableSummary dt {
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: .75rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-5);
+.tableSummary dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.tableRemaining {
+  border: 1px solid var(--border-strong);
+}
+
+.review,
+.emptyState,
+.doneState {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+}
+
+.review {
+  border: 1px solid var(--order-needs-check-fg);
+  background: var(--order-needs-check-bg);
+  color: var(--order-needs-check-fg);
+}
+
+.methodChooser,
+.simpleFlow,
+.personWorkspace {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
   background: var(--surface-raised);
   box-shadow: var(--shadow-md);
 }
 
-.sectionHeader {
+.methodChooser {
   display: grid;
-  grid-template-columns: minmax(4.75rem, max-content) 1fr;
   gap: var(--space-4);
-  align-items: start;
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--space-5);
 }
 
-.sectionHeader p:last-child {
-  margin: var(--space-1) 0 0;
-}
-
-.stepLabel {
-  display: inline-flex;
-  justify-content: center;
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-pill);
-  background: var(--surface-sunken);
-  white-space: nowrap;
-}
-
-.formGrid {
+.methodGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: var(--space-4);
-  align-items: stretch;
-}
-
-/*
- * Each account-creation path (existing customer / free name) is one vertical
- * group: its field on top, its own action button flush to the bottom edge so
- * the button unambiguously belongs to that input.
- */
-.pathGroup {
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
 }
 
-.pathGroup > *:first-child {
-  flex: 1 1 auto;
-}
-
-.pathGroup button {
-  width: 100%;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.field select {
-  min-height: 2.5rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface-raised);
-  color: var(--text-primary);
-  padding: 0 var(--space-3);
-}
-
-.subsection {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+.methodGrid button {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-3);
+  align-items: center;
+  min-height: 8rem;
   padding: var(--space-4);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
-}
-
-.lines,
-.accounts,
-.assignmentList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.line,
-.account,
-.assignmentItem {
-  display: grid;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--surface-raised);
-}
-
-.line,
-.assignmentSummary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) max-content max-content;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.assignmentItem {
-  border-color: var(--border-strong);
-}
-
-.assignmentWorkspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.45fr);
-  gap: var(--space-4);
-  align-items: start;
-}
-
-.quickAssignControls {
-  display: grid;
-  grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
-  gap: var(--space-3);
-  align-items: end;
-  min-width: 0;
-}
-
-.quickAssignControls button {
-  min-width: 0;
-  padding: var(--space-2) var(--space-3);
-  font-size: 1rem;
-  white-space: normal;
-}
-
-.selectedAccountPanel {
-  position: sticky;
-  top: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-  padding: var(--space-4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
-}
-
-.selectedAccountPanel h4,
-.selectedAccountPanel p {
-  margin: 0;
-}
-
-.selectedAccountPanel p {
-  color: var(--text-secondary);
-}
-
-.selectedAccountPanel .balanceGrid {
-  grid-template-columns: 1fr;
-}
-
-.selectedAccountPanel .balanceGrid div {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.selectedAccountPanel .balanceGrid dd {
-  text-align: right;
-}
-
-.accountPicker {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.accountPickerItem {
-  position: relative;
-}
-
-.accountButton,
-.selectedAccountButton {
-  display: grid;
-  gap: var(--space-1);
-  width: 100%;
-  padding: var(--space-3);
-  padding-right: calc(var(--space-3) + 2rem);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--surface-raised);
   color: var(--text-primary);
   text-align: left;
-  overflow-wrap: anywhere;
   cursor: pointer;
 }
 
-.selectedAccountButton {
+.methodGrid button:hover,
+.methodGrid button:focus-visible {
   border-color: var(--border-strong);
-  box-shadow: inset 0 0 0 2px var(--border-strong);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
 }
 
-.accountButton span,
-.selectedAccountButton span,
-.accountButton small,
-.selectedAccountButton small {
-  min-width: 0;
+.methodGrid span {
+  grid-column: 1 / -1;
   color: var(--text-secondary);
-  overflow-wrap: anywhere;
+  line-height: 1.45;
 }
 
-.removeAccountButton {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
+.modeBar {
+  display: flex;
+  gap: var(--space-1);
+  align-self: flex-start;
+  padding: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+}
+
+.modeBar button {
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modeBar .modeActive {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.personWorkspace {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.accountTabs {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border-subtle);
+  scrollbar-width: thin;
+}
+
+.tab,
+.tabActive,
+.addTab {
+  flex: 0 0 auto;
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-pill);
   background: var(--surface-sunken);
-  color: var(--text-secondary);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 700;
   cursor: pointer;
 }
 
-.removeAccountButton:hover:not(:disabled) {
+.tab span,
+.tabActive span {
+  margin-left: var(--space-1);
+}
+
+.tabActive {
   border-color: var(--border-strong);
-  color: var(--text-primary);
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
-.removeAccountButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.accountButton span,
-.selectedAccountButton span {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.itemName {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.unassignedBadge,
-.assignedBadge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2rem;
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-pill);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.unassignedBadge {
-  background: var(--order-needs-check-bg);
-  color: var(--order-needs-check-fg);
-}
-
-.assignedBadge {
+.tabPaid {
   background: var(--order-paid-bg);
   color: var(--order-paid-fg);
 }
 
-.account {
-  grid-template-columns: minmax(8rem, 1fr) minmax(0, 2fr);
-  align-items: center;
-  min-width: 0;
-}
-
-.account > * {
-  min-width: 0;
-}
-
-.assignedProducts {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
-}
-
-.assignedProductsHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.assignedProductsHeader h4 {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.8125rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.assignedProductsHeader > span {
-  display: inline-flex;
-  min-width: 1.5rem;
-  min-height: 1.5rem;
-  align-items: center;
-  justify-content: center;
-  padding: 0 var(--space-1);
-  border-radius: var(--radius-pill);
-  background: var(--surface-raised);
-  color: var(--text-secondary);
-  font-size: 0.8125rem;
-  font-weight: 700;
-}
-
-.assignedProductsList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.assignedProductsList li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--surface-raised);
-}
-
-.assignedProductsList li > span {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.assignedProductsList strong,
-.assignedProductsList small {
-  overflow-wrap: anywhere;
-}
-
-.assignedProductsList small,
-.noAssignedProducts {
-  color: var(--text-secondary);
-}
-
-.assignedProductsList button {
-  flex: 0 0 auto;
-  padding: var(--space-2) var(--space-3);
-  font-size: 0.875rem;
-}
-
-.noAssignedProducts {
-  margin: 0;
-  font-size: 0.875rem;
-}
-
-/* Actions get their own full-width line so the labels never wrap or clip. */
-.accountActions {
-  grid-column: 1 / -1;
-}
-
-.account button {
-  min-width: 0;
-  white-space: nowrap;
-}
-
-.accountIdentity {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.accountIdentity strong {
-  overflow-wrap: anywhere;
-}
-
-.balanceGrid {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: repeat(auto-fit, minmax(min(7rem, 100%), 1fr));
-  gap: var(--space-2);
-  margin: 0;
-}
-
-.balanceGrid div {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--surface-sunken);
-  text-align: center;
-}
-
-.balanceGrid dt {
-  color: var(--text-secondary);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.balanceGrid dd {
-  min-width: 0;
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.emptyState {
-  margin: 0;
-  padding: var(--space-4);
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
-}
-
-.review {
-  padding: var(--space-3);
-  border: 1px solid var(--order-needs-check-fg);
-  border-radius: var(--radius-md);
+.tabPending {
   background: var(--order-needs-check-bg);
   color: var(--order-needs-check-fg);
 }
 
-.tableSummary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(7rem, 1fr));
-  gap: var(--space-2);
-  margin: var(--space-4) 0 0;
-}
-
-.tableSummary div {
-  display: flex;
-  flex-direction: column;
+.addTab {
+  display: inline-flex;
+  width: auto;
   align-items: center;
-  padding: var(--space-3);
-  border-radius: var(--radius-sm);
+  gap: var(--space-1);
+  font-size: 1rem;
+}
+
+.addTab > span:first-child {
+  font-size: 1.25rem;
+}
+
+.workspaceGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(13rem, .34fr);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  align-items: start;
+}
+
+.productPanel,
+.productList {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.productPanel {
+  padding: var(--space-4);
+}
+
+.assignmentTarget {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
   background: var(--surface-sunken);
-  text-align: center;
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 
-.tableSummary dt,
-.tableSummary dd {
-  margin: 0;
-}
-
-.tableSummary dt {
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.tableSummary dd {
-  margin-top: var(--space-1);
-  font-weight: 700;
-  text-align: center;
-}
-
-.tableRemaining {
-  border: 1px solid var(--order-needs-check-fg);
-}
-
-@media (max-width: 40rem) {
-  .tableSummary {
-    grid-template-columns: 1fr;
-  }
-}
-
-.paymentDetailsButton {
-  align-self: flex-start;
+.assignmentTarget button {
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--accent-emphasis);
   font: inherit;
-  font-size: 0.8125rem;
   font-weight: 700;
   text-decoration: underline;
   cursor: pointer;
 }
 
+.assignmentFeedback {
+  margin: 0;
+  color: var(--order-paid-fg);
+  font-size: .875rem;
+  font-weight: 700;
+}
+
+.panelHeading {
+  align-items: flex-end;
+  margin-bottom: var(--space-2);
+}
+
+.panelHeading p {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+}
+
+.panelHeading label,
+.selectField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+  font-size: .8125rem;
+  font-weight: 700;
+}
+
+.panelHeading select,
+.selectField select {
+  min-height: 2.5rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+.productRow {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) max-content max-content max-content;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-bottom-color: var(--border-subtle);
+  border-radius: var(--radius-sm);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.productRowSelected {
+  border-color: var(--border-strong);
+  background: var(--surface-sunken);
+}
+
+.productSelect {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+
+.productSelect input {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  accent-color: var(--accent-emphasis);
+}
+
+.productInfo {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: .15rem;
+}
+
+.productInfo strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.productInfo span,
+.productInfo small {
+  color: var(--text-secondary);
+  font-size: .8125rem;
+}
+
+.quantityControl {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+}
+
+.quantityControl button,
+.quantityControl input {
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0;
+  border: 0;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  text-align: center;
+  font: inherit;
+  font-weight: 800;
+}
+
+.quantityControl button {
+  background: var(--surface-sunken);
+  cursor: pointer;
+}
+
+.quantityControl input {
+  appearance: textfield;
+}
+
+.singleQuantity {
+  width: 7.25rem;
+}
+
+.batchAction {
+  position: sticky;
+  z-index: 2;
+  bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+
+.allAssigned {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.allAssigned h3,
+.allAssigned p {
+  margin: 0;
+}
+
+.allAssigned .doneState {
+  display: inline-flex;
+  margin-bottom: var(--space-3);
+}
+
+.allAssigned div > p:last-child {
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
+}
+
+.quickSummary {
+  position: sticky;
+  top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.quickSummary > span,
+.status {
+  color: var(--text-secondary);
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.quickSummary p {
+  margin: 0 0 var(--space-2);
+  color: var(--text-secondary);
+}
+
+.doneState {
+  background: var(--order-paid-bg);
+  color: var(--order-paid-fg);
+  font-weight: 700;
+}
+
+.emptyState {
+  border: 1px dashed var(--border-strong);
+  color: var(--text-secondary);
+}
+
+.accountDetail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 48rem;
+  padding: var(--space-5);
+  margin: 0 auto;
+}
+
+.accountTitle > span {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.assignedProducts ul,
+.paymentList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assignedProducts li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content max-content;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.assignedProducts li > span {
+  display: flex;
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.assignedProducts small {
+  color: var(--text-secondary);
+}
+
+.assignedProducts li button,
+.removeAccountLink {
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.accountBalances {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.accountBalances div {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  text-align: center;
+}
+
+.accountBalances dt {
+  color: var(--text-secondary);
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.accountBalances dd {
+  margin: var(--space-1) 0 0;
+  font-weight: 800;
+}
+
+.accountActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.accountActions > * {
+  flex: 1 1 9rem;
+}
+
+.removeAccountLink {
+  flex-basis: 100%;
+}
+
+.simpleFlow {
+  display: flex;
+  width: min(100%, 32rem);
+  align-self: center;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  text-align: center;
+}
+
+.simpleFlow > p,
+.simpleFlow > label {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.simpleFlow h3 {
+  font-size: 2rem;
+}
+
+.peopleStepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.peopleStepper button {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font-size: 1.35rem;
+  cursor: pointer;
+}
+
+.peopleStepper strong {
+  min-width: 3rem;
+  font-size: 1.5rem;
+}
+
+.equalResult {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.equalResult strong {
+  font-size: 1.4rem;
+}
+
+.equalResult small,
+.simpleCopy {
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.footerAction {
+  align-self: flex-end;
+}
+
 .modalBackdrop {
   position: fixed;
-  z-index: 10;
+  z-index: 20;
   inset: 0;
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: rgb(0 0 0 / 45%);
+  background: rgb(0 0 0 / 48%);
 }
 
-.paymentModal {
-  width: min(100%, 34rem);
-  max-height: min(90vh, 42rem);
+.createModal {
+  width: min(100%, 30rem);
+  max-height: 90vh;
   overflow-y: auto;
   padding: var(--space-5);
   border: 1px solid var(--border-strong);
@@ -574,119 +650,85 @@
   box-shadow: var(--shadow-lg);
 }
 
-.paymentModalHeader,
-.paymentModalTotal,
-.paymentList li,
-.modalProducts p {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.paymentModalHeader h3 {
-  margin: 0;
-}
-
-.closeModalButton {
+.modalHeader > button {
   border: 0;
   background: transparent;
   color: var(--text-secondary);
   font-size: 1.75rem;
-  line-height: 1;
   cursor: pointer;
 }
 
-.paymentModalTotal {
+.creationPaths {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.or {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: .75rem;
+  text-transform: uppercase;
+}
+
+.or::before,
+.or::after {
+  height: 1px;
+  flex: 1;
+  background: var(--border-subtle);
+  content: "";
+}
+
+.paymentTotal {
   margin: var(--space-4) 0;
   padding: var(--space-3);
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
-  font-weight: 700;
-}
-
-.paymentList,
-.modalProducts {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.paymentList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  font-weight: 800;
 }
 
 .paymentList li {
-  padding: var(--space-3);
+  padding: var(--space-2) 0;
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.paymentList li span {
+.paymentList li > span {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
 }
 
 .paymentList small {
   color: var(--text-secondary);
 }
 
-.modalProducts {
-  margin-top: var(--space-4);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border-subtle);
-}
-
-.modalProducts h4 {
-  margin: 0 0 var(--space-2);
-}
-
-.modalProducts p {
-  margin: 0;
-  padding: var(--space-2) 0;
-  color: var(--text-secondary);
-}
-
 @media (max-width: 64rem) {
-  .screen {
-    overflow: visible;
-  }
+  .screen { overflow: visible; }
+  .workspaceGrid { grid-template-columns: 1fr; }
+  .quickSummary { position: static; order: -1; }
+  .productRow { grid-template-columns: minmax(0, 1fr) max-content; }
+  .singleQuantity { display: none; }
+  .productRow > button { grid-column: 2; }
+  .quantityControl { grid-row: 2; }
+}
 
-  .header,
-  .sectionHeader {
-    grid-template-columns: 1fr;
-  }
-
-  .header {
-    display: grid;
-  }
-
-  .line,
-  .account,
-  .assignmentWorkspace,
-  .assignmentSummary,
-  .quickAssignControls,
-  .balanceGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .selectedAccountPanel {
-    position: static;
-  }
-
-  /* Keep Step 3 actions tappable without shrinking or clipping labels. */
-  .accountActionsRow {
-    flex-wrap: wrap;
-  }
-
-  .accountActionsRow > * {
-    flex: 1 1 14rem;
-  }
-
-  .removeAccountButton {
-    width: 2.25rem;
-    height: 2.25rem;
-  }
+@media (max-width: 40rem) {
+  .methodGrid,
+  .tableSummary { grid-template-columns: 1fr; }
+  .methodGrid button { min-height: auto; }
+  .modeBar { width: 100%; overflow-x: auto; }
+  .modeBar button { flex: 0 0 auto; }
+  .panelHeading { align-items: stretch; flex-direction: column; }
+  .assignmentTarget { align-self: flex-start; white-space: normal; }
+  .productRow { grid-template-columns: minmax(0, 1fr) max-content; padding-inline: var(--space-2); }
+  .productRow > button { width: 100%; }
+  .addTabLabel { display: none; }
+  .addTab { width: 2.75rem; justify-content: center; padding: 0; }
+  .batchAction,
+  .allAssigned { align-items: stretch; flex-direction: column; }
+  .batchAction button { width: 100%; }
+  .accountBalances { grid-template-columns: 1fr; }
+  .accountDetail { padding: var(--space-4); }
 }

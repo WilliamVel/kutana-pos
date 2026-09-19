@@ -42,6 +42,7 @@ import styles from "./SplitBillContainer.module.css";
 export interface SplitBillContainerProps {
   readonly tableId: string;
   readonly onPayAccount?: (accountId: string) => void;
+  readonly onPayOrder?: () => void;
 }
 
 interface AccountPaymentCache {
@@ -108,6 +109,7 @@ function toAccountPayments(payments: readonly AccountPaymentCache[]): AccountPay
 export function SplitBillContainer({
   tableId,
   onPayAccount,
+  onPayOrder,
 }: SplitBillContainerProps): JSX.Element | null {
   const tables = useTables();
   const orders = useOrders();
@@ -213,8 +215,18 @@ export function SplitBillContainer({
               ...existing,
               allocationIds: [...existing.allocationIds, allocation.id],
               quantity: existing.quantity + allocation.quantity,
+              totalCents:
+                (existing.totalCents ?? 0) +
+                Math.round(((line?.totalCents ?? 0) / (line?.quantity ?? 1)) * allocation.quantity),
             }
-          : { allocationIds: [allocation.id], name, quantity: allocation.quantity },
+          : {
+              allocationIds: [allocation.id],
+              name,
+              quantity: allocation.quantity,
+              totalCents: Math.round(
+                ((line?.totalCents ?? 0) / (line?.quantity ?? 1)) * allocation.quantity,
+              ),
+            },
       );
     }
     const assignedLines = [...assignedLinesByProduct.values()];
@@ -249,6 +261,7 @@ export function SplitBillContainer({
     void runMutation(async () => {
       const account = createPersonalAccount({ orderId: order.id, customerId: selectedCustomerId });
       await accountsPort.save(account, allocations, 0);
+      setAllocationDraft((draft) => ({ ...draft, accountId: account.id }));
       setSelectedCustomerId("");
     });
   };
@@ -257,45 +270,59 @@ export function SplitBillContainer({
     void runMutation(async () => {
       const account = createPersonalAccount({ orderId: order.id, freeName });
       await accountsPort.save(account, allocations, 0);
+      setAllocationDraft((draft) => ({ ...draft, accountId: account.id }));
       setFreeName("");
     });
   };
 
-  const assignQuantity = (draft = allocationDraft): void => {
+  const assignQuantities = (drafts: readonly AccountAllocationDraft[]): void => {
     void runMutation(async () => {
-      const quantity = Number(draft.quantity);
-      const groupedLine = toLines(order, allocations).find((line) => line.id === draft.lineItemId);
-      const account = accounts.find((candidate) => candidate.id === draft.accountId);
-      if (!groupedLine || !account) return;
+      const accountId = drafts[0]?.accountId;
+      if (!accountId) return;
+      const account = accounts.find((candidate) => candidate.id === accountId);
+      if (!account || drafts.some((draft) => draft.accountId !== accountId)) return;
 
       let nextAllocations = [...allocations];
-      let remainingToAssign = quantity;
-      for (const lineItemId of groupedLine.lineItemIds) {
-        if (remainingToAssign <= 0) break;
-        const lineItem = order.lineItems.find((line) => line.id === lineItemId);
-        if (!lineItem) continue;
-        const alreadyAssigned = nextAllocations
-          .filter((allocation) => allocation.lineItemId === lineItemId)
-          .reduce((sum, allocation) => sum + allocation.quantity, 0);
-        const available = Math.max(0, lineItem.quantity - alreadyAssigned);
-        const quantityForLine = Math.min(available, remainingToAssign);
-        if (quantityForLine <= 0) continue;
-        const next = createAccountLineAllocation({
-          accountId: draft.accountId,
-          lineItemId,
-          quantity: quantityForLine,
-        });
-        nextAllocations = addAccountLineAllocation({
-          allocations: nextAllocations,
-          lineItems: order.lineItems,
-          next,
-        }).allocations;
-        remainingToAssign -= quantityForLine;
+      for (const draft of drafts) {
+        const quantity = Number(draft.quantity);
+        const groupedLine = toLines(order, nextAllocations).find((line) => line.id === draft.lineItemId);
+        if (!groupedLine || !Number.isFinite(quantity) || quantity <= 0) return;
+
+        let remainingToAssign = quantity;
+        for (const lineItemId of groupedLine.lineItemIds) {
+          if (remainingToAssign <= 0) break;
+          const lineItem = order.lineItems.find((line) => line.id === lineItemId);
+          if (!lineItem) continue;
+          const alreadyAssigned = nextAllocations
+            .filter((allocation) => allocation.lineItemId === lineItemId)
+            .reduce((sum, allocation) => sum + allocation.quantity, 0);
+          const available = Math.max(0, lineItem.quantity - alreadyAssigned);
+          const quantityForLine = Math.min(available, remainingToAssign);
+          if (quantityForLine <= 0) continue;
+          const next = createAccountLineAllocation({ accountId, lineItemId, quantity: quantityForLine });
+          nextAllocations = addAccountLineAllocation({
+            allocations: nextAllocations,
+            lineItems: order.lineItems,
+            next,
+          }).allocations;
+          remainingToAssign -= quantityForLine;
+        }
+        if (remainingToAssign > 0) return;
       }
-      if (remainingToAssign > 0) return;
-      await accountsPort.save(account, nextAllocations, account.version);
-      setAllocationDraft({ ...draft, quantity: "1" });
+
+      setAllocations(nextAllocations);
+      try {
+        await accountsPort.save(account, nextAllocations, account.version);
+      } catch (error) {
+        setAllocations(allocations);
+        throw error;
+      }
     });
+  };
+
+  const assignQuantity = (draft = allocationDraft): void => {
+    assignQuantities([draft]);
+    setAllocationDraft({ ...draft, quantity: "1" });
   };
 
   const payAccount = (accountId: string): void => {
@@ -452,11 +479,13 @@ export function SplitBillContainer({
         onCreateFreeNameAccount={createFreeNameAccount}
         onAllocationDraftChange={setAllocationDraft}
         onAssignQuantity={assignQuantity}
+        onAssignQuantities={assignQuantities}
         onPayAccount={payAccount}
         onMarkPending={markPending}
         onDeleteAccount={deleteAccount}
         onRemoveAllocation={removeAllocation}
         onAttemptClose={attemptClose}
+        onPayOrder={onPayOrder}
       />
     </div>
   );

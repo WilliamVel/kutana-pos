@@ -121,6 +121,11 @@ export function App(): JSX.Element {
               setSelectedAccountId(accountId);
               setCenterView("payment");
             }}
+            onPayOrder={() => {
+              setSelectedTicketId(null);
+              setSelectedAccountId(null);
+              setCenterView("payment");
+            }}
           />
           <Button variant="secondary" onClick={resetCenter}>
             Volver al pedido

@@ -24,6 +24,7 @@ async function renderContainer() {
       screen.getByRole("heading", { name: "Table 1 — Cuentas personales" }),
     ).toBeInTheDocument(),
   );
+  fireEvent.click(screen.getByRole("button", { name: /Por persona/ }));
   return ports;
 }
 
@@ -31,15 +32,14 @@ describe("SplitBillContainer", () => {
   it("uses personal-account ports to create a customer account and assign quantity", async () => {
     const ports = await renderContainer();
 
+    fireEvent.click(screen.getByRole("button", { name: "Agregar persona" }));
     fireEvent.change(screen.getByLabelText("Cliente existente"), {
       target: { value: "customer-ada" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Crear cuenta de cliente" }));
 
     await waitFor(() =>
-      expect(
-        screen.getByRole("article", { name: /Saldo de cuenta de Ada Lovelace/ }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("tab", { name: "Seleccionar cuenta Ada Lovelace" })).toBeInTheDocument(),
     );
     const order = await ports.orders.findByTable("table-1");
     const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
@@ -47,7 +47,6 @@ describe("SplitBillContainer", () => {
     fireEvent.change(screen.getByLabelText(`Cantidad para ${order!.lineItems[0]!.nameSnapshot}`), {
       target: { value: "1" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Seleccionar cuenta Ada Lovelace" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Agregar" })[0]!);
 
     await waitFor(async () => {
@@ -55,24 +54,25 @@ describe("SplitBillContainer", () => {
       expect(allocations).toHaveLength(1);
       expect(allocations[0]).toMatchObject({ accountId: account.id, quantity: 1 });
     });
-    expect(screen.getByRole("region", { name: "Productos pendientes" })).toHaveTextContent("1 sin asignar");
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: /Sin asignar 2/ })).toBeInTheDocument(),
+    );
   });
 
   it("records account-level pay-now payments without using concrete adapters", async () => {
     const ports = await renderContainer();
 
+    fireEvent.click(screen.getByRole("button", { name: "Agregar persona" }));
     fireEvent.change(screen.getByLabelText("Cuenta con nombre libre"), { target: { value: "Juan P." } });
     fireEvent.click(screen.getByRole("button", { name: "Crear cuenta libre" }));
     await waitFor(() =>
-      expect(
-        screen.getByRole("article", { name: "Saldo de cuenta de Juan P." }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("tab", { name: "Seleccionar cuenta Juan P." })).toBeInTheDocument(),
     );
 
     const order = await ports.orders.findByTable("table-1");
     const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
-    fireEvent.click(screen.getByRole("button", { name: "Seleccionar cuenta Juan P." }));
     fireEvent.click(screen.getAllByRole("button", { name: "Agregar" })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Ver cuenta" }));
     await waitFor(() => {
       expect(
         within(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).getAllByText(
@@ -81,12 +81,12 @@ describe("SplitBillContainer", () => {
       ).toBeGreaterThan(0);
     });
 
-    fireEvent.click(
-      within(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).getByRole(
-        "button",
-        { name: "Cobrar" },
-      ),
+    const payButton = within(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).getByRole(
+      "button",
+      { name: "Cobrar" },
     );
+    await waitFor(() => expect(payButton).toBeEnabled());
+    fireEvent.click(payButton);
 
     await waitFor(async () => {
       const payments = await ports.payments.listByTarget({
@@ -101,17 +101,16 @@ describe("SplitBillContainer", () => {
   it("marks account-level balances pending", async () => {
     const ports = await renderContainer();
 
+    fireEvent.click(screen.getByRole("button", { name: "Agregar persona" }));
     fireEvent.change(screen.getByLabelText("Cuenta con nombre libre"), { target: { value: "Juan P." } });
     fireEvent.click(screen.getByRole("button", { name: "Crear cuenta libre" }));
     await waitFor(() =>
-      expect(
-        screen.getByRole("article", { name: "Saldo de cuenta de Juan P." }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("tab", { name: "Seleccionar cuenta Juan P." })).toBeInTheDocument(),
     );
     const order = await ports.orders.findByTable("table-1");
     const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
-    fireEvent.click(screen.getByRole("button", { name: "Seleccionar cuenta Juan P." }));
     fireEvent.click(screen.getAllByRole("button", { name: "Agregar" })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Ver cuenta" }));
     await waitFor(() =>
       expect(
         within(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).getAllByText(
@@ -120,12 +119,12 @@ describe("SplitBillContainer", () => {
       ).toBeGreaterThan(0),
     );
 
-    fireEvent.click(
-      within(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).getByRole(
-        "button",
-        { name: "Dejar pendiente" },
-      ),
+    const pendingButton = within(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).getByRole(
+      "button",
+      { name: "Dejar pendiente" },
     );
+    await waitFor(() => expect(pendingButton).toBeEnabled());
+    fireEvent.click(pendingButton);
 
     await waitFor(async () =>
       expect((await ports.personalAccounts.findById(account.id))?.status).toBe("pending"),
@@ -135,19 +134,18 @@ describe("SplitBillContainer", () => {
   it("removes a person from this split from step two without deleting the customer", async () => {
     const ports = await renderContainer();
 
+    fireEvent.click(screen.getByRole("button", { name: "Agregar persona" }));
     fireEvent.change(screen.getByLabelText("Cliente existente"), {
       target: { value: "customer-ada" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Crear cuenta de cliente" }));
     await waitFor(() =>
-      expect(
-        screen.getByRole("article", { name: /Saldo de cuenta de Ada Lovelace/ }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("tab", { name: "Seleccionar cuenta Ada Lovelace" })).toBeInTheDocument(),
     );
 
     const order = await ports.orders.findByTable("table-1");
     const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
-    fireEvent.click(screen.getByRole("button", { name: "Seleccionar cuenta Ada Lovelace" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ver cuenta" }));
     fireEvent.click(screen.getByRole("button", { name: "Quitar Ada Lovelace de esta división" }));
 
     await waitFor(async () => expect(await ports.personalAccounts.findById(account.id)).toBeNull());
@@ -159,26 +157,25 @@ describe("SplitBillContainer", () => {
         screen.queryByRole("article", { name: /Saldo de cuenta de Ada Lovelace/ }),
       ).not.toBeInTheDocument(),
     );
-    expect(screen.getByText("Primero creá una cuenta.")).toBeInTheDocument();
+    expect(screen.getByText(/seleccioná una persona/)).toBeInTheDocument();
   });
 
   it("deletes a mistaken personal account and returns its items to unassigned", async () => {
     const ports = await renderContainer();
 
+    fireEvent.click(screen.getByRole("button", { name: "Agregar persona" }));
     fireEvent.change(screen.getByLabelText("Cuenta con nombre libre"), {
       target: { value: "Wrong name" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Crear cuenta libre" }));
     await waitFor(() =>
-      expect(
-        screen.getByRole("article", { name: "Saldo de cuenta de Wrong name" }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("tab", { name: "Seleccionar cuenta Wrong name" })).toBeInTheDocument(),
     );
 
     const order = await ports.orders.findByTable("table-1");
     const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
-    fireEvent.click(screen.getByRole("button", { name: "Seleccionar cuenta Wrong name" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Agregar" })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Ver cuenta" }));
     await waitFor(() =>
       expect(
         within(
@@ -187,12 +184,12 @@ describe("SplitBillContainer", () => {
       ).toBeGreaterThan(0),
     );
 
-    fireEvent.click(
-      within(screen.getByRole("article", { name: "Saldo de cuenta de Wrong name" })).getByRole(
-        "button",
-        { name: "Eliminar" },
-      ),
+    const deleteButton = within(screen.getByRole("article", { name: "Saldo de cuenta de Wrong name" })).getByRole(
+      "button",
+      { name: "Eliminar" },
     );
+    await waitFor(() => expect(deleteButton).toBeEnabled());
+    fireEvent.click(deleteButton);
 
     await waitFor(async () => expect(await ports.personalAccounts.findById(account.id)).toBeNull());
     await expect(ports.personalAccounts.listAllocationsByOrder(order!.id)).resolves.toEqual([]);
@@ -201,47 +198,42 @@ describe("SplitBillContainer", () => {
         screen.queryByRole("article", { name: "Saldo de cuenta de Wrong name" }),
       ).not.toBeInTheDocument(),
     );
-    expect(screen.getByRole("region", { name: "Productos pendientes" })).toHaveTextContent("2 sin asignar");
+    expect(screen.getByRole("tab", { name: /Sin asignar 3/ })).toBeInTheDocument();
   });
 
   it("delegates a valid closure to the payment-closure port", async () => {
       const ports = await renderContainer();
       const closeOrder = vi.spyOn(ports.paymentClosure, "closeOrder");
 
+      fireEvent.click(screen.getByRole("button", { name: "Agregar persona" }));
       fireEvent.change(screen.getByLabelText("Cuenta con nombre libre"), {
         target: { value: "Juan P." },
       });
       fireEvent.click(screen.getByRole("button", { name: "Crear cuenta libre" }));
       await waitFor(() =>
-        expect(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).toBeInTheDocument(),
+        expect(screen.getByRole("tab", { name: "Seleccionar cuenta Juan P." })).toBeInTheDocument(),
       );
       const order = await ports.orders.findByTable("table-1");
       const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
-      fireEvent.click(screen.getByRole("button", { name: "Seleccionar cuenta Juan P." }));
       fireEvent.change(screen.getByLabelText(`Cantidad para ${order!.lineItems[0]!.nameSnapshot}`), {
         target: { value: "2" },
       });
       fireEvent.click(screen.getAllByRole("button", { name: "Agregar" })[0]!);
-      await waitFor(() => expect(screen.getByText("1 sin asignar")).toBeInTheDocument());
-      fireEvent.change(screen.getByLabelText(`Cantidad para ${order!.lineItems[1]!.nameSnapshot}`), {
-        target: { value: "1" },
+      await waitFor(() => expect(screen.getByRole("tab", { name: /Sin asignar 1/ })).toBeInTheDocument());
+      const finalAssignButton = within(screen.getByRole("article", { name: "Asignar Loaded Nachos" })).getByRole("button", {
+        name: "Agregar",
       });
-      fireEvent.click(
-        within(screen.getByRole("article", { name: "Asignar Loaded Nachos" })).getByRole("button", {
-          name: "Agregar",
-        }),
-      );
+      await waitFor(() => expect(finalAssignButton).toBeEnabled());
+      fireEvent.click(finalAssignButton);
       await waitFor(() =>
-        expect(screen.getByRole("region", { name: "Productos pendientes" })).toHaveTextContent(
-          "0 sin asignar",
-        ),
+        expect(screen.getByRole("tab", { name: /Sin asignar 0/ })).toBeInTheDocument(),
       );
-      fireEvent.click(
-        within(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).getByRole(
-          "button",
-          { name: "Cobrar" },
-        ),
+      const closePayButton = within(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).getByRole(
+        "button",
+        { name: "Cobrar" },
       );
+      await waitFor(() => expect(closePayButton).toBeEnabled());
+      fireEvent.click(closePayButton);
       await waitFor(async () =>
         expect((await ports.personalAccounts.findById(account.id))?.status).toBe("paid"),
       );
