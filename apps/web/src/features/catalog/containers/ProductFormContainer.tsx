@@ -80,7 +80,7 @@ export function ProductFormContainer({
       .then((list) => {
         if (!cancelled) setCategoryOptions(list);
       })
-      .catch((error: unknown) => {
+      .catch(() => {
       });
     return () => {
       cancelled = true;
@@ -101,7 +101,7 @@ export function ProductFormContainer({
       .then((item) => {
         if (!cancelled) setExistingStockItem(item);
       })
-      .catch((error: unknown) => {
+      .catch(() => {
       });
 
     return () => {
@@ -188,7 +188,7 @@ export function ProductFormContainer({
       });
       const saved = await products.save(newProduct, 0);
       onSaved(saved);
-    } catch (error) {
+    } catch {
       setErrors({ sku: "No se pudo guardar. Revisá la consola." });
     }
   }

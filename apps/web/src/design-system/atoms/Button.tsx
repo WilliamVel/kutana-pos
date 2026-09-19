@@ -10,6 +10,7 @@ export interface ButtonProps {
   readonly disabled?: boolean;
   readonly type?: "button" | "submit";
   readonly ariaLabel?: string;
+  readonly ariaBusy?: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ export function Button({
   disabled = false,
   type = "button",
   ariaLabel,
+  ariaBusy = false,
 }: ButtonProps): JSX.Element {
   const variantClass = variant === "primary" ? styles.primary : styles.secondary;
 
@@ -34,6 +36,7 @@ export function Button({
       data-variant={variant}
       disabled={disabled}
       aria-label={ariaLabel}
+      aria-busy={ariaBusy || undefined}
       onClick={onClick}
     >
       {children}

@@ -16,11 +16,13 @@ describe("ProductFormContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Draft Beer" })).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "House Lager" } });
+    fireEvent.change(screen.getByLabelText("Nombre del producto *"), { target: { value: "House Lager" } });
+    fireEvent.change(screen.getByLabelText("Categoría *"), { target: { value: "category-draft-beer" } });
+    fireEvent.click(screen.getByText("Más opciones"));
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "SKU-NEW-1" } });
-    fireEvent.change(screen.getByLabelText("Precio de venta (USD)"), { target: { value: "4.25" } });
+    fireEvent.change(screen.getByLabelText("Precio de venta * (USD)"), { target: { value: "4.25" } });
     fireEvent.submit(screen.getByRole("form"));
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
@@ -42,14 +44,16 @@ describe("ProductFormContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Draft Beer" })).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "House Lager" } });
+    fireEvent.change(screen.getByLabelText("Nombre del producto *"), { target: { value: "House Lager" } });
+    fireEvent.change(screen.getByLabelText("Categoría *"), { target: { value: "category-draft-beer" } });
+    fireEvent.click(screen.getByText("Más opciones"));
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "SKU-NEW-2" } });
     fireEvent.change(screen.getByLabelText("Descripción"), {
       target: { value: "Smooth and light." },
     });
-    fireEvent.change(screen.getByLabelText("Precio de venta (USD)"), { target: { value: "4.25" } });
+    fireEvent.change(screen.getByLabelText("Precio de venta * (USD)"), { target: { value: "4.25" } });
     fireEvent.change(screen.getByLabelText("Costo (USD)"), { target: { value: "1.50" } });
     fireEvent.submit(screen.getByRole("form"));
 
@@ -83,9 +87,9 @@ describe("ProductFormContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Draft Beer" })).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Edited Lager" } });
+    fireEvent.change(screen.getByLabelText("Nombre del producto *"), { target: { value: "Edited Lager" } });
     fireEvent.submit(screen.getByRole("form"));
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
@@ -118,9 +122,10 @@ describe("ProductFormContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Draft Beer" })).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Cantidad inicial de stock"), { target: { value: "42" } });
+    fireEvent.click(screen.getByLabelText("Controlar inventario para este producto"));
+    fireEvent.change(screen.getByLabelText("Stock inicial (unidades)"), { target: { value: "42" } });
     fireEvent.submit(screen.getByRole("form"));
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
@@ -154,9 +159,11 @@ describe("ProductFormContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Draft Beer" })).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Duplicate" } });
+    fireEvent.change(screen.getByLabelText("Nombre del producto *"), { target: { value: "Duplicate" } });
+    fireEvent.change(screen.getByLabelText("Categoría *"), { target: { value: "category-draft-beer" } });
+    fireEvent.click(screen.getByText("Más opciones"));
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "DRAFT-PILS-500" } });
     fireEvent.submit(screen.getByRole("form"));
 

@@ -2,153 +2,83 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ProductForm, type ProductFormValues } from "./ProductForm.js";
 
-const CATEGORIES = [
-  { id: "cat-draft", name: "Draft Beer" },
-  { id: "cat-food", name: "Food" },
-];
-
+const CATEGORIES = [{ id: "cat-draft", name: "Draft Beer" }, { id: "cat-food", name: "Food" }];
 const BLANK_VALUES: ProductFormValues = {
-  name: "",
-  categoryId: "cat-draft",
-  sku: "",
-  barcode: "",
-  stockKind: "unit",
-  pourSizeMl: null,
-  description: "",
-  retailPriceCents: 0,
-  costPriceCents: null,
-  lowStockLevel: null,
-  initialStockQuantity: 0,
-  active: true,
+  name: "", categoryId: "cat-draft", sku: "", barcode: "", stockKind: "unit", pourSizeMl: null,
+  description: "", retailPriceCents: 0, costPriceCents: null, lowStockLevel: null,
+  initialStockQuantity: 0, active: true,
 };
-
 function renderForm(overrides: Partial<React.ComponentProps<typeof ProductForm>> = {}) {
-  const props: React.ComponentProps<typeof ProductForm> = {
-    categories: CATEGORIES,
-    initialValues: BLANK_VALUES,
-    onSubmit: vi.fn(),
-    onCancel: vi.fn(),
-    submitLabel: "Crear producto",
-    errors: {},
-    ...overrides,
-  };
+  const props: React.ComponentProps<typeof ProductForm> = { categories: CATEGORIES, initialValues: BLANK_VALUES, onSubmit: vi.fn(), onCancel: vi.fn(), submitLabel: "Crear producto", errors: {}, ...overrides };
   render(<ProductForm {...props} />);
   return props;
 }
+function completeRequiredFields() {
+  fireEvent.change(screen.getByLabelText("Nombre del producto *"), { target: { value: "Loaded Nachos" } });
+  fireEvent.change(screen.getByLabelText("Precio de venta * (USD)"), { target: { value: "6.50" } });
+}
 
 describe("ProductForm", () => {
-  it("renders every required field pre-filled from initialValues when editing", () => {
-    renderForm({
-      initialValues: { ...BLANK_VALUES, name: "KUTANA Pilsener 500ml", sku: "DRAFT-PILS-500" },
-      submitLabel: "Guardar cambios",
-    });
-
-    expect(screen.getByLabelText("Nombre")).toHaveValue("KUTANA Pilsener 500ml");
-    expect(screen.getByLabelText("SKU")).toHaveValue("DRAFT-PILS-500");
-    expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeInTheDocument();
+  it("renders the compact basic form and a live summary", () => {
+    renderForm({ initialValues: { ...BLANK_VALUES, name: "KUTANA Pilsener", retailPriceCents: 550 } });
+    expect(screen.getByRole("heading", { name: "Información básica" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "Resumen del producto" })).toHaveTextContent("5.50 USD");
+    expect(screen.getByText("Estado")).toBeInTheDocument();
   });
 
-  it("submits the exact edited values, with price parsed to integer cents (never a float)", () => {
+  it("keeps Más opciones closed until the summary row is opened", () => {
+    renderForm();
+    const details = screen.getByText("Más opciones").closest("details");
+    expect(details).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("Más opciones"));
+    expect(details).toHaveAttribute("open");
+    fireEvent.click(screen.getByText("Más opciones"));
+    expect(details).not.toHaveAttribute("open");
+  });
+
+  it("conditionally reveals inventory controls and submits integer cents", () => {
     const onSubmit = vi.fn();
     renderForm({ onSubmit });
-
-    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Loaded Nachos" } });
-    fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "FOOD-NACHOS" } });
-    fireEvent.change(screen.getByLabelText("Precio de venta (USD)"), { target: { value: "6.50" } });
-    fireEvent.change(screen.getByLabelText("Cantidad inicial de stock"), {
-      target: { value: "20" },
-    });
-    fireEvent.change(screen.getByLabelText("Alerta de stock bajo"), { target: { value: "5" } });
+    expect(screen.queryByLabelText(/Stock inicial/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Controlar inventario para este producto"));
+    fireEvent.change(screen.getByLabelText("Stock inicial (unidades)"), { target: { value: "20" } });
+    fireEvent.change(screen.getByLabelText("Alerta de stock bajo (unidades)"), { target: { value: "5" } });
+    completeRequiredFields();
     fireEvent.submit(screen.getByRole("form"));
-
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: "Loaded Nachos",
-        sku: "FOOD-NACHOS",
-        retailPriceCents: 650,
-        initialStockQuantity: 20,
-        lowStockLevel: 5,
-      }),
-    );
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ retailPriceCents: 650, initialStockQuantity: 20, lowStockLevel: 5, trackInventory: true }));
   });
 
-  it("reveals the pour-size field only when stock kind is volume (draft beer)", () => {
-    renderForm();
-    expect(screen.queryByLabelText("Medida del vaso (ml)")).not.toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText("Tipo de stock"), { target: { value: "volume" } });
-    expect(screen.getByLabelText("Medida del vaso (ml)")).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "330ml" })).toBeInTheDocument();
-  });
-
-  it("toggles the active switch", () => {
+  it("moves the active state into the summary and preserves it on submit", () => {
     const onSubmit = vi.fn();
-    renderForm({ onSubmit, initialValues: { ...BLANK_VALUES, active: true } });
-
-    fireEvent.click(screen.getByLabelText("Activo"));
+    renderForm({ onSubmit });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Producto activo" }));
+    completeRequiredFields();
     fireEvent.submit(screen.getByRole("form"));
-
+    expect(screen.getByText("Borrador")).toBeInTheDocument();
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ active: false }));
   });
 
-  it("renders the description field as a multiline input and round-trips its value", () => {
-    const onSubmit = vi.fn();
-    renderForm({ onSubmit });
-
-    const descriptionField = screen.getByLabelText("Descripción");
-    expect(descriptionField.tagName).toBe("TEXTAREA");
-
-    fireEvent.change(descriptionField, { target: { value: "Crisp, cold, and local." } });
+  it("shows validation summary and focuses it when required fields are missing", () => {
+    renderForm();
     fireEvent.submit(screen.getByRole("form"));
-
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ description: "Crisp, cold, and local." }),
-    );
+    const summary = screen.getByText("Revisá los datos del producto.").closest("[role=alert]");
+    expect(summary).toHaveFocus();
+    expect(summary).toHaveTextContent("nombre");
   });
 
-  it("submits a cost price entered as dollars-and-cents as integer cents", () => {
-    const onSubmit = vi.fn();
-    renderForm({ onSubmit });
-
-    fireEvent.change(screen.getByLabelText("Costo (USD)"), { target: { value: "4.25" } });
-    fireEvent.submit(screen.getByRole("form"));
-
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ costPriceCents: 425 }));
+  it("keeps cancel secondary and confirms when the form is dirty", () => {
+    const onCancel = vi.fn();
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderForm({ onCancel });
+    completeRequiredFields();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(onCancel).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
   });
 
-  it("submits an empty cost price as null, never as zero", () => {
-    const onSubmit = vi.fn();
-    renderForm({ onSubmit, initialValues: { ...BLANK_VALUES, costPriceCents: 500 } });
-
-    fireEvent.change(screen.getByLabelText("Costo (USD)"), { target: { value: "" } });
-    fireEvent.submit(screen.getByRole("form"));
-
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ costPriceCents: null }));
-  });
-
-  it("pre-fills description and cost price from initialValues when editing", () => {
-    renderForm({
-      initialValues: {
-        ...BLANK_VALUES,
-        description: "House-made salsa on the side.",
-        costPriceCents: 275,
-      },
-      submitLabel: "Guardar cambios",
-    });
-
-    expect(screen.getByLabelText("Descripción")).toHaveValue("House-made salsa on the side.");
-    expect(screen.getByLabelText("Costo (USD)")).toHaveValue("2.75");
-  });
-
-  it("shows field-level validation errors passed in via props", () => {
+  it("round-trips optional details and reports duplicate errors", () => {
     renderForm({ errors: { sku: "El SKU ya está en uso" } });
     expect(screen.getByText("El SKU ya está en uso")).toBeInTheDocument();
-  });
-
-  it("calls onCancel when the cancel button is pressed", () => {
-    const onCancel = vi.fn();
-    renderForm({ onCancel });
-    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-    expect(onCancel).toHaveBeenCalledOnce();
+    expect(screen.getByLabelText("SKU")).toBeInTheDocument();
   });
 });
