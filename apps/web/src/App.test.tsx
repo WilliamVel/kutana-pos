@@ -22,7 +22,10 @@ describe("App", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Inventario" })).toBeInTheDocument(),
     );
-    expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute("src", "/Kutana_navbar_transparente.svg");
+    expect(screen.getByRole("img", { name: "KUTANA" })).toHaveAttribute(
+      "src",
+      "/Kutana_navbar_transparente.svg",
+    );
     expect(screen.getByRole("button", { name: "Inventario" })).toBeInTheDocument();
   });
 
@@ -36,6 +39,13 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Mina" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Órdenes" })).toHaveAttribute(
+        "aria-current",
+        "page",
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Inventario" }));
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Agregar producto" })).toBeInTheDocument(),
     );
@@ -89,6 +99,7 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Mina" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Inventario" }));
 
     await waitFor(() => expect(screen.getByText("Blonde Ale 330ml")).toBeInTheDocument());
     const row = screen.getByRole("row", {

@@ -41,7 +41,7 @@ export function App(): JSX.Element {
   const auth = useAuth();
   const [session, setSession] = useState<AuthSession | null>(() => auth.currentSession());
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
-  const [screen, setScreen] = useState<ScreenId>("inventory");
+  const [screen, setScreen] = useState<ScreenId>("register");
   const [isNavigating, setIsNavigating] = useState(false);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);

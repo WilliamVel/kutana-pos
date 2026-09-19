@@ -449,6 +449,54 @@
   color: var(--text-secondary);
 }
 
+@media (max-width: 64rem) {
+  /* Keep the card's second row bounded: the status and price each own a
+     grid column instead of competing for a wrapped flex line. */
+  .rowMain {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-template-rows: auto auto;
+    align-content: center;
+    gap: 0.3rem 0.55rem;
+    padding: 0.65rem;
+  }
+
+  .rowMain .identity {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .rowMain [data-status] {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rowMain .balance {
+    grid-column: 2;
+    grid-row: 2;
+    width: auto;
+    min-width: max-content;
+    margin-left: 0;
+    white-space: nowrap;
+  }
+
+  .row[data-selected="false"] .rowMain .identity {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .row[data-selected="false"] .rowMain .balance {
+    grid-row: 1;
+  }
+}
+
 .error {
   max-width: 32rem;
   margin: 0 auto;
