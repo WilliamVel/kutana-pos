@@ -10,6 +10,7 @@ const ROWS: InventoryRow[] = [
     categoryName: "Draft Beer",
     priceCents: 350,
     imageUrl: null,
+    presentation: null,
     stockStatus: "low-stock",
     stockLabel: "4500ml",
   },
@@ -20,6 +21,7 @@ const ROWS: InventoryRow[] = [
     categoryName: "Bottled Beer",
     priceCents: 380,
     imageUrl: null,
+    presentation: null,
     stockStatus: "in-stock",
     stockLabel: "48 unidades",
   },
@@ -100,9 +102,25 @@ describe("InventoryList", () => {
     const row = screen.getByRole("row", {
       name: /KUTANA Pilsener 500ml DRAFT-PILS-500 Draft Beer/,
     });
-    fireEvent.click(within(row).getByRole("button", { name: "Editar" }));
+    fireEvent.click(within(row).getByRole("button", { name: "Editar producto KUTANA Pilsener 500ml" }));
 
     expect(props.onEditProduct).toHaveBeenCalledWith("product-pilsener-500");
+  });
+
+  it("opens the actions menu in a portal and closes it with Escape", () => {
+    renderList({ onDeleteProduct: vi.fn().mockResolvedValue(undefined) });
+    const trigger = screen.getByRole("button", { name: "Más acciones para KUTANA Pilsener 500ml" });
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-haspopup", "menu");
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("menuitem", { name: "Eliminar" })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("does not render the retired catalog-active label", () => {
+    renderList();
+    expect(screen.queryByText("Catálogo activo")).not.toBeInTheDocument();
   });
 
   it("renders pagination controls and calls onPageChange", () => {
@@ -114,14 +132,14 @@ describe("InventoryList", () => {
     expect(props.onPageChange).toHaveBeenCalledWith(1);
   });
 
-  it("disables Previous on the first page and Next on the last page", () => {
+  it("hides pagination controls when there is only one page", () => {
     renderList({ page: 1, pageCount: 1 });
-    expect(screen.getByRole("button", { name: "Página anterior" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Página siguiente" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Página anterior" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Página siguiente" })).not.toBeInTheDocument();
   });
 
   it("shows an empty state when there are no rows", () => {
     renderList({ rows: [] });
-    expect(screen.getByText("No hay productos que coincidan con los filtros.")).toBeInTheDocument();
+    expect(screen.getByText("Todavía no hay productos")).toBeInTheDocument();
   });
 });

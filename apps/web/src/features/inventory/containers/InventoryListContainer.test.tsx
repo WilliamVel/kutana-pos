@@ -16,8 +16,7 @@ describe("InventoryListContainer", () => {
 
     await waitFor(() => expect(screen.getByText("Draft Beer")).toBeInTheDocument());
 
-    expect(screen.getByText("0")).toBeInTheDocument();
-    expect(screen.getByText("Productos visibles")).toBeInTheDocument();
+    expect(screen.getByText("0 productos")).toBeInTheDocument();
     expect(screen.queryByText("Blonde Ale 330ml")).not.toBeInTheDocument();
   });
 
@@ -48,7 +47,7 @@ describe("InventoryListContainer", () => {
     const row = screen.getByRole("row", {
       name: /Editable Lager EDIT-LAGER Draft Beer/,
     });
-    fireEvent.click(within(row).getByRole("button", { name: "Editar" }));
+    fireEvent.click(within(row).getByRole("button", { name: "Editar producto Editable Lager" }));
 
     expect(onEditProduct).toHaveBeenCalledOnce();
     expect(onEditProduct.mock.calls[0]![0]).toMatchObject({
@@ -79,7 +78,10 @@ describe("InventoryListContainer", () => {
     );
 
     await waitFor(() => expect(screen.getByText("Delete Lager")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Eliminar producto Delete Lager" }));
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const row = screen.getByRole("row", { name: /Delete Lager DELETE-LAGER Draft Beer/ });
+    fireEvent.click(within(row).getByRole("button", { name: "Más acciones para Delete Lager" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Eliminar" }));
 
     await waitFor(() => expect(screen.queryByText("Delete Lager")).not.toBeInTheDocument());
     await expect(ports.products.findById(saved.id)).resolves.toMatchObject({ active: false });

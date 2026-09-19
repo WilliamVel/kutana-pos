@@ -1,4 +1,5 @@
-import { useId } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "../../../design-system/atoms/Button.js";
 import { Icon } from "../../../design-system/atoms/Icon.js";
 import { PriceTag } from "../../../design-system/molecules/PriceTag.js";
@@ -11,267 +12,180 @@ export interface InventoryRow {
   readonly name: string;
   readonly sku: string;
   readonly categoryName: string;
-  /** Integer cents. */
   readonly priceCents: number;
   readonly imageUrl: string | null;
+  readonly presentation?: string | null;
   readonly stockStatus: StockDisplayStatus;
-  /** Pre-formatted by `computeStockDisplay` — a keg shows millilitres, a bottle shows a unit count. */
   readonly stockLabel: string;
 }
-
-export interface InventoryCategoryOption {
-  readonly id: string;
-  readonly name: string;
-}
-
+export interface InventoryCategoryOption { readonly id: string; readonly name: string; }
 export interface InventoryListProps {
   readonly rows: readonly InventoryRow[];
+  readonly totalCount?: number;
+  readonly catalogCount?: number;
+  readonly loading?: boolean;
+  readonly error?: boolean;
   readonly categories: readonly InventoryCategoryOption[];
   readonly selectedCategoryId: string | null;
-  readonly onCategoryChange: (categoryId: string | null) => void;
+  readonly onCategoryChange: (value: string | null) => void;
   readonly stockStatusFilter: StockDisplayStatus | null;
-  readonly onStockStatusFilterChange: (status: StockDisplayStatus | null) => void;
+  readonly onStockStatusFilterChange: (value: StockDisplayStatus | null) => void;
   readonly searchQuery: string;
-  readonly onSearchQueryChange: (query: string) => void;
+  readonly onSearchQueryChange: (value: string) => void;
   readonly page: number;
   readonly pageCount: number;
   readonly onPageChange: (page: number) => void;
-  readonly onEditProduct?: (productId: string) => void;
-  readonly onDeleteProduct?: (productId: string) => void;
+  readonly onEditProduct?: (id: string) => void;
+  readonly onDeleteProduct?: (id: string) => Promise<void>;
+  readonly onRetry?: () => void;
   readonly onAddProduct?: () => void;
   readonly onManageCategories?: () => void;
 }
 
-/**
- * Purely presentational: props in, markup out, no port access. All
- * filtering/search/pagination logic lives in the container
- * (`InventoryListContainer`) — this component only renders whatever rows
- * it is handed and reports user intent upward via callbacks.
- */
+const stockLabels: Record<StockDisplayStatus, string> = {
+  "in-stock": "Con stock", "low-stock": "Stock bajo", "out-of-stock": "Sin stock", "no-stock-control": "Sin control",
+};
+const countText = (count: number): string => `${new Intl.NumberFormat("es-AR").format(count)} ${count === 1 ? "producto" : "productos"}`;
+
 export function InventoryList({
-  rows,
-  categories,
-  selectedCategoryId,
-  onCategoryChange,
-  stockStatusFilter,
-  onStockStatusFilterChange,
-  searchQuery,
-  onSearchQueryChange,
-  page,
-  pageCount,
-  onPageChange,
-  onEditProduct,
-  onDeleteProduct,
-  onAddProduct,
-  onManageCategories,
+  rows, totalCount, catalogCount, loading, error, categories, selectedCategoryId, onCategoryChange,
+  stockStatusFilter, onStockStatusFilterChange, searchQuery, onSearchQueryChange, page, pageCount,
+  onPageChange, onEditProduct, onDeleteProduct, onRetry, onAddProduct, onManageCategories,
 }: InventoryListProps): JSX.Element {
-  const categoryFieldId = useId();
-  const stockFieldId = useId();
-  const searchFieldId = useId();
-  const productCount = new Intl.NumberFormat().format(rows.length);
+  const resultCount = totalCount ?? rows.length;
+  const catalogTotal = catalogCount ?? rows.length;
+  const isLoading = loading ?? false;
+  const hasError = error ?? false;
+  const categoryId = useId();
+  const stockId = useId();
+  const searchId = useId();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState("");
+  useEffect(() => {
+    if (!window.matchMedia) return undefined;
+    const media = window.matchMedia("(max-width: 48rem)");
+    const update = (): void => setIsMobile(media.matches);
+    update();
+    media.addEventListener?.("change", update);
+    return () => media.removeEventListener?.("change", update);
+  }, []);
+  const hasFilters = Boolean(searchQuery || selectedCategoryId || stockStatusFilter);
+  const activeFilterCount = Number(Boolean(selectedCategoryId)) + Number(Boolean(stockStatusFilter));
+  const from = resultCount === 0 ? 0 : (page - 1) * 10 + 1;
+  const to = resultCount === 0 ? 0 : Math.min(page * 10, resultCount);
+  const categoryName = categories.find((category) => category.id === selectedCategoryId)?.name;
+  const clearFilters = (): void => { onSearchQueryChange(""); onCategoryChange(null); onStockStatusFilterChange(null); setFiltersOpen(false); };
+  const deleteRow = async (row: InventoryRow): Promise<void> => {
+    if (!onDeleteProduct || !window.confirm(`¿Eliminar “${row.name}”? Esta acción es permanente.`)) return;
+    setDeletingId(row.id);
+    try { await onDeleteProduct(row.id); setNotice(`Producto “${row.name}” eliminado.`); }
+    catch { setNotice(`No se pudo eliminar “${row.name}”.`); }
+    finally { setDeletingId(null); }
+  };
+  const productVisual = (row: InventoryRow): JSX.Element => row.imageUrl ? <img className={styles.avatar} src={row.imageUrl} alt="" width="42" height="42" loading="lazy" /> : <span className={styles.avatar} aria-hidden="true">{row.name.charAt(0)}</span>;
 
   return (
     <section className={styles.screen} aria-labelledby="inventory-heading">
       <header className={styles.header}>
-        <div>
+        <div className={styles.headingCopy}>
           <p className={styles.eyebrow}>Catálogo</p>
           <h2 id="inventory-heading">Productos</h2>
-          <p>Buscá, filtrá y revisá el estado del stock antes de vender.</p>
+          <p>Gestioná tu catálogo y revisá el estado del stock.</p>
         </div>
-        <div className={styles.headerAside}>
-          <div className={styles.inventoryActions} aria-label="Acciones de catálogo">
-            {onAddProduct ? (
-              <Button onClick={onAddProduct}>
-                <Icon name="plus" size={18} />
-                Agregar producto
-              </Button>
-            ) : null}
-            {onManageCategories ? (
-              <Button variant="secondary" onClick={onManageCategories}>
-                <Icon name="folder" size={18} />
-                Categorías
-              </Button>
-            ) : null}
-          </div>
-          <div className={styles.summaryCard} aria-live="polite">
-            <strong>{productCount}</strong>
-            <span>{rows.length === 1 ? "Producto visible" : "Productos visibles"}</span>
-          </div>
+        <div className={styles.inventoryActions} aria-label="Acciones de catálogo">
+          {onManageCategories ? <Button variant="secondary" onClick={onManageCategories}><Icon name="folder" size={18} />Categorías</Button> : null}
+          {onAddProduct ? <Button onClick={onAddProduct}><Icon name="plus" size={18} />Agregar producto</Button> : null}
         </div>
       </header>
 
       <div className={styles.filters} role="search" aria-label="Filtros de productos">
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor={searchFieldId}>
-            Buscar
-          </label>
-          <input
-            id={searchFieldId}
-            name="inventory-search"
-            autoComplete="off"
-            role="searchbox"
-            className={styles.search}
-            type="search"
-            placeholder="Buscar por nombre o SKU…"
-            value={searchQuery}
-            onChange={(event) => onSearchQueryChange(event.target.value)}
-          />
+        <div className={styles.searchWrap}>
+          <label className={styles.srOnly} htmlFor={searchId}>Buscar por nombre o SKU</label>
+          <Icon name="search" size={19} />
+          <input id={searchId} className={styles.search} type="search" placeholder="Buscar por nombre o SKU…" value={searchQuery} onChange={(event) => onSearchQueryChange(event.target.value)} />
+          {searchQuery ? <button type="button" className={styles.clearButton} aria-label="Limpiar búsqueda" title="Limpiar búsqueda" onClick={() => onSearchQueryChange("")}><Icon name="close" size={16} /></button> : null}
         </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor={categoryFieldId}>
-            Categoría
-          </label>
-          <select
-            id={categoryFieldId}
-            name="inventory-category"
-            autoComplete="off"
-            className={styles.select}
-            value={selectedCategoryId ?? ""}
-            onChange={(event) => onCategoryChange(event.target.value || null)}
-          >
-            <option value="">Todas las categorías</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+        <div className={styles.desktopFilters}>
+          <label className={styles.srOnly} htmlFor={categoryId}>Categoría</label>
+          <select id={categoryId} className={styles.select} value={selectedCategoryId ?? ""} onChange={(event) => onCategoryChange(event.target.value || null)}><option value="">Todas las categorías</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
+          <label className={styles.srOnly} htmlFor={stockId}>Estado de stock</label>
+          <select id={stockId} className={styles.select} value={stockStatusFilter ?? ""} onChange={(event) => onStockStatusFilterChange((event.target.value || null) as StockDisplayStatus | null)}><option value="">Todos los stocks</option>{Object.entries(stockLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
         </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor={stockFieldId}>
-            Estado de stock
-          </label>
-          <select
-            id={stockFieldId}
-            name="inventory-stock-status"
-            autoComplete="off"
-            className={styles.select}
-            value={stockStatusFilter ?? ""}
-            onChange={(event) =>
-              onStockStatusFilterChange((event.target.value || null) as StockDisplayStatus | null)
-            }
-          >
-            <option value="">Todos los niveles de stock</option>
-            <option value="in-stock">Con stock</option>
-            <option value="low-stock">Stock bajo</option>
-            <option value="out-of-stock">Sin stock</option>
-          </select>
-        </div>
+        <button type="button" className={styles.filterButton} aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}><span>Filtros</span>{activeFilterCount > 0 ? <span className={styles.filterCount}>{activeFilterCount}</span> : null}</button>
+        {filtersOpen ? <div className={styles.mobileFilterPanel}>
+          <label htmlFor={`${categoryId}-mobile`}>Categoría</label><select id={`${categoryId}-mobile`} className={styles.select} value={selectedCategoryId ?? ""} onChange={(event) => onCategoryChange(event.target.value || null)}><option value="">Todas las categorías</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
+          <label htmlFor={`${stockId}-mobile`}>Estado de stock</label><select id={`${stockId}-mobile`} className={styles.select} value={stockStatusFilter ?? ""} onChange={(event) => onStockStatusFilterChange((event.target.value || null) as StockDisplayStatus | null)}><option value="">Todos los stocks</option>{Object.entries(stockLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+        </div> : null}
       </div>
 
-      {rows.length === 0 ? (
-        <div className={styles.empty} role="status">
-          <h3>No hay productos que coincidan</h3>
-          <p>No hay productos que coincidan con los filtros.</p>
-          <p>Limpiá la búsqueda o elegí otra categoría o estado de stock.</p>
-        </div>
-      ) : (
-        <div className={styles.tableShell}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th aria-hidden="true" />
-                <th>Nombre</th>
-                <th>SKU</th>
-                <th>Categoría</th>
-                <th>Precio</th>
-                <th>Stock</th>
-                {onEditProduct || onDeleteProduct ? <th className={styles.actionCell}>Acciones</th> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className={styles.row}>
-                  <td>
-                    {row.imageUrl ? (
-                      <img
-                        className={styles.image}
-                        src={row.imageUrl}
-                        alt=""
-                        width="48"
-                        height="48"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className={styles.image} aria-hidden="true">
-                        {row.name.charAt(0)}
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <strong className={styles.productName}>{row.name}</strong>
-                  </td>
-                  <td>
-                    <code className={styles.sku} translate="no">
-                      {row.sku}
-                    </code>
-                  </td>
-                  <td>{row.categoryName}</td>
-                  <td className={styles.priceCell}>
-                    <PriceTag cents={row.priceCents} />
-                  </td>
-                  <td>
-                    <div className={styles.stockCell}>
-                      <StatusPill status={row.stockStatus} />
-                      <span>{row.stockLabel}</span>
-                    </div>
-                  </td>
-                  {onEditProduct || onDeleteProduct ? (
-                    <td className={styles.actionCell}>
-                      <div className={styles.actions} aria-label="Acciones de producto">
-                        {onEditProduct ? (
-                          <button
-                            type="button"
-                            className={styles.iconButton}
-                            aria-label="Editar"
-                            title="Editar producto"
-                            onClick={() => onEditProduct(row.id)}
-                          >
-                            <Icon name="edit" size={18} />
-                          </button>
-                        ) : null}
-                        {onDeleteProduct ? (
-                          <button
-                            type="button"
-                            className={styles.iconButton}
-                            aria-label={`Eliminar producto ${row.name}`}
-                            title="Eliminar producto"
-                            onClick={() => onDeleteProduct(row.id)}
-                          >
-                            <Icon name="trash" size={18} />
-                          </button>
-                        ) : null}
-                      </div>
-                    </td>
-                  ) : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {hasFilters ? <div className={styles.filterBar}><span className={styles.filterHint}>Filtros activos</span>{searchQuery ? <button type="button" className={styles.chip} onClick={() => onSearchQueryChange("")}>“{searchQuery}” <Icon name="close" size={14} /></button> : null}{categoryName ? <button type="button" className={styles.chip} onClick={() => onCategoryChange(null)}>{categoryName} <Icon name="close" size={14} /></button> : null}{stockStatusFilter ? <button type="button" className={styles.chip} onClick={() => onStockStatusFilterChange(null)}>{stockLabels[stockStatusFilter]} <Icon name="close" size={14} /></button> : null}<button type="button" className={styles.clearFilters} onClick={clearFilters}>Limpiar filtros</button></div> : null}
 
-      <nav className={styles.pagination} aria-label="Páginas de productos">
-        <Button
-          variant="secondary"
-          onClick={() => onPageChange(page - 1)}
-          disabled={page <= 1}
-          ariaLabel="Página anterior"
-        >
-          <Icon name="arrow-left" size={20} />
-        </Button>
-        <span aria-live="polite">
-          Página {page} de {pageCount}
-        </span>
-        <Button
-          variant="secondary"
-          onClick={() => onPageChange(page + 1)}
-          disabled={page >= pageCount}
-          ariaLabel="Página siguiente"
-        >
-          <Icon name="arrow-right" size={20} />
-        </Button>
-      </nav>
+      <div className={styles.resultsHeader} id="inventory-results" aria-live="polite"><div><h3>{hasFilters ? `${countText(resultCount)} encontrados` : countText(resultCount)}</h3><span>Mostrando {from}–{to}</span></div></div>
+      {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
+      {hasError ? <div className={styles.empty}><h3>No pudimos cargar los productos</h3><p>Revisá tu conexión e intentá nuevamente.</p>{onRetry ? <Button variant="secondary" onClick={onRetry}>Reintentar</Button> : null}</div> : isLoading ? <div className={styles.loading} aria-label="Cargando productos">{[1, 2, 3, 4].map((item) => <div className={styles.skeletonRow} key={item} />)}</div> : rows.length === 0 ? <div className={styles.empty} role="status"><h3>{catalogTotal === 0 ? "Todavía no hay productos" : "No encontramos productos con estos filtros"}</h3><p>{catalogTotal === 0 ? "Agregá tu primer producto para comenzar a vender." : "Probá quitar algún filtro para ampliar la búsqueda."}</p>{catalogTotal === 0 && onAddProduct ? <Button onClick={onAddProduct}>Agregar primer producto</Button> : null}{catalogTotal > 0 && hasFilters ? <Button variant="secondary" onClick={clearFilters}>Limpiar filtros</Button> : null}</div> : <div className={styles.resultsShell}>
+        {!isMobile ? <div className={`${styles.tableShell} ${styles.desktopOnly}`}><table className={styles.table}><caption className={styles.srOnly}>Lista de productos</caption><thead><tr><th>Producto</th><th>SKU</th><th>Categoría</th><th className={styles.number}>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td><div className={styles.productCell}>{productVisual(row)}<span><strong>{row.name}</strong>{row.presentation ? <small>{row.presentation}</small> : null}</span></div></td><td><code className={styles.sku} title={row.sku}>{row.sku}</code></td><td>{row.categoryName}</td><td className={styles.number}><PriceTag cents={row.priceCents} /></td><td><div className={styles.stockCell}><StatusPill status={row.stockStatus} />{row.stockStatus === "no-stock-control" ? null : <span>{row.stockLabel}</span>}</div></td><td className={styles.actionCell}><ProductActions row={row} onEdit={onEditProduct} onDelete={onDeleteProduct ? () => void deleteRow(row) : undefined} deleting={deletingId === row.id} /></td></tr>)}</tbody></table></div> : <ul className={`${styles.mobileList} ${styles.mobileOnly}`} aria-label="Productos">{rows.map((row) => <li className={styles.card} key={row.id}><div className={styles.cardHeader}>{productVisual(row)}<div className={styles.cardTitle}><strong>{row.name}</strong>{row.presentation ? <small>{row.presentation}</small> : null}</div><PriceTag cents={row.priceCents} /><ProductActions row={row} onEdit={onEditProduct} onDelete={onDeleteProduct ? () => void deleteRow(row) : undefined} deleting={deletingId === row.id} /></div><div className={styles.cardBody}><div className={styles.stockCell}><StatusPill status={row.stockStatus} />{row.stockStatus === "no-stock-control" ? null : <span>{row.stockLabel}</span>}</div><span>{row.categoryName}</span><span className={styles.cardSku}>SKU: <code title={row.sku}>{row.sku}</code></span></div>{onEditProduct ? <button type="button" className={styles.editLink} onClick={() => onEditProduct(row.id)}>Editar producto</button> : null}</li>)}</ul>}
+      <footer className={styles.paginationFooter}><span>Mostrando {from}–{to} de {resultCount}</span>{pageCount > 1 ? <nav className={styles.pagination} aria-label="Páginas de productos"><button type="button" className={styles.pageButton} onClick={() => onPageChange(page - 1)} disabled={page <= 1} aria-label="Página anterior"><Icon name="arrow-left" size={20} /></button><span aria-current="page">Página {page} de {pageCount}</span><button type="button" className={styles.pageButton} onClick={() => onPageChange(page + 1)} disabled={page >= pageCount} aria-label="Página siguiente"><Icon name="arrow-right" size={20} /></button></nav> : null}</footer>
+      </div>}
     </section>
   );
+}
+
+interface ProductActionsProps {
+  readonly row: InventoryRow;
+  readonly onEdit?: (id: string) => void;
+  readonly onDelete?: () => void;
+  readonly deleting: boolean;
+}
+
+function ProductActions({ row, onEdit, onDelete, deleting }: ProductActionsProps): JSX.Element {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const closeOnEscape = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        buttonRef.current?.focus();
+      }
+    };
+    const closeOnOutside = (event: PointerEvent): void => {
+      if (event.target instanceof Node && !buttonRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOnOutside);
+    requestAnimationFrame(() => menuRef.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus());
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeOnOutside);
+    };
+  }, [open]);
+
+  const toggleMenu = (): void => {
+    if (open) {
+      setOpen(false);
+      buttonRef.current?.focus();
+      return;
+    }
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const menuWidth = 144;
+    setPosition({
+      top: Math.min(rect.bottom + 8, window.innerHeight - 56),
+      left: Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)),
+    });
+    setOpen(true);
+  };
+
+  const menuStyle: CSSProperties = { position: "fixed", top: position.top, left: position.left };
+  return <div className={styles.actions}>
+    {onEdit ? <button type="button" className={styles.iconButton} aria-label={`Editar producto ${row.name}`} title="Editar producto" onClick={() => onEdit(row.id)}><Icon name="edit" size={18} /></button> : null}
+    {onDelete ? <button ref={buttonRef} type="button" className={styles.iconButton} aria-label={`Más acciones para ${row.name}`} aria-haspopup="menu" aria-expanded={open} aria-controls={menuId} title="Más acciones" onClick={toggleMenu}><Icon name="more" size={20} /></button> : null}
+    {open && onDelete ? createPortal(<div ref={menuRef} id={menuId} className={styles.menu} style={menuStyle} role="menu" aria-label={`Acciones de ${row.name}`}><button type="button" role="menuitem" onClick={() => { setOpen(false); onDelete(); }} disabled={deleting}><Icon name="trash" size={16} />Eliminar</button></div>, document.body) : null}
+  </div>;
 }

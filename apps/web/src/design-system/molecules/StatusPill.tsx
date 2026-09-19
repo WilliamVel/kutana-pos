@@ -1,6 +1,6 @@
 import styles from "./StatusPill.module.css";
 
-export type StockStatus = "in-stock" | "low-stock" | "out-of-stock";
+export type StockStatus = "in-stock" | "low-stock" | "out-of-stock" | "no-stock-control";
 export type OrderStatus = "active" | "needs-check" | "in-review" | "paid" | "closed-with-pending";
 
 export interface StatusPillProps {
@@ -11,6 +11,7 @@ const LABELS_BY_STATUS: Record<StockStatus | OrderStatus, string> = {
   "in-stock": "Con stock",
   "low-stock": "Stock bajo",
   "out-of-stock": "Sin stock",
+  "no-stock-control": "Sin control",
   active: "Activa",
   "needs-check": "Requiere revisión",
   "in-review": "En revisión",
@@ -25,6 +26,7 @@ const CLASS_BY_STATUS: Record<StockStatus | OrderStatus, string> = {
   "in-stock": styles.inStock!,
   "low-stock": styles.lowStock!,
   "out-of-stock": styles.outOfStock!,
+  "no-stock-control": styles.needsCheck!,
   active: styles.active!,
   "needs-check": styles.needsCheck!,
   "in-review": styles.needsCheck!,

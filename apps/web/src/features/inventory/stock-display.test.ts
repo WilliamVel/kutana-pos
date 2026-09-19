@@ -26,7 +26,7 @@ describe("computeStockDisplay", () => {
 
     const result = computeStockDisplay(product, keg);
 
-    expect(result.label).toBe("4500ml");
+    expect(result.label).toBe("4.5 L");
     expect(result.label).not.toContain("units");
   });
 
@@ -117,7 +117,7 @@ describe("computeStockDisplay", () => {
     expect(computeStockDisplay(product, item).status).toBe("out-of-stock");
   });
 
-  it("treats a missing stock item as out-of-stock with a zero label", () => {
+  it("shows no control when a product does not track stock", () => {
     const product = createProduct({
       sku: "SKU-D",
       name: "D",
@@ -129,7 +129,7 @@ describe("computeStockDisplay", () => {
 
     const result = computeStockDisplay(product, null);
 
-    expect(result.status).toBe("out-of-stock");
-    expect(result.label).toBe("0 unidades");
+    expect(result.status).toBe("no-stock-control");
+    expect(result.label).toBe("Sin control");
   });
 });
