@@ -47,19 +47,44 @@
   font-size: 1.35rem;
 }
 
+.splitHeaderContent {
+  width: min(100%, 73.75rem);
+  margin-inline: auto;
+}
+
+.summarySection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionLabel {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: .8rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 .tableSummary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(6.5rem, 1fr));
-  gap: var(--space-2);
+  grid-template-columns: repeat(4, minmax(11.25rem, 15rem));
+  justify-content: center;
+  gap: var(--space-4);
   margin: 0;
 }
 
 .tableSummary div {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  min-height: 5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: var(--surface-sunken);
 }
@@ -76,8 +101,9 @@
   font-weight: 800;
 }
 
-.tableRemaining {
-  border: 1px solid var(--border-strong);
+.tableSummary .tableRemaining {
+  border-color: var(--border-strong);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
 }
 
 .review,
@@ -143,16 +169,32 @@
   line-height: 1.45;
 }
 
-.modeBar {
+.splitMethod {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.splitMethod .methodChooser {
+  width: 100%;
+}
+
+.modeBar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(9rem, 1fr));
   gap: var(--space-1);
-  align-self: flex-start;
+  width: min(100%, 34rem);
   padding: var(--space-1);
   border-radius: var(--radius-pill);
   background: var(--surface-sunken);
 }
 
 .modeBar button {
+  min-width: 0;
   padding: var(--space-2) var(--space-3);
   border: 0;
   border-radius: var(--radius-pill);
@@ -164,7 +206,7 @@
 }
 
 .modeBar .modeActive {
-  background: var(--surface-raised);
+  background: #fff;
   color: var(--text-primary);
   box-shadow: var(--shadow-sm);
 }
@@ -706,6 +748,7 @@
 
 @media (max-width: 64rem) {
   .screen { overflow: visible; }
+  .tableSummary { grid-template-columns: repeat(2, minmax(11.25rem, 15rem)); }
   .workspaceGrid { grid-template-columns: 1fr; }
   .quickSummary { position: static; order: -1; }
   .productRow { grid-template-columns: minmax(0, 1fr) max-content; }
@@ -715,11 +758,21 @@
 }
 
 @media (max-width: 40rem) {
-  .methodGrid,
-  .tableSummary { grid-template-columns: 1fr; }
+  .methodGrid { grid-template-columns: 1fr; }
+  .tableSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+  .tableSummary div {
+    min-height: 5.5rem;
+    padding: var(--space-3);
+  }
   .methodGrid button { min-height: auto; }
-  .modeBar { width: 100%; overflow-x: auto; }
-  .modeBar button { flex: 0 0 auto; }
+  .modeBar {
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .modeBar button { padding-inline: var(--space-2); }
   .panelHeading { align-items: stretch; flex-direction: column; }
   .assignmentTarget { align-self: flex-start; white-space: normal; }
   .productRow { grid-template-columns: minmax(0, 1fr) max-content; padding-inline: var(--space-2); }
