@@ -190,9 +190,14 @@
   background: var(--surface-sunken);
 }
 
+.accountSummaryName,
 .accountStatus,
 .accountHint {
   margin: 0;
+}
+
+.accountSummaryName {
+  display: none;
 }
 
 .accountStatus {
@@ -370,12 +375,13 @@
   }
 
   .accountActions {
-    position: absolute;
+    position: fixed;
+    top: auto;
     right: 1rem;
-    bottom: calc(100% - 0.625rem);
+    bottom: calc(env(safe-area-inset-bottom) + 3.25rem);
     left: 1rem;
     min-width: 0;
-    max-height: min(12rem, calc(100dvh - 3.25rem - env(safe-area-inset-bottom) - 1rem));
+    max-height: min(12rem, calc(100dvh - 3.25rem - env(safe-area-inset-bottom) - 3.75rem));
     margin: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -383,7 +389,7 @@
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-md);
-    z-index: 2;
+    z-index: 1000;
   }
 
   .accountSummary {
@@ -392,9 +398,20 @@
   }
 
   .accountAvatarLarge {
-    width: 2rem;
-    height: 2rem;
-    font-size: 0.75rem;
+    display: none;
+  }
+
+  .accountSummaryName {
+    display: block;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .accountStatus,
+  .accountHint {
+    display: none;
   }
 
   .accountStatus {

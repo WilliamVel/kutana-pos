@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { AuthSession } from "@kutana/shared/auth/model/auth-session.js";
 import { Icon } from "../../design-system/atoms/Icon.js";
 import { screensForRole, type ScreenId } from "../screens.js";
@@ -25,9 +26,35 @@ export function TopBar({
 }: TopBarProps): JSX.Element {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(() => matchesMobileViewport());
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const accountActionsRef = useRef<HTMLDivElement>(null);
   const screens = screensForRole(session.role);
   const initials = initialsFor(session.displayName);
   const roleLabel = session.role === "admin" ? "Administrador" : "Operador";
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia?.("(max-width: 67.5rem)");
+    if (!mediaQuery) return undefined;
+    const updateViewport = (): void => setIsMobileViewport(mediaQuery.matches);
+    mediaQuery.addEventListener("change", updateViewport);
+    return () => mediaQuery.removeEventListener("change", updateViewport);
+  }, []);
+
+  useEffect(() => {
+    if (!isAccountOpen) return undefined;
+
+    const closeOnOutsidePointer = (event: PointerEvent): void => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (accountMenuRef.current?.contains(target) || accountActionsRef.current?.contains(target))
+        return;
+      setIsAccountOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, [isAccountOpen]);
 
   const navigate = (screen: ScreenId): void => {
     onNavigate(screen);
@@ -49,6 +76,24 @@ export function TopBar({
     setIsMenuOpen(false);
     onLogout();
   };
+
+  const accountActions = (
+    <div ref={accountActionsRef} id="account-actions" className={styles.accountActions}>
+      <button
+        type="button"
+        className={styles.logoutButton}
+        onClick={() => {
+          setIsAccountOpen(false);
+          onChangePin();
+        }}
+      >
+        Cambiar PIN
+      </button>
+      <button type="button" className={styles.logoutButton} onClick={logout}>
+        Cerrar sesión
+      </button>
+    </div>
+  );
 
   return (
     <header className={styles.bar}>
@@ -86,7 +131,7 @@ export function TopBar({
           ))}
         </div>
 
-        <div className={styles.accountMenu}>
+        <div ref={accountMenuRef} className={styles.accountMenu}>
           <button
             type="button"
             className={styles.accountButton}
@@ -105,35 +150,20 @@ export function TopBar({
               ▾
             </span>
           </button>
-          {isAccountOpen ? (
-            <div id="account-actions" className={styles.accountActions}>
-              <div className={styles.accountSummary}>
-                <span className={styles.accountAvatarLarge} aria-hidden="true">
-                  {initials}
-                </span>
-                <div>
-                  <p className={styles.accountStatus}>Sesión activa</p>
-                  <p className={styles.accountHint}>{roleLabel}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className={styles.logoutButton}
-                onClick={() => {
-                  setIsAccountOpen(false);
-                  onChangePin();
-                }}
-              >
-                Cambiar PIN
-              </button>
-              <button type="button" className={styles.logoutButton} onClick={logout}>
-                Cerrar sesión
-              </button>
-            </div>
-          ) : null}
+          {isAccountOpen
+            ? isMobileViewport
+              ? createPortal(accountActions, document.body)
+              : accountActions
+            : null}
         </div>
       </nav>
     </header>
+  );
+}
+
+function matchesMobileViewport(): boolean {
+  return (
+    typeof window !== "undefined" && Boolean(window.matchMedia?.("(max-width: 67.5rem)").matches)
   );
 }
 
