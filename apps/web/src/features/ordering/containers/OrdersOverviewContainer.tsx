@@ -178,18 +178,13 @@ export function OrdersOverviewContainer({
   useEffect(() => {
     if (!eventsReady) return;
 
-    // Keep only the selected order subscribed. The HTTP adapter shares one
-    // global EventSource, while the order id still limits local deliveries.
-    const subscribedTables = selectedTableId
-      ? tableList.filter((table) => table.id === selectedTableId)
-      : [];
-    const unsubscribes = subscribedTables.map((table) => {
-      // The mock OrderEvents port is keyed by orderId, but a table's order
-      // isn't known synchronously here; subscribing keyed by table's
-      // CURRENT order id is refreshed every load. For the milestone-1 demo
-      // (single open order per table, orderId stable across the session)
-      // this is sufficient; re-subscribing per new order id is a
-      // milestone-2 concern once orders can close/reopen mid-session.
+    // Subscribe to every open order, not only the selected table. The cards
+    // represent the whole active-order list, so a waiter editing another
+    // order must refresh that card as well. The HTTP adapter still shares one
+    // global EventSource; the order id only routes events locally.
+    const unsubscribes = tableList.map((table) => {
+      // The subscription uses the table's CURRENT order id and is rebuilt
+      // whenever the table list is reloaded (including after a new order).
       return table.currentOrderId
         ? events.subscribe(table.currentOrderId, () => {
             void refreshTable(table);
@@ -199,7 +194,7 @@ export function OrdersOverviewContainer({
     return () => {
       for (const unsubscribe of unsubscribes) unsubscribe();
     };
-  }, [tableList, selectedTableId, events, eventsReady, refreshTable]);
+  }, [tableList, events, eventsReady, refreshTable]);
 
   return (
     <OrdersOverview

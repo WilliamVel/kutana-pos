@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { createOrder } from "@kutana/shared/ordering/model/order.js";
+import { addLineItem } from "@kutana/shared/ordering/services/line-item-service.js";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../../composition/mock.js";
 import { OrdersOverviewContainer } from "./OrdersOverviewContainer.js";
@@ -64,6 +65,40 @@ describe("OrdersOverviewContainer", () => {
     });
 
     await waitFor(() => expect(screen.queryByText("Table 1")).not.toBeInTheDocument());
+  });
+
+  it("refreshes another order card while a different table is selected", async () => {
+    const ports = buildMockPorts();
+    render(
+      <PortsProvider value={ports}>
+        <OrdersOverviewContainer selectedTableId="table-1" onSelectTable={vi.fn()} />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Table 2")).toBeInTheDocument());
+    const currentOrder = await ports.orders.findByTable("table-2");
+    if (!currentOrder) throw new Error("expected seeded order");
+    const updatedOrder = addLineItem(currentOrder, {
+      productId: "product-nachos",
+      nameSnapshot: "Loaded Nachos",
+      unitPriceCents: 650,
+      quantity: 1,
+      taxRateBp: 1200,
+    });
+    const saved = await ports.orders.save(updatedOrder, currentOrder.version);
+
+    ports.events.publish({
+      type: "order.updated",
+      orderId: saved.id,
+      tableId: "table-2",
+      version: saved.version,
+      at: "2026-08-30T13:00:00.000Z",
+      payload: saved,
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-table-id="table-2"]')?.textContent).toContain("3 productos");
+    });
   });
 
   it("calls onSelectTable with the real table id when a row is clicked", async () => {
