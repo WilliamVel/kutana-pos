@@ -102,7 +102,10 @@ function toLines(
 
 function toAccountPayments(payments: readonly AccountPaymentCache[]): AccountPaymentAmount[] {
   return payments.flatMap((entry) =>
-    entry.payments.map((payment) => ({ accountId: entry.accountId, amountCents: payment.amountCents })),
+    entry.payments.map((payment) => ({
+      accountId: entry.accountId,
+      amountCents: payment.amountCents,
+    })),
   );
 }
 
@@ -153,7 +156,10 @@ export function SplitBillContainer({
     const accountPayments = await Promise.all(
       orderAccounts.map(async (account) => ({
         accountId: account.id,
-        payments: await paymentsPort.listByTarget({ kind: "personal_account", accountId: account.id }),
+        payments: await paymentsPort.listByTarget({
+          kind: "personal_account",
+          accountId: account.id,
+        }),
       })),
     );
 
@@ -183,7 +189,9 @@ export function SplitBillContainer({
             "This account assignment changed on another device. We've refreshed it below — please review and try again.",
           );
         } else {
-          throw error;
+          setConflictMessage(
+            "No se pudo completar la operación. Revisa el estado de la cuenta e inténtalo de nuevo.",
+          );
         }
       } finally {
         setBusy(false);
@@ -236,11 +244,13 @@ export function SplitBillContainer({
       allocations,
       payments: toAccountPayments(payments),
     });
-    const accountPayments = payments.find((entry) => entry.accountId === account.id)?.payments ?? [];
+    const accountPayments =
+      payments.find((entry) => entry.accountId === account.id)?.payments ?? [];
     const paymentDetails: AccountPaymentDetail[] = accountPayments.map((payment) => ({
       id: payment.id,
       amountCents: payment.amountCents,
-      methodLabel: methods.find((method) => method.code === payment.methodCode)?.label ?? payment.methodCode,
+      methodLabel:
+        methods.find((method) => method.code === payment.methodCode)?.label ?? payment.methodCode,
       recordedAt: payment.recordedAt,
     }));
     return {
@@ -285,7 +295,9 @@ export function SplitBillContainer({
       let nextAllocations = [...allocations];
       for (const draft of drafts) {
         const quantity = Number(draft.quantity);
-        const groupedLine = toLines(order, nextAllocations).find((line) => line.id === draft.lineItemId);
+        const groupedLine = toLines(order, nextAllocations).find(
+          (line) => line.id === draft.lineItemId,
+        );
         if (!groupedLine || !Number.isFinite(quantity) || quantity <= 0) return;
 
         let remainingToAssign = quantity;
@@ -299,7 +311,11 @@ export function SplitBillContainer({
           const available = Math.max(0, lineItem.quantity - alreadyAssigned);
           const quantityForLine = Math.min(available, remainingToAssign);
           if (quantityForLine <= 0) continue;
-          const next = createAccountLineAllocation({ accountId, lineItemId, quantity: quantityForLine });
+          const next = createAccountLineAllocation({
+            accountId,
+            lineItemId,
+            quantity: quantityForLine,
+          });
           nextAllocations = addAccountLineAllocation({
             allocations: nextAllocations,
             lineItems: order.lineItems,
@@ -473,6 +489,7 @@ export function SplitBillContainer({
         allocationDraft={allocationDraft}
         reviewMessage={reviewMessage}
         disabled={busy || conflictMessage !== null}
+        processing={busy}
         onSelectCustomer={setSelectedCustomerId}
         onFreeNameChange={setFreeName}
         onCreateCustomerAccount={createCustomerAccount}

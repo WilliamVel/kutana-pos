@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   Customer,
   PersonalAccountOwner,
@@ -68,6 +68,7 @@ export interface SplitBillViewProps {
   readonly allocationDraft: AccountAllocationDraft;
   readonly reviewMessage: string | null;
   readonly disabled?: boolean;
+  readonly processing?: boolean;
   readonly onSelectCustomer: (customerId: string) => void;
   readonly onFreeNameChange: (freeName: string) => void;
   readonly onCreateCustomerAccount: () => void;
@@ -84,7 +85,13 @@ export interface SplitBillViewProps {
 }
 
 function formatStatus(status: PersonalAccountStatus): string {
-  return ({ open: "Abierta", partially_paid: "Pago parcial", pending: "Pendiente", paid: "Pagado", void: "Anulada" })[status];
+  return {
+    open: "Abierta",
+    partially_paid: "Pago parcial",
+    pending: "Pendiente",
+    paid: "Pagado",
+    void: "Anulada",
+  }[status];
 }
 
 export function SplitBillView({
@@ -100,6 +107,7 @@ export function SplitBillView({
   allocationDraft,
   reviewMessage,
   disabled = false,
+  processing = false,
   onSelectCustomer,
   onFreeNameChange,
   onCreateCustomerAccount,
@@ -115,13 +123,18 @@ export function SplitBillView({
   onPayOrder,
 }: SplitBillViewProps): JSX.Element {
   const [method, setMethod] = useState<SplitMethod | null>(accounts.length > 0 ? "person" : null);
-  const [activeTab, setActiveTab] = useState<string>(accounts.length > 0 ? accounts[0]!.id : "unassigned");
+  const [activeTab, setActiveTab] = useState<string>(
+    accounts.length > 0 ? accounts[0]!.id : "unassigned",
+  );
   const [createOpen, setCreateOpen] = useState(false);
   const [detailsAccountId, setDetailsAccountId] = useState<string | null>(null);
   const [equalPeople, setEqualPeople] = useState(2);
   const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(() => new Set());
   const [assignmentFeedback, setAssignmentFeedback] = useState<string | null>(null);
   const [reviewAccountId, setReviewAccountId] = useState<string | null>(null);
+  const [removeAccountId, setRemoveAccountId] = useState<string | null>(null);
+  const removeTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const removeConfirmRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (accounts.length > 0 && method === null) setMethod("person");
@@ -134,27 +147,51 @@ export function SplitBillView({
   }, [accounts, activeTab, method, reviewAccountId]);
 
   useEffect(() => {
-    if (allocationDraft.accountId && accounts.some((account) => account.id === allocationDraft.accountId)) {
-      setActiveTab((current) => current === "unassigned" && accounts.length === 1 ? allocationDraft.accountId : current);
+    if (
+      allocationDraft.accountId &&
+      accounts.some((account) => account.id === allocationDraft.accountId)
+    ) {
+      setActiveTab((current) =>
+        current === "unassigned" && accounts.length === 1 ? allocationDraft.accountId : current,
+      );
     }
   }, [accounts.length, allocationDraft.accountId]);
 
   useEffect(() => {
-    setSelectedLineIds((current) => new Set([...current].filter((id) => lines.some((line) => line.id === id && line.unassignedQuantity > 0))));
+    setSelectedLineIds(
+      (current) =>
+        new Set(
+          [...current].filter((id) =>
+            lines.some((line) => line.id === id && line.unassignedQuantity > 0),
+          ),
+        ),
+    );
   }, [lines]);
 
   const unassignedUnits = lines.reduce((sum, line) => sum + line.unassignedQuantity, 0);
   const assignedCents = accounts.reduce((sum, account) => sum + account.totalCents, 0);
   const unassignedCents = Math.max(0, tableTotalCents - assignedCents);
-  const selectedAccount = accounts.find((account) => account.id === (reviewAccountId ?? activeTab)) ?? null;
-  const destinationAccount = accounts.find((account) => account.id === allocationDraft.accountId) ?? null;
+  const selectedAccount =
+    accounts.find((account) => account.id === (reviewAccountId ?? activeTab)) ?? null;
+  const destinationAccount =
+    accounts.find((account) => account.id === allocationDraft.accountId) ?? null;
   const detailsAccount = accounts.find((account) => account.id === detailsAccountId) ?? null;
+  const removeAccount = accounts.find((account) => account.id === removeAccountId) ?? null;
+  const removeUnits =
+    removeAccount?.assignedLines?.reduce((sum, line) => sum + line.quantity, 0) ?? 0;
+  const removeValue = removeAccount?.totalCents ?? 0;
   const equalShares = useMemo(
-    () => largestRemainderSplit(tableRemainingCents, Array.from({ length: equalPeople }, () => 1)),
+    () =>
+      largestRemainderSplit(
+        tableRemainingCents,
+        Array.from({ length: equalPeople }, () => 1),
+      ),
     [equalPeople, tableRemainingCents],
   );
   const formatDate = (value: string): string =>
-    new Intl.DateTimeFormat("es", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+    new Intl.DateTimeFormat("es", { dateStyle: "short", timeStyle: "short" }).format(
+      new Date(value),
+    );
 
   const selectAccount = (accountId: string): void => {
     const account = accounts.find((candidate) => candidate.id === accountId);
@@ -175,8 +212,19 @@ export function SplitBillView({
 
   const requestMethod = (nextMethod: SplitMethod): void => {
     if (nextMethod === method) return;
-    const hasProtectedWork = assignedCents > 0 || accounts.some((account) => account.paidCents > 0 || account.status === "paid" || account.status === "pending");
-    if (hasProtectedWork && !window.confirm("Ya hay productos asignados o pagos registrados. ¿Querés cambiar el método sin modificar esos datos?")) return;
+    const hasProtectedWork =
+      assignedCents > 0 ||
+      accounts.some(
+        (account) =>
+          account.paidCents > 0 || account.status === "paid" || account.status === "pending",
+      );
+    if (
+      hasProtectedWork &&
+      !window.confirm(
+        "Ya hay productos asignados o pagos registrados. ¿Querés cambiar el método sin modificar esos datos?",
+      )
+    )
+      return;
     setMethod(nextMethod);
   };
 
@@ -197,18 +245,85 @@ export function SplitBillView({
     });
   };
 
-  const selectedLines = lines.filter((line) => selectedLineIds.has(line.id) && line.unassignedQuantity > 0);
-  const selectedTotalCents = selectedLines.reduce((sum, line) => sum + Math.round(line.totalCents / line.quantity), 0);
-  const canAssignToDestination = destinationAccount && destinationAccount.status !== "paid" && destinationAccount.status !== "pending";
-  const showAssignmentWorkspace = reviewAccountId === null && unassignedUnits > 0 && (activeTab === "unassigned" || Boolean(canAssignToDestination));
+  const selectedLines = lines.filter(
+    (line) => selectedLineIds.has(line.id) && line.unassignedQuantity > 0,
+  );
+  const selectedTotalCents = selectedLines.reduce(
+    (sum, line) => sum + Math.round(line.totalCents / line.quantity),
+    0,
+  );
+  const canAssignToDestination =
+    destinationAccount &&
+    destinationAccount.status !== "paid" &&
+    destinationAccount.status !== "pending";
+  const showAssignmentWorkspace =
+    reviewAccountId === null &&
+    unassignedUnits > 0 &&
+    (activeTab === "unassigned" || Boolean(canAssignToDestination));
+
+  useEffect(() => {
+    if (!removeAccountId) return;
+    removeConfirmRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        setRemoveAccountId(null);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const dialog = document.querySelector<HTMLElement>(
+        '[role="dialog"][aria-labelledby="remove-person-title"]',
+      );
+      if (!dialog) return;
+      const focusable = [
+        ...dialog.querySelectorAll<HTMLElement>(
+          "button:not([disabled]), [href], input, select, textarea",
+        ),
+      ];
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [removeAccountId]);
+
+  const closeRemoveDialog = (): void => {
+    setRemoveAccountId(null);
+    window.setTimeout(() => removeTriggerRef.current?.focus(), 0);
+  };
+
+  const confirmRemoveAccount = (): void => {
+    if (!removeAccount) return;
+    onDeleteAccount(removeAccount.id);
+    setAssignmentFeedback(
+      removeUnits > 0
+        ? `${removeAccount.ownerLabel} fue quitada y ${removeUnits} unidad(es) volvieron a Sin asignar.`
+        : `${removeAccount.ownerLabel} fue quitada de la división.`,
+    );
+    closeRemoveDialog();
+  };
 
   const assignSelected = (): void => {
     if (!destinationAccount || selectedLines.length === 0) return;
-    const drafts = selectedLines.map((line) => ({ accountId: destinationAccount.id, lineItemId: line.id, quantity: "1" }));
+    const drafts = selectedLines.map((line) => ({
+      accountId: destinationAccount.id,
+      lineItemId: line.id,
+      quantity: "1",
+    }));
     if (onAssignQuantities) onAssignQuantities(drafts);
     else drafts.forEach((draft) => onAssignQuantity(draft));
     setSelectedLineIds(new Set());
-    setAssignmentFeedback(`${drafts.length} producto(s) asignado(s) a ${destinationAccount.ownerLabel}`);
+    setAssignmentFeedback(
+      `${drafts.length} producto(s) asignado(s) a ${destinationAccount.ownerLabel}`,
+    );
   };
 
   return (
@@ -218,22 +333,48 @@ export function SplitBillView({
           <p className={styles.eyebrow}>Dividir cuenta</p>
           <h2>{tableLabel} — Cuentas personales</h2>
         </div>
-        <strong className={styles.heroTotal}><PriceTag cents={tableTotalCents} /></strong>
+        <strong className={styles.heroTotal}>
+          <PriceTag cents={tableTotalCents} />
+        </strong>
       </header>
 
       <div className={styles.splitHeaderContent}>
         <section className={styles.summarySection} aria-labelledby="account-summary-title">
-          <h3 id="account-summary-title" className={styles.sectionLabel}>Resumen de la cuenta</h3>
+          <h3 id="account-summary-title" className={styles.sectionLabel}>
+            Resumen de la cuenta
+          </h3>
           <dl className={styles.tableSummary} aria-label="Resumen de la mesa">
-            <div><dt>Asignado</dt><dd><PriceTag cents={assignedCents} /></dd></div>
-            <div><dt>Sin asignar</dt><dd><PriceTag cents={unassignedCents} /></dd></div>
-            <div><dt>Pagado</dt><dd><PriceTag cents={tablePaidCents} /></dd></div>
-            <div className={styles.tableRemaining}><dt>Saldo pendiente</dt><dd><PriceTag cents={tableRemainingCents} /></dd></div>
+            <div>
+              <dt>Asignado</dt>
+              <dd>
+                <PriceTag cents={assignedCents} />
+              </dd>
+            </div>
+            <div>
+              <dt>Sin asignar</dt>
+              <dd>
+                <PriceTag cents={unassignedCents} />
+              </dd>
+            </div>
+            <div>
+              <dt>Pagado</dt>
+              <dd>
+                <PriceTag cents={tablePaidCents} />
+              </dd>
+            </div>
+            <div className={styles.tableRemaining}>
+              <dt>Saldo pendiente</dt>
+              <dd>
+                <PriceTag cents={tableRemainingCents} />
+              </dd>
+            </div>
           </dl>
         </section>
 
         <section className={styles.splitMethod} aria-labelledby="split-method-label">
-          <h3 id="split-method-label" className={styles.sectionLabel}>Método de división</h3>
+          <h3 id="split-method-label" className={styles.sectionLabel}>
+            Método de división
+          </h3>
           {method === null ? (
             <div className={styles.methodChooser} aria-labelledby="split-method-title">
               <div>
@@ -242,102 +383,394 @@ export function SplitBillView({
               </div>
               <div className={styles.methodGrid}>
                 <button type="button" onClick={() => setMethod("person")}>
-                  <Icon name="customers" size={24} /><strong>Por persona</strong><span>Asigná productos y cantidades a cada persona.</span>
+                  <Icon name="customers" size={24} />
+                  <strong>Por persona</strong>
+                  <span>Asigná productos y cantidades a cada persona.</span>
                 </button>
                 <button type="button" onClick={() => setMethod("equal")}>
-                  <Icon name="split" size={24} /><strong>Partes iguales</strong><span>Calculá una parte exacta para cada comensal.</span>
+                  <Icon name="split" size={24} />
+                  <strong>Partes iguales</strong>
+                  <span>Calculá una parte exacta para cada comensal.</span>
                 </button>
                 <button type="button" onClick={() => setMethod("amount")}>
-                  <Icon name="cash" size={24} /><strong>Por monto</strong><span>Cobrá montos parciales hasta completar el saldo.</span>
+                  <Icon name="cash" size={24} />
+                  <strong>Por monto</strong>
+                  <span>Cobrá montos parciales hasta completar el saldo.</span>
                 </button>
               </div>
             </div>
           ) : (
             <nav className={styles.modeBar} aria-label="Método de división">
-              <button type="button" className={method === "person" ? styles.modeActive : ""} onClick={() => requestMethod("person")}>Por persona</button>
-              <button type="button" className={method === "equal" ? styles.modeActive : ""} onClick={() => requestMethod("equal")}>Partes iguales</button>
-              <button type="button" className={method === "amount" ? styles.modeActive : ""} onClick={() => requestMethod("amount")}>Por monto</button>
+              <button
+                type="button"
+                className={method === "person" ? styles.modeActive : ""}
+                onClick={() => requestMethod("person")}
+              >
+                Por persona
+              </button>
+              <button
+                type="button"
+                className={method === "equal" ? styles.modeActive : ""}
+                onClick={() => requestMethod("equal")}
+              >
+                Partes iguales
+              </button>
+              <button
+                type="button"
+                className={method === "amount" ? styles.modeActive : ""}
+                onClick={() => requestMethod("amount")}
+              >
+                Por monto
+              </button>
             </nav>
           )}
         </section>
       </div>
 
-      {reviewMessage ? <div role="alert" className={styles.review}>{reviewMessage}</div> : null}
+      {reviewMessage ? (
+        <div role="alert" className={styles.review}>
+          {reviewMessage}
+        </div>
+      ) : null}
+      {assignmentFeedback ? (
+        <p className={styles.assignmentFeedback} role="status" aria-live="polite">
+          ✓ {assignmentFeedback}
+        </p>
+      ) : null}
 
       {method === "person" ? (
         <section className={styles.personWorkspace} aria-label="División por persona">
           <div className={styles.accountTabs} role="tablist" aria-label="Cuentas de la mesa">
-            <button type="button" role="tab" aria-selected={activeTab === "unassigned" && !destinationAccount} className={activeTab === "unassigned" && !destinationAccount ? styles.tabActive : styles.tab} onClick={selectUnassigned}>
-              Sin asignar <span>{unassignedUnits}</span>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "unassigned" && !destinationAccount}
+              className={
+                activeTab === "unassigned" && !destinationAccount ? styles.tabActive : styles.tab
+              }
+              onClick={selectUnassigned}
+            >
+              Sin asignar{" "}
+              <span aria-label={`${unassignedUnits} unidades`}>· {unassignedUnits}</span>
             </button>
             {accounts.map((account) => {
               const isDestination = destinationAccount?.id === account.id;
-              const statusPrefix = account.status === "paid" ? "✓ " : account.status === "pending" ? "• " : "";
+              const statusPrefix =
+                account.status === "paid" ? "✓ " : account.status === "pending" ? "• " : "";
               return (
-                <button key={account.id} type="button" role="tab" aria-selected={isDestination || activeTab === account.id} className={`${isDestination || activeTab === account.id ? styles.tabActive : styles.tab} ${account.status === "paid" ? styles.tabPaid : account.status === "pending" ? styles.tabPending : ""}`} onClick={() => selectAccount(account.id)} aria-label={`Seleccionar cuenta ${account.ownerLabel}`}>
-                  {statusPrefix}{account.ownerLabel} <PriceTag cents={account.remainingCents} />
+                <button
+                  key={account.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isDestination || activeTab === account.id}
+                  className={`${isDestination || activeTab === account.id ? styles.tabActive : styles.tab} ${account.status === "paid" ? styles.tabPaid : account.status === "pending" ? styles.tabPending : ""}`}
+                  onClick={() => selectAccount(account.id)}
+                  aria-label={`Seleccionar cuenta ${account.ownerLabel}`}
+                >
+                  {statusPrefix}
+                  {account.ownerLabel} <PriceTag cents={account.remainingCents} />
                 </button>
               );
             })}
-            <button type="button" className={styles.addTab} onClick={() => setCreateOpen(true)} aria-label="Agregar persona"><span aria-hidden="true">+</span><span className={styles.addTabLabel}>Nueva persona</span></button>
+            <button
+              type="button"
+              className={styles.addTab}
+              onClick={() => setCreateOpen(true)}
+              aria-label="Agregar persona"
+            >
+              <span aria-hidden="true">+</span>
+              <span className={styles.addTabLabel}>Nueva persona</span>
+            </button>
           </div>
 
           {showAssignmentWorkspace ? (
             <section aria-label="Productos pendientes" className={styles.productPanel}>
               <div className={styles.panelHeading}>
-                <div><h3>Productos sin asignar</h3><p>{unassignedUnits} unidad(es) disponibles</p></div>
-                <div className={styles.assignmentTarget}><span>Asignando a: <strong>{destinationAccount?.ownerLabel ?? "seleccioná una persona"}</strong></span>{destinationAccount ? <button type="button" onClick={() => setReviewAccountId(destinationAccount.id)}>Ver cuenta</button> : null}</div>
+                <div>
+                  <h3>Productos sin asignar</h3>
+                  <p>{unassignedUnits} unidad(es) disponibles</p>
+                </div>
+                <div className={styles.assignmentTarget}>
+                  <span>
+                    Asignando a:{" "}
+                    <strong>{destinationAccount?.ownerLabel ?? "selecciona una persona"}</strong>
+                  </span>
+                  {destinationAccount ? (
+                    <button type="button" onClick={() => setReviewAccountId(destinationAccount.id)}>
+                      <Icon name="arrow-left" size={16} />
+                      Volver a la cuenta
+                    </button>
+                  ) : null}
+                </div>
               </div>
-              {assignmentFeedback ? <p className={styles.assignmentFeedback} role="status">✓ {assignmentFeedback}</p> : null}
-              {lines.length === 0 ? <div role="alert" className={styles.emptyState}>Para dividir la cuenta debe existir al menos un producto.</div> : null}
+              {lines.length === 0 ? (
+                <div role="alert" className={styles.emptyState}>
+                  Para dividir la cuenta debe existir al menos un producto.
+                </div>
+              ) : null}
               <div className={styles.productList}>
-                {lines.filter((line) => line.unassignedQuantity > 0).map((line) => {
-                  const quantity = allocationDraft.lineItemId === line.id ? Number(allocationDraft.quantity) || 1 : 1;
-                  const isSelected = selectedLineIds.has(line.id);
-                  return (
-                    <article key={line.id} className={`${styles.productRow} ${isSelected ? styles.productRowSelected : ""}`} aria-label={`Asignar ${line.name}`}>
-                      <label className={styles.productSelect}>
-                        <input type="checkbox" checked={isSelected} onChange={() => toggleLine(line.id)} disabled={disabled || !canAssignToDestination} aria-label={`Seleccionar ${line.name}`} />
-                        <span className={styles.productInfo}><strong>{line.name}</strong>{line.unassignedQuantity > 1 ? <small>{line.unassignedQuantity} disponibles</small> : null}</span>
-                      </label>
-                      <PriceTag cents={Math.round(line.totalCents / line.quantity) * quantity} />
-                      {line.unassignedQuantity > 1 ? (
-                        <div className={styles.quantityControl}>
-                          <button type="button" onClick={() => updateQuantity(line.id, quantity - 1, line.unassignedQuantity)} aria-label={`Reducir ${line.name}`}>−</button>
-                          <input type="number" min="1" max={line.unassignedQuantity} value={quantity} onChange={(event) => updateQuantity(line.id, Number(event.target.value), line.unassignedQuantity)} aria-label={`Cantidad para ${line.name}`} />
-                          <button type="button" onClick={() => updateQuantity(line.id, quantity + 1, line.unassignedQuantity)} aria-label={`Aumentar ${line.name}`}>+</button>
-                        </div>
-                      ) : <span className={styles.singleQuantity} aria-hidden="true" />}
-                      <Button ariaLabel="Agregar" onClick={() => { if (!destinationAccount) return; onAssignQuantity({ ...allocationDraft, accountId: destinationAccount.id, lineItemId: line.id, quantity: String(quantity) }); setAssignmentFeedback(`${line.name} asignado a ${destinationAccount.ownerLabel}`); }} disabled={disabled || !canAssignToDestination}>Asignar</Button>
-                    </article>
-                  );
-                })}
+                {lines
+                  .filter((line) => line.unassignedQuantity > 0)
+                  .map((line) => {
+                    const quantity =
+                      allocationDraft.lineItemId === line.id
+                        ? Number(allocationDraft.quantity) || 1
+                        : 1;
+                    const isSelected = selectedLineIds.has(line.id);
+                    return (
+                      <article
+                        key={line.id}
+                        className={`${styles.productRow} ${isSelected ? styles.productRowSelected : ""}`}
+                        aria-label={`Asignar ${line.name}`}
+                      >
+                        <label className={styles.productSelect}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleLine(line.id)}
+                            disabled={disabled || !canAssignToDestination}
+                            aria-label={`Seleccionar ${line.name}`}
+                          />
+                          <span className={styles.productInfo}>
+                            <strong>{line.name}</strong>
+                            {line.unassignedQuantity > 1 ? (
+                              <small>{line.unassignedQuantity} disponibles</small>
+                            ) : null}
+                          </span>
+                        </label>
+                        <PriceTag cents={Math.round(line.totalCents / line.quantity) * quantity} />
+                        {line.unassignedQuantity > 1 ? (
+                          <div className={styles.quantityControl}>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateQuantity(line.id, quantity - 1, line.unassignedQuantity)
+                              }
+                              aria-label={`Reducir ${line.name}`}
+                            >
+                              −
+                            </button>
+                            <input
+                              type="number"
+                              min="1"
+                              max={line.unassignedQuantity}
+                              value={quantity}
+                              onChange={(event) =>
+                                updateQuantity(
+                                  line.id,
+                                  Number(event.target.value),
+                                  line.unassignedQuantity,
+                                )
+                              }
+                              aria-label={`Cantidad para ${line.name}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateQuantity(line.id, quantity + 1, line.unassignedQuantity)
+                              }
+                              aria-label={`Aumentar ${line.name}`}
+                            >
+                              +
+                            </button>
+                          </div>
+                        ) : (
+                          <span className={styles.singleQuantity} aria-hidden="true" />
+                        )}
+                        <Button
+                          ariaLabel="Asignar"
+                          onClick={() => {
+                            if (!destinationAccount) return;
+                            onAssignQuantity({
+                              ...allocationDraft,
+                              accountId: destinationAccount.id,
+                              lineItemId: line.id,
+                              quantity: String(quantity),
+                            });
+                            setAssignmentFeedback(
+                              `${line.name} asignado a ${destinationAccount.ownerLabel}`,
+                            );
+                          }}
+                          disabled={disabled || !canAssignToDestination}
+                        >
+                          Asignar
+                        </Button>
+                      </article>
+                    );
+                  })}
               </div>
               {selectedLines.length > 0 && destinationAccount ? (
                 <div className={styles.batchAction} role="region" aria-label="Asignación múltiple">
-                  <span><strong>{selectedLines.length} seleccionado{selectedLines.length === 1 ? "" : "s"}</strong> · <PriceTag cents={selectedTotalCents} /></span>
-                  <Button onClick={assignSelected} disabled={disabled}>Asignar a {destinationAccount.ownerLabel}</Button>
+                  <span>
+                    <strong>
+                      {selectedLines.length} seleccionado{selectedLines.length === 1 ? "" : "s"}
+                    </strong>{" "}
+                    · <PriceTag cents={selectedTotalCents} />
+                  </span>
+                  <Button onClick={assignSelected} disabled={disabled}>
+                    Asignar a {destinationAccount.ownerLabel}
+                  </Button>
                 </div>
               ) : null}
             </section>
           ) : unassignedUnits === 0 && activeTab === "unassigned" ? (
             <section className={styles.allAssigned} aria-label="Todos los productos asignados">
-              <div><p className={styles.doneState}>✓ Todos los productos están asignados.</p><h3>Revisá las cuentas y completá el cobro</h3><p>Seleccioná una persona para cobrar, dejar pendiente o revisar su estado.</p></div>
-              <Button onClick={onAttemptClose} disabled={disabled}>Revisar cierre de mesa</Button>
+              <div>
+                <p className={styles.doneState}>✓ Todos los productos están asignados.</p>
+                <h3>Revisa las cuentas y completa el cobro</h3>
+                <p>Selecciona una persona para cobrar, dejar pendiente o revisar su estado.</p>
+              </div>
+              <Button onClick={onAttemptClose} disabled={disabled}>
+                Revisar cierre de mesa
+              </Button>
             </section>
           ) : selectedAccount ? (
-            <article className={styles.accountDetail} aria-label={`Saldo de cuenta de ${selectedAccount.ownerLabel}`}>
-              <div className={styles.accountTitle}><div><span className={styles.status}>{formatStatus(selectedAccount.status)}</span><h3>{selectedAccount.ownerLabel}</h3></div><PriceTag cents={selectedAccount.totalCents} /></div>
-              <section aria-label={`Productos asignados a ${selectedAccount.ownerLabel}`} className={styles.assignedProducts}>
-                {(selectedAccount.assignedLines?.length ?? 0) === 0 ? <p className={styles.emptyState}>Todavía no hay productos asignados.</p> : <ul>{selectedAccount.assignedLines?.map((line) => <li key={line.allocationIds.join("-")}><span><strong>{line.name}</strong><small>×{line.quantity}</small></span>{line.totalCents !== undefined ? <PriceTag cents={line.totalCents} /> : null}<button type="button" onClick={() => onRemoveAllocation?.(selectedAccount.id, line.allocationIds)} disabled={disabled || selectedAccount.paidCents > 0 || selectedAccount.status === "pending" || selectedAccount.status === "paid"} aria-label={`Quitar ${line.name} de la cuenta de ${selectedAccount.ownerLabel}`}>Devolver</button></li>)}</ul>}
+            <article
+              className={styles.accountDetail}
+              aria-label={`Saldo de cuenta de ${selectedAccount.ownerLabel}`}
+            >
+              <div className={styles.accountTitle}>
+                <div className={styles.accountHeading}>
+                  <span className={styles.status}>{formatStatus(selectedAccount.status)}</span>
+                  <h3 title={selectedAccount.ownerLabel}>{selectedAccount.ownerLabel}</h3>
+                </div>
+                <div className={styles.accountHeaderActions}>
+                  <PriceTag cents={selectedAccount.totalCents} />
+                  <button
+                    ref={removeTriggerRef}
+                    type="button"
+                    className={styles.removeAccountButton}
+                    title="Quitar persona de la división"
+                    aria-label="Quitar persona de la división"
+                    onClick={() => setRemoveAccountId(selectedAccount.id)}
+                    disabled={
+                      disabled ||
+                      selectedAccount.paidCents > 0 ||
+                      selectedAccount.status === "pending" ||
+                      selectedAccount.status === "paid"
+                    }
+                  >
+                    <Icon name="close" size={20} />
+                  </button>
+                </div>
+              </div>
+              <section
+                aria-label={`Productos asignados a ${selectedAccount.ownerLabel}`}
+                className={styles.assignedProducts}
+              >
+                {(selectedAccount.assignedLines?.length ?? 0) === 0 ? (
+                  <div className={styles.emptyState}>
+                    <Icon name="receipt" size={20} />
+                    <p>Esta persona todavía no tiene productos.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(selectedAccount.id);
+                        setReviewAccountId(null);
+                        onAllocationDraftChange({
+                          ...allocationDraft,
+                          accountId: selectedAccount.id,
+                        });
+                      }}
+                    >
+                      Asignar productos
+                    </button>
+                  </div>
+                ) : (
+                  <ul>
+                    {selectedAccount.assignedLines?.map((line) => (
+                      <li key={line.allocationIds.join("-")}>
+                        <span>
+                          <strong>{line.name}</strong>
+                          <small>×{line.quantity}</small>
+                        </span>
+                        {line.totalCents !== undefined ? (
+                          <PriceTag cents={line.totalCents} />
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onRemoveAllocation?.(selectedAccount.id, line.allocationIds)
+                          }
+                          disabled={
+                            disabled ||
+                            selectedAccount.paidCents > 0 ||
+                            selectedAccount.status === "pending" ||
+                            selectedAccount.status === "paid"
+                          }
+                          aria-label={`Devolver ${line.name} de la cuenta de ${selectedAccount.ownerLabel}`}
+                        >
+                          Devolver
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </section>
-              <dl className={styles.accountBalances}><div><dt>Total</dt><dd><PriceTag cents={selectedAccount.totalCents} /></dd></div><div><dt>Pagado</dt><dd><PriceTag cents={selectedAccount.paidCents} /></dd></div><div><dt>Restante</dt><dd><PriceTag cents={selectedAccount.remainingCents} /></dd></div></dl>
+              <dl className={styles.accountBalances}>
+                <div>
+                  <dt>Total</dt>
+                  <dd>
+                    <PriceTag cents={selectedAccount.totalCents} />
+                  </dd>
+                </div>
+                <div>
+                  <dt>Pagado</dt>
+                  <dd>
+                    <PriceTag cents={selectedAccount.paidCents} />
+                  </dd>
+                </div>
+                <div>
+                  <dt>Restante</dt>
+                  <dd>
+                    <PriceTag cents={selectedAccount.remainingCents} />
+                  </dd>
+                </div>
+              </dl>
               <div className={styles.accountActions}>
-                <Button ariaLabel="Cobrar" onClick={() => onPayAccount(selectedAccount.id)} disabled={disabled || selectedAccount.remainingCents === 0 || selectedAccount.status === "pending"}>Cobrar <PriceTag cents={selectedAccount.remainingCents} /></Button>
-                <Button variant="secondary" onClick={() => onMarkPending(selectedAccount.id)} disabled={disabled || selectedAccount.remainingCents === 0 || selectedAccount.status === "pending"}>Dejar pendiente</Button>
-                {(selectedAccount.payments?.length ?? 0) > 0 ? <Button variant="secondary" onClick={() => setDetailsAccountId(selectedAccount.id)}>Ver pagos ({selectedAccount.payments?.length})</Button> : null}
-                <Button variant="secondary" onClick={() => onDeleteAccount(selectedAccount.id)} disabled={disabled || selectedAccount.paidCents > 0 || selectedAccount.status === "pending" || selectedAccount.status === "paid"}>Eliminar</Button>
-                <button type="button" className={styles.removeAccountLink} aria-label={`Quitar ${selectedAccount.ownerLabel} de esta división`} onClick={() => onDeleteAccount(selectedAccount.id)} disabled={disabled || selectedAccount.paidCents > 0 || selectedAccount.status === "pending" || selectedAccount.status === "paid"}>Quitar de esta división</button>
+                <Button
+                  ariaBusy={processing}
+                  onClick={() => onPayAccount(selectedAccount.id)}
+                  disabled={
+                    disabled ||
+                    processing ||
+                    selectedAccount.remainingCents === 0 ||
+                    selectedAccount.status === "pending"
+                  }
+                >
+                  <span className={styles.payButtonContent}>
+                    {processing ? <span className={styles.paySpinner} aria-hidden="true" /> : null}
+                    <span className={styles.payButtonLabel}>
+                      {processing
+                        ? "Procesando…"
+                        : selectedAccount.remainingCents === 0
+                          ? "Cuenta pagada"
+                          : "Cobrar ·"}
+                    </span>
+                    {!processing && selectedAccount.remainingCents > 0 ? (
+                      <PriceTag cents={selectedAccount.remainingCents} />
+                    ) : null}
+                  </span>
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => onMarkPending(selectedAccount.id)}
+                  disabled={
+                    disabled ||
+                    selectedAccount.remainingCents === 0 ||
+                    selectedAccount.status === "pending"
+                  }
+                >
+                  Dejar pendiente
+                </Button>
+                {(selectedAccount.payments?.length ?? 0) > 0 ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setDetailsAccountId(selectedAccount.id)}
+                  >
+                    Ver pagos ({selectedAccount.payments?.length})
+                  </Button>
+                ) : null}
               </div>
             </article>
           ) : null}
@@ -346,45 +779,226 @@ export function SplitBillView({
 
       {method === "equal" ? (
         <section className={styles.simpleFlow} aria-label="División en partes iguales">
-          <p>Saldo a dividir</p><h3><PriceTag cents={tableRemainingCents} /></h3>
+          <p>Saldo a dividir</p>
+          <h3>
+            <PriceTag cents={tableRemainingCents} />
+          </h3>
           <label>Número de personas</label>
-          <div className={styles.peopleStepper}><button type="button" onClick={() => setEqualPeople(Math.max(2, equalPeople - 1))}>−</button><strong>{equalPeople}</strong><button type="button" onClick={() => setEqualPeople(Math.min(20, equalPeople + 1))}>+</button></div>
-          <div className={styles.equalResult}><span>Cada persona</span><strong><PriceTag cents={equalShares[0] ?? 0} /></strong>{new Set(equalShares).size > 1 ? <small>Una parte se ajusta 1 centavo para que el total sea exacto.</small> : null}</div>
-          <Button onClick={() => onPayOrder?.()} disabled={disabled || !onPayOrder}>Comenzar cobro en {equalPeople} partes</Button>
+          <div className={styles.peopleStepper}>
+            <button type="button" onClick={() => setEqualPeople(Math.max(2, equalPeople - 1))}>
+              −
+            </button>
+            <strong>{equalPeople}</strong>
+            <button type="button" onClick={() => setEqualPeople(Math.min(20, equalPeople + 1))}>
+              +
+            </button>
+          </div>
+          <div className={styles.equalResult}>
+            <span>Cada persona</span>
+            <strong>
+              <PriceTag cents={equalShares[0] ?? 0} />
+            </strong>
+            {new Set(equalShares).size > 1 ? (
+              <small>Una parte se ajusta 1 centavo para que el total sea exacto.</small>
+            ) : null}
+          </div>
+          <Button onClick={() => onPayOrder?.()} disabled={disabled || !onPayOrder}>
+            Comenzar cobro en {equalPeople} partes
+          </Button>
         </section>
       ) : null}
 
       {method === "amount" ? (
         <section className={styles.simpleFlow} aria-label="División por monto">
-          <p>Saldo pendiente</p><h3><PriceTag cents={tableRemainingCents} /></h3>
-          <p className={styles.simpleCopy}>Ingresá el monto a pagar y elegí el medio de pago en la pantalla de cobro. Podés repetir el proceso hasta llegar a $0.</p>
-          <Button onClick={() => onPayOrder?.()} disabled={disabled || !onPayOrder}>Ingresar monto y cobrar</Button>
+          <p>Saldo pendiente</p>
+          <h3>
+            <PriceTag cents={tableRemainingCents} />
+          </h3>
+          <p className={styles.simpleCopy}>
+            Ingresa el monto a pagar y elegí el medio de pago en la pantalla de cobro. Podés repetir
+            el proceso hasta llegar a $0.
+          </p>
+          <Button onClick={() => onPayOrder?.()} disabled={disabled || !onPayOrder}>
+            Ingresar monto y cobrar
+          </Button>
         </section>
       ) : null}
 
-      {method !== null && unassignedUnits > 0 ? <div className={styles.footerAction}><Button variant="secondary" onClick={onAttemptClose} disabled={disabled}>Revisar cierre de mesa</Button></div> : null}
+      {method !== null && unassignedUnits > 0 ? (
+        <div className={styles.footerAction}>
+          <Button variant="secondary" onClick={onAttemptClose} disabled={disabled}>
+            Revisar cierre de mesa
+          </Button>
+        </div>
+      ) : null}
 
       {createOpen ? (
-        <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setCreateOpen(false)}>
-          <section className={styles.createModal} role="dialog" aria-modal="true" aria-labelledby="create-person-title" onMouseDown={(event) => event.stopPropagation()}>
-            <div className={styles.modalHeader}><div><p className={styles.eyebrow}>Nueva cuenta</p><h3 id="create-person-title">Agregar persona</h3></div><button type="button" onClick={() => setCreateOpen(false)} aria-label="Cerrar creación de cuenta">×</button></div>
+        <div
+          className={styles.modalBackdrop}
+          role="presentation"
+          onMouseDown={() => setCreateOpen(false)}
+        >
+          <section
+            className={styles.createModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-person-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.eyebrow}>Nueva cuenta</p>
+                <h3 id="create-person-title">Agregar persona</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCreateOpen(false)}
+                aria-label="Cerrar creación de cuenta"
+              >
+                ×
+              </button>
+            </div>
             <div className={styles.creationPaths}>
-              <label className={styles.selectField}>Cliente existente<select value={selectedCustomerId} onChange={(event) => onSelectCustomer(event.target.value)} disabled={disabled || customers.length === 0}><option value="">Seleccionar cliente</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.displayName}</option>)}</select></label>
-              <Button onClick={() => { onCreateCustomerAccount(); setCreateOpen(false); }} disabled={disabled || selectedCustomerId.length === 0}>Crear cuenta de cliente</Button>
-              <div className={styles.or}><span>o</span></div>
-              <Input label="Cuenta con nombre libre" value={freeName} onChange={onFreeNameChange} placeholder="Juan P." />
-              <Button variant="secondary" onClick={() => { onCreateFreeNameAccount(); setCreateOpen(false); }} disabled={disabled || freeName.trim().length === 0}>Crear cuenta libre</Button>
+              <label className={styles.selectField}>
+                Cliente existente
+                <select
+                  value={selectedCustomerId}
+                  onChange={(event) => onSelectCustomer(event.target.value)}
+                  disabled={disabled || customers.length === 0}
+                >
+                  <option value="">Seleccionar cliente</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button
+                onClick={() => {
+                  onCreateCustomerAccount();
+                  setCreateOpen(false);
+                }}
+                disabled={disabled || selectedCustomerId.length === 0}
+              >
+                Crear cuenta de cliente
+              </Button>
+              <div className={styles.or}>
+                <span>o</span>
+              </div>
+              <Input
+                label="Cuenta con nombre libre"
+                value={freeName}
+                onChange={onFreeNameChange}
+                placeholder="Juan P."
+              />
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  onCreateFreeNameAccount();
+                  setCreateOpen(false);
+                }}
+                disabled={disabled || freeName.trim().length === 0}
+              >
+                Crear cuenta libre
+              </Button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {removeAccount ? (
+        <div className={styles.modalBackdrop} role="presentation" onMouseDown={closeRemoveDialog}>
+          <section
+            className={styles.confirmModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remove-person-title"
+            aria-describedby="remove-person-description"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.eyebrow}>Quitar de la división</p>
+                <h3 id="remove-person-title">
+                  {removeUnits > 0
+                    ? "Esta persona tiene productos asignados"
+                    : "¿Quitar a esta persona?"}
+                </h3>
+              </div>
+              <button type="button" onClick={closeRemoveDialog} aria-label="Cerrar confirmación">
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+            <p id="remove-person-description">
+              {removeUnits > 0
+                ? "Al quitarla, sus productos volverán a la lista de productos sin asignar."
+                : "Se eliminará de la división de la cuenta."}
+            </p>
+            {removeUnits > 0 ? (
+              <p className={styles.reassignmentSummary}>
+                <strong>{removeUnits} unidad(es)</strong> · <PriceTag cents={removeValue} />{" "}
+                volverán a Sin asignar
+              </p>
+            ) : null}
+            <div className={styles.confirmActions}>
+              <button type="button" className={styles.cancelButton} onClick={closeRemoveDialog}>
+                Cancelar
+              </button>
+              <button
+                ref={removeConfirmRef}
+                type="button"
+                className={styles.destructiveButton}
+                onClick={confirmRemoveAccount}
+              >
+                {removeUnits > 0 ? "Quitar y devolver productos" : "Quitar persona"}
+              </button>
             </div>
           </section>
         </div>
       ) : null}
 
       {detailsAccount ? (
-        <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setDetailsAccountId(null)}>
-          <section className={styles.createModal} role="dialog" aria-modal="true" aria-labelledby="payment-details-title" onMouseDown={(event) => event.stopPropagation()}>
-            <div className={styles.modalHeader}><div><p className={styles.eyebrow}>Historial de pagos</p><h3 id="payment-details-title">{detailsAccount.ownerLabel}</h3></div><button type="button" onClick={() => setDetailsAccountId(null)} aria-label="Cerrar detalle de pagos">×</button></div>
-            <div className={styles.paymentTotal}><span>Total pagado</span><PriceTag cents={detailsAccount.paidCents} /></div>
-            <ul className={styles.paymentList}>{(detailsAccount.payments ?? []).map((payment) => <li key={payment.id}><span><strong>{payment.methodLabel}</strong><small>{formatDate(payment.recordedAt)}</small></span><PriceTag cents={payment.amountCents} /></li>)}</ul>
+        <div
+          className={styles.modalBackdrop}
+          role="presentation"
+          onMouseDown={() => setDetailsAccountId(null)}
+        >
+          <section
+            className={styles.createModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="payment-details-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.eyebrow}>Historial de pagos</p>
+                <h3 id="payment-details-title">{detailsAccount.ownerLabel}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailsAccountId(null)}
+                aria-label="Cerrar detalle de pagos"
+              >
+                ×
+              </button>
+            </div>
+            <div className={styles.paymentTotal}>
+              <span>Total pagado</span>
+              <PriceTag cents={detailsAccount.paidCents} />
+            </div>
+            <ul className={styles.paymentList}>
+              {(detailsAccount.payments ?? []).map((payment) => (
+                <li key={payment.id}>
+                  <span>
+                    <strong>{payment.methodLabel}</strong>
+                    <small>{formatDate(payment.recordedAt)}</small>
+                  </span>
+                  <PriceTag cents={payment.amountCents} />
+                </li>
+              ))}
+            </ul>
           </section>
         </div>
       ) : null}

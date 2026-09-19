@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { SplitBillView, type AccountAssignmentAccount, type AccountAssignmentLine } from "./SplitBillView.js";
+import {
+  SplitBillView,
+  type AccountAssignmentAccount,
+  type AccountAssignmentLine,
+} from "./SplitBillView.js";
 
 const LINE: AccountAssignmentLine = {
   id: "line-a",
@@ -20,7 +24,14 @@ const ACCOUNT: AccountAssignmentAccount = {
   totalCents: 392,
   paidCents: 0,
   remainingCents: 392,
-  assignedLines: [{ allocationIds: ["allocation-a"], name: "KUTANA Pilsener 500ml", quantity: 1, totalCents: 392 }],
+  assignedLines: [
+    {
+      allocationIds: ["allocation-a"],
+      name: "KUTANA Pilsener 500ml",
+      quantity: 1,
+      totalCents: 392,
+    },
+  ],
 };
 
 function renderView(overrides: Partial<React.ComponentProps<typeof SplitBillView>> = {}) {
@@ -28,7 +39,17 @@ function renderView(overrides: Partial<React.ComponentProps<typeof SplitBillView
     tableLabel: "Table 1",
     tableTotalCents: 784,
     tableRemainingCents: 784,
-    customers: [{ id: "customer-1", displayName: "Ada", phone: null, email: null, notes: null, createdAt: "now", updatedAt: "now" }],
+    customers: [
+      {
+        id: "customer-1",
+        displayName: "Ada",
+        phone: null,
+        email: null,
+        notes: null,
+        createdAt: "now",
+        updatedAt: "now",
+      },
+    ],
     selectedCustomerId: "",
     freeName: "",
     lines: [LINE],
@@ -56,7 +77,9 @@ function renderView(overrides: Partial<React.ComponentProps<typeof SplitBillView
 describe("SplitBillView", () => {
   it("starts with a compact split-method choice and persistent total", () => {
     renderView();
-    expect(screen.getByRole("heading", { name: "¿Cómo quieres dividir la cuenta?" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "¿Cómo quieres dividir la cuenta?" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Por persona/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Partes iguales/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Por monto/ })).toBeInTheDocument();
@@ -64,11 +87,20 @@ describe("SplitBillView", () => {
   });
 
   it("uses account tabs as navigation and assigns compact row quantities", () => {
-    const props = renderView({ accounts: [ACCOUNT], allocationDraft: { accountId: "account-a", lineItemId: "line-a", quantity: "1" } });
+    const props = renderView({
+      accounts: [ACCOUNT],
+      allocationDraft: { accountId: "account-a", lineItemId: "line-a", quantity: "1" },
+    });
     const row = screen.getByRole("article", { name: "Asignar KUTANA Pilsener 500ml" });
-    expect(within(row).queryByLabelText("Cantidad para KUTANA Pilsener 500ml")).not.toBeInTheDocument();
-    fireEvent.click(within(row).getByRole("button", { name: "Agregar" }));
-    expect(props.onAssignQuantity).toHaveBeenCalledWith({ accountId: "account-a", lineItemId: "line-a", quantity: "1" });
+    expect(
+      within(row).queryByLabelText("Cantidad para KUTANA Pilsener 500ml"),
+    ).not.toBeInTheDocument();
+    fireEvent.click(within(row).getByRole("button", { name: "Asignar" }));
+    expect(props.onAssignQuantity).toHaveBeenCalledWith({
+      accountId: "account-a",
+      lineItemId: "line-a",
+      quantity: "1",
+    });
   });
 
   it("assigns multiple selected products to the active person", () => {
@@ -93,11 +125,16 @@ describe("SplitBillView", () => {
 
   it("confirms before changing methods when account work could be affected", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    renderView({ accounts: [ACCOUNT], allocationDraft: { accountId: "account-a", lineItemId: "", quantity: "1" } });
+    renderView({
+      accounts: [ACCOUNT],
+      allocationDraft: { accountId: "account-a", lineItemId: "", quantity: "1" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Partes iguales" }));
     expect(confirm).toHaveBeenCalled();
-    expect(screen.queryByRole("region", { name: "División en partes iguales" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "División en partes iguales" }),
+    ).not.toBeInTheDocument();
 
     confirm.mockReturnValue(true);
     fireEvent.click(screen.getByRole("button", { name: "Partes iguales" }));
@@ -116,13 +153,17 @@ describe("SplitBillView", () => {
   });
 
   it("shows account products and payment actions without a separate review step", () => {
-    const props = renderView({ accounts: [ACCOUNT], allocationDraft: { accountId: "account-a", lineItemId: "", quantity: "1" } });
-    fireEvent.click(screen.getByRole("button", { name: "Ver cuenta" }));
+    const props = renderView({
+      accounts: [ACCOUNT],
+      allocationDraft: { accountId: "account-a", lineItemId: "", quantity: "1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Volver a la cuenta" }));
     const account = screen.getByRole("article", { name: "Saldo de cuenta de Juan P." });
     expect(account).toHaveTextContent("KUTANA Pilsener 500ml");
+    expect(within(account).getByRole("button", { name: "Cobrar · $3.92" })).toBeEnabled();
     fireEvent.click(within(account).getByRole("button", { name: /Cobrar/ }));
     fireEvent.click(within(account).getByRole("button", { name: "Dejar pendiente" }));
-    fireEvent.click(within(account).getByRole("button", { name: /Quitar KUTANA/ }));
+    fireEvent.click(within(account).getByRole("button", { name: /Devolver KUTANA/ }));
     expect(props.onPayAccount).toHaveBeenCalledWith("account-a");
     expect(props.onMarkPending).toHaveBeenCalledWith("account-a");
     expect(props.onRemoveAllocation).toHaveBeenCalledWith("account-a", ["allocation-a"]);
@@ -130,15 +171,66 @@ describe("SplitBillView", () => {
 
   it("marks paid account tabs and prevents editing their products", () => {
     renderView({ accounts: [{ ...ACCOUNT, status: "paid", paidCents: 392, remainingCents: 0 }] });
-    expect(screen.getByRole("tab", { name: "Seleccionar cuenta Juan P." })).toHaveTextContent("✓ Juan P.");
-    expect(screen.getByRole("button", { name: /Quitar KUTANA/ })).toBeDisabled();
+    expect(screen.getByRole("tab", { name: "Seleccionar cuenta Juan P." })).toHaveTextContent(
+      "✓ Juan P.",
+    );
+    expect(screen.getByRole("button", { name: /Devolver KUTANA/ })).toBeDisabled();
+  });
+
+  it("confirms removing an empty person and calls the deletion action", () => {
+    const onDeleteAccount = vi.fn();
+    renderView({
+      accounts: [{ ...ACCOUNT, assignedLines: [], totalCents: 0, remainingCents: 0 }],
+      onDeleteAccount,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Quitar persona de la división" }));
+    expect(screen.getByRole("dialog", { name: "¿Quitar a esta persona?" })).toHaveTextContent(
+      "Se eliminará de la división de la cuenta.",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(onDeleteAccount).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Quitar persona de la división" }));
+    fireEvent.click(screen.getByRole("button", { name: "Quitar persona" }));
+    expect(onDeleteAccount).toHaveBeenCalledWith("account-a");
+  });
+
+  it("confirms removing assigned products with units and value", () => {
+    const onDeleteAccount = vi.fn();
+    renderView({ accounts: [ACCOUNT], onDeleteAccount });
+
+    fireEvent.click(screen.getByRole("button", { name: "Quitar persona de la división" }));
+    expect(
+      screen.getByRole("dialog", { name: "Esta persona tiene productos asignados" }),
+    ).toHaveTextContent("1 unidad(es)");
+    fireEvent.click(screen.getByRole("button", { name: "Quitar y devolver productos" }));
+    expect(onDeleteAccount).toHaveBeenCalledWith("account-a");
+  });
+
+  it("offers assignment from an empty account and disables charging at zero", () => {
+    const onAllocationDraftChange = vi.fn();
+    renderView({
+      accounts: [{ ...ACCOUNT, assignedLines: [], totalCents: 0, remainingCents: 0 }],
+      lines: [],
+      onAllocationDraftChange,
+    });
+    expect(screen.getByText("Esta persona todavía no tiene productos.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Asignar productos" }));
+    expect(onAllocationDraftChange).toHaveBeenCalledWith({
+      accountId: "account-a",
+      lineItemId: "",
+      quantity: "1",
+    });
+    expect(screen.getByRole("button", { name: "Cuenta pagada" })).toBeDisabled();
   });
 
   it("calculates exact equal shares and routes amount payments to checkout", () => {
     const onPayOrder = vi.fn();
     renderView({ tableTotalCents: 1000, tableRemainingCents: 1000, onPayOrder });
     fireEvent.click(screen.getByRole("button", { name: /Partes iguales/ }));
-    expect(screen.getByRole("region", { name: "División en partes iguales" })).toHaveTextContent("$5.00");
+    expect(screen.getByRole("region", { name: "División en partes iguales" })).toHaveTextContent(
+      "$5.00",
+    );
     fireEvent.click(screen.getByRole("button", { name: /Comenzar cobro/ }));
     expect(onPayOrder).toHaveBeenCalled();
   });

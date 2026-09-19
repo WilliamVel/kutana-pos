@@ -37,9 +37,9 @@
 .eyebrow {
   margin: 0 0 var(--space-1);
   color: var(--text-secondary);
-  font-size: .75rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -61,9 +61,9 @@
 .sectionLabel {
   margin: 0;
   color: var(--text-secondary);
-  font-size: .8rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   text-align: center;
   text-transform: uppercase;
 }
@@ -91,7 +91,7 @@
 
 .tableSummary dt {
   color: var(--text-secondary);
-  font-size: .75rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -206,7 +206,7 @@
 }
 
 .modeBar .modeActive {
-  background: #fff;
+  background: var(--surface-raised);
   color: var(--text-primary);
   box-shadow: var(--shadow-sm);
 }
@@ -243,6 +243,27 @@
 .tab span,
 .tabActive span {
   margin-left: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.tab,
+.tabActive {
+  max-width: 15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab:focus-visible,
+.tabActive:focus-visible,
+.addTab:focus-visible,
+.modeBar button:focus-visible,
+.productRow button:focus-visible,
+.quantityControl button:focus-visible,
+.quantityControl input:focus-visible,
+.assignedProducts li button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .tabActive {
@@ -275,7 +296,7 @@
 
 .workspaceGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(13rem, .34fr);
+  grid-template-columns: minmax(0, 1fr) minmax(13rem, 0.34fr);
   gap: var(--space-4);
   padding: var(--space-4);
   align-items: start;
@@ -305,20 +326,27 @@
 }
 
 .assignmentTarget button {
-  padding: 0;
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
   border: 0;
   background: transparent;
-  color: var(--accent-emphasis);
+  color: var(--text-primary);
   font: inherit;
   font-weight: 700;
-  text-decoration: underline;
   cursor: pointer;
+}
+
+.assignmentTarget button:hover {
+  color: var(--accent-strong);
 }
 
 .assignmentFeedback {
   margin: 0;
   color: var(--order-paid-fg);
-  font-size: .875rem;
+  font-size: 0.875rem;
   font-weight: 700;
 }
 
@@ -338,7 +366,7 @@
   flex-direction: column;
   gap: var(--space-1);
   color: var(--text-secondary);
-  font-size: .8125rem;
+  font-size: 0.8125rem;
   font-weight: 700;
 }
 
@@ -361,7 +389,9 @@
   border: 1px solid transparent;
   border-bottom-color: var(--border-subtle);
   border-radius: var(--radius-sm);
-  transition: background 120ms ease, border-color 120ms ease;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
 }
 
 .productRowSelected {
@@ -388,7 +418,7 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: .15rem;
+  gap: 0.15rem;
 }
 
 .productInfo strong {
@@ -400,7 +430,7 @@
 .productInfo span,
 .productInfo small {
   color: var(--text-secondary);
-  font-size: .8125rem;
+  font-size: 0.8125rem;
 }
 
 .quantityControl {
@@ -490,9 +520,9 @@
 .quickSummary > span,
 .status {
   color: var(--text-secondary);
-  font-size: .75rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -508,8 +538,28 @@
 }
 
 .emptyState {
-  border: 1px dashed var(--border-strong);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-sunken);
   color: var(--text-secondary);
+}
+
+.emptyState p {
+  margin: 0;
+}
+.emptyState button {
+  min-height: 2.75rem;
+  margin-left: auto;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .accountDetail {
@@ -521,9 +571,49 @@
   margin: 0 auto;
 }
 
-.accountTitle > span {
+.accountHeading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.accountHeading h3 {
+  max-width: min(32rem, 62vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 1.35rem;
-  font-weight: 700;
+}
+
+.accountHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.removeAccountButton,
+.modalHeader > button {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.removeAccountButton:hover,
+.removeAccountButton:focus-visible {
+  border-color: var(--accent-strong);
+  color: var(--accent-strong);
+}
+.removeAccountButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .assignedProducts ul,
@@ -573,15 +663,34 @@
 }
 
 .accountBalances div {
-  padding: var(--space-3);
+  display: flex;
+  min-height: 5.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: var(--surface-sunken);
-  text-align: center;
+  text-align: left;
+}
+
+.accountBalances div:last-child {
+  border-color: var(--border-active);
+  background: var(--surface-active);
+}
+
+.accountBalances dd {
+  font-variant-numeric: tabular-nums;
+}
+.accountBalances div:last-child dd {
+  font-size: 1.15rem;
 }
 
 .accountBalances dt {
   color: var(--text-secondary);
-  font-size: .75rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -601,8 +710,97 @@
   flex: 1 1 9rem;
 }
 
-.removeAccountLink {
-  flex-basis: 100%;
+.payButtonContent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.payButtonLabel {
+  color: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.payButtonContent > span:last-child {
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.paySpinner {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  border: 2px solid currentcolor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: pay-spin 700ms linear infinite;
+}
+
+@keyframes pay-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paySpinner {
+    animation: none;
+  }
+}
+
+.confirmModal {
+  width: min(100%, 32rem);
+  padding: var(--space-5);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+
+.confirmModal > p {
+  line-height: 1.5;
+}
+.reassignmentSummary {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+.cancelButton,
+.destructiveButton {
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cancelButton {
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+.destructiveButton {
+  border: 1px solid var(--accent-strong);
+  background: var(--accent-strong);
+  color: var(--text-on-action);
+}
+.cancelButton:focus-visible,
+.destructiveButton:focus-visible,
+.emptyState button:focus-visible,
+.assignmentTarget button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .simpleFlow {
@@ -693,11 +891,7 @@
 }
 
 .modalHeader > button {
-  border: 0;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 1.75rem;
-  cursor: pointer;
+  flex: 0 0 auto;
 }
 
 .creationPaths {
@@ -712,7 +906,7 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--text-secondary);
-  font-size: .75rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
 }
 
@@ -747,18 +941,43 @@
 }
 
 @media (max-width: 64rem) {
-  .screen { overflow: visible; }
-  .tableSummary { grid-template-columns: repeat(2, minmax(11.25rem, 15rem)); }
-  .workspaceGrid { grid-template-columns: 1fr; }
-  .quickSummary { position: static; order: -1; }
-  .productRow { grid-template-columns: minmax(0, 1fr) max-content; }
-  .singleQuantity { display: none; }
-  .productRow > button { grid-column: 2; }
-  .quantityControl { grid-row: 2; }
+  .screen {
+    overflow: visible;
+  }
+  .tableSummary {
+    grid-template-columns: repeat(2, minmax(11.25rem, 15rem));
+  }
+  .workspaceGrid {
+    grid-template-columns: 1fr;
+  }
+  .quickSummary {
+    position: static;
+    order: -1;
+  }
+  .productRow {
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
+  .singleQuantity {
+    display: none;
+  }
+  .productRow > button {
+    grid-column: 2;
+  }
+  .quantityControl {
+    grid-row: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .productRow {
+    transition: none;
+  }
 }
 
 @media (max-width: 40rem) {
-  .methodGrid { grid-template-columns: 1fr; }
+  .methodGrid {
+    grid-template-columns: 1fr;
+  }
   .tableSummary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-3);
@@ -767,21 +986,75 @@
     min-height: 5.5rem;
     padding: var(--space-3);
   }
-  .methodGrid button { min-height: auto; }
+  .methodGrid button {
+    min-height: auto;
+  }
   .modeBar {
     width: 100%;
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .modeBar button { padding-inline: var(--space-2); }
-  .panelHeading { align-items: stretch; flex-direction: column; }
-  .assignmentTarget { align-self: flex-start; white-space: normal; }
-  .productRow { grid-template-columns: minmax(0, 1fr) max-content; padding-inline: var(--space-2); }
-  .productRow > button { width: 100%; }
-  .addTabLabel { display: none; }
-  .addTab { width: 2.75rem; justify-content: center; padding: 0; }
+  .modeBar button {
+    padding-inline: var(--space-2);
+  }
+  .panelHeading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .assignmentTarget {
+    align-self: flex-start;
+    white-space: normal;
+  }
+  .productRow {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    padding-inline: var(--space-2);
+  }
+  .productRow > button {
+    width: 100%;
+    min-width: 6.5rem;
+  }
+  .addTabLabel {
+    display: none;
+  }
+  .addTab {
+    width: 2.75rem;
+    justify-content: center;
+    padding: 0;
+  }
   .batchAction,
-  .allAssigned { align-items: stretch; flex-direction: column; }
-  .batchAction button { width: 100%; }
-  .accountBalances { grid-template-columns: 1fr; }
-  .accountDetail { padding: var(--space-4); }
+  .allAssigned {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .batchAction button {
+    width: 100%;
+  }
+  .accountBalances {
+    grid-template-columns: 1fr;
+  }
+  .accountDetail {
+    padding: var(--space-4);
+  }
+  .accountTitle {
+    align-items: flex-start;
+  }
+  .accountHeaderActions {
+    align-items: flex-start;
+  }
+  .accountHeading h3 {
+    max-width: 56vw;
+  }
+  .emptyState {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .emptyState button {
+    width: 100%;
+    margin-left: 0;
+  }
+  .confirmActions {
+    flex-direction: column-reverse;
+  }
+  .confirmActions button {
+    width: 100%;
+  }
 }
