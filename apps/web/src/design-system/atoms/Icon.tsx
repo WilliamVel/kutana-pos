@@ -19,7 +19,8 @@ export type IconName =
   | "menu"
   | "chevron-down"
   | "search"
-  | "more";
+  | "more"
+  | "drag";
 
 export interface IconProps {
   readonly name: IconName;
@@ -160,5 +161,13 @@ function IconGlyph({ name }: { name: IconName }): JSX.Element {
       return <circle cx="11" cy="11" r="6" strokeWidth={2} />;
     case "more":
       return <path d="M12 6h.01M12 12h.01M12 18h.01" strokeWidth={3} strokeLinecap="round" />;
+    case "drag":
+      return (
+        <path
+          d="M8 5h.01M16 5h.01M8 12h.01M16 12h.01M8 19h.01M16 19h.01"
+          strokeWidth={3}
+          strokeLinecap="round"
+        />
+      );
   }
 }

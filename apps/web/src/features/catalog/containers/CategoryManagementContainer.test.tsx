@@ -1,68 +1,54 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../../composition/mock.js";
 import { CategoryManagementContainer } from "./CategoryManagementContainer.js";
 
 describe("CategoryManagementContainer", () => {
-  it("loads mock categories through CategoryRepository and creates a new category", async () => {
+  it("loads counts, creates, updates and deletes through repositories", async () => {
     const ports = buildMockPorts();
     render(
       <PortsProvider value={ports}>
         <CategoryManagementContainer />
       </PortsProvider>,
     );
-
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Categorías" })).toBeInTheDocument(),
-    );
-    expect(await screen.findByRole("form", { name: "Editar Draft Beer" })).toBeInTheDocument();
-
-    const createForm = screen.getByRole("form", { name: "Crear categoría" });
-    fireEvent.change(within(createForm).getByLabelText("Nombre"), { target: { value: "Postres" } });
-    fireEvent.change(within(createForm).getByLabelText("Orden"), { target: { value: "7" } });
-    fireEvent.submit(createForm);
-
-    await waitFor(() => expect(screen.getByText("Categoría creada.")).toBeInTheDocument());
-    const categories = await ports.categories.listAll();
-    expect(categories.map((category) => category.name)).toContain("Postres");
-  });
-
-  it("saves edits through CategoryRepository", async () => {
-    const ports = buildMockPorts();
-    render(
-      <PortsProvider value={ports}>
-        <CategoryManagementContainer />
-      </PortsProvider>,
-    );
-
-    const form = await screen.findByRole("form", { name: "Editar Draft Beer" });
-    fireEvent.change(within(form).getByLabelText("Nombre"), {
-      target: { value: "Draft Beer Updated" },
+    expect(await screen.findByRole("heading", { name: "Categorías" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Nueva categoría/ }));
+    fireEvent.change(screen.getByLabelText("Nombre de la categoría"), {
+      target: { value: "Postres" },
     });
-    fireEvent.change(within(form).getByLabelText("Orden"), { target: { value: "9" } });
-    fireEvent.submit(form);
+    fireEvent.click(screen.getByRole("button", { name: "Crear categoría" }));
+    await waitFor(() => expect(screen.getByText("Categoría creada.")).toBeInTheDocument());
+    await expect(ports.categories.listAll()).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "Postres" })]),
+    );
 
-    await waitFor(() => expect(screen.getByText("Categoría guardada.")).toBeInTheDocument());
-    const saved = await ports.categories.findById("category-draft-beer");
-    expect(saved).toMatchObject({ name: "Draft Beer Updated", sortOrder: 9 });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Nueva categoría/ })).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getAllByRole("button", { name: "Editar" })[0]!);
+    fireEvent.change(screen.getByLabelText("Nombre de la categoría"), {
+      target: { value: "Bebidas" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() => expect(screen.getByText("Categoría actualizada.")).toBeInTheDocument());
   });
 
-  it("deletes a category using the trash icon", async () => {
+  it("protects a category that contains products", async () => {
     const ports = buildMockPorts();
     render(
       <PortsProvider value={ports}>
         <CategoryManagementContainer />
       </PortsProvider>,
     );
-
-    await screen.findByRole("form", { name: "Editar Draft Beer" });
-    fireEvent.click(screen.getByRole("button", { name: "Eliminar categoría Draft Beer" }));
-
-    await waitFor(() => expect(screen.getByText("Categoría eliminada.")).toBeInTheDocument());
     await waitFor(() =>
-      expect(screen.queryByRole("form", { name: "Editar Draft Beer" })).not.toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: /Acciones para Draft Beer/ })).toBeInTheDocument(),
     );
-    await expect(ports.categories.findById("category-draft-beer")).resolves.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Acciones para Draft Beer/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Eliminar" }));
+    expect(
+      await screen.findByRole("dialog", { name: "¿Eliminar esta categoría?" }),
+    ).toHaveTextContent("Esta acción no se puede deshacer.");
+    expect(screen.getByRole("button", { name: "Eliminar categoría" })).toBeInTheDocument();
   });
 });

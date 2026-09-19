@@ -1,77 +1,371 @@
 .screen {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
+  min-width: 0;
 }
-
-.header,
-.card,
-.row {
-  border: 1px solid var(--color-border, #d9dee8);
-  border-radius: 1rem;
-  background: var(--color-surface, #fff);
-  padding: 1rem;
+.header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding-bottom: var(--space-2);
 }
-
+.headingCopy {
+  display: grid;
+  gap: var(--space-1);
+}
+.headingCopy h2,
+.headingCopy p,
+.count {
+  margin: 0;
+}
+.headingCopy h2 {
+  font-size: clamp(1.6rem, 3vw, 2rem);
+}
+.headingCopy p,
+.count {
+  color: var(--text-secondary);
+}
 .eyebrow {
-  margin: 0 0 0.25rem;
-  color: var(--color-muted, #5f6b7a);
-  font-size: 0.8rem;
+  color: var(--accent-strong) !important;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-
-.card form,
-.row form,
-.card {
-  display: grid;
-  gap: 0.75rem;
+.count {
+  font-size: 0.875rem;
+  font-weight: 650;
 }
-
-.list {
-  display: grid;
-  gap: 0.75rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.header button {
+  gap: 0.5rem;
+  min-height: 48px;
+  font-size: 1rem;
 }
-
-.actions {
-  display: inline-flex;
-  gap: var(--space-2, 0.5rem);
+.searchRow {
+  display: flex;
   align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
 }
-
-.iconButton {
-  display: inline-grid;
-  width: 2.5rem;
-  height: 2.5rem;
-  place-items: center;
-  border: 1px solid var(--color-border, #d9dee8);
-  border-radius: var(--radius-md, 0.75rem);
-  background: var(--color-surface, #fff);
-  color: var(--color-muted, #5f6b7a);
+.searchRow:focus-within {
+  border-color: var(--border-strong);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.searchRow input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+}
+.clearButton,
+.iconButton,
+.actionButton,
+.dragHandle {
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
   cursor: pointer;
 }
-
-.iconButton:hover,
-.iconButton:focus-visible {
-  border-color: var(--border-strong, #8f9aac);
-  color: var(--text-primary, #1f2937);
+.clearButton {
+  display: grid;
+  min-width: 32px;
+  min-height: 32px;
+  place-items: center;
 }
-
-.iconButton:disabled {
+.live {
+  min-height: 1.2rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+.list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--border-subtle);
+}
+.row {
+  display: grid;
+  grid-template-columns: 32px 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 68px;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-page);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+.row:hover {
+  background: var(--surface-raised);
+}
+.dragOver {
+  border-top: 2px solid var(--accent-emphasis);
+  background: var(--surface-active);
+}
+.dragHandle {
+  display: grid;
+  width: 32px;
+  height: 44px;
+  place-items: center;
+  cursor: grab;
+  touch-action: none;
+}
+.dragHandle:active {
+  cursor: grabbing;
+}
+.dragHandle:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.position {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.categoryName {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.categoryName strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.categoryName span {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  padding: 0 0.5rem;
+  font-weight: 650;
+}
+.actionButton:hover,
+.actionButton:focus-visible,
+.iconButton:hover,
+.iconButton:focus-visible,
+.clearButton:hover,
+.clearButton:focus-visible {
+  color: var(--text-primary);
+}
+.iconButton {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: var(--radius-md);
+}
+.menuWrap {
+  position: relative;
+}
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  display: grid;
+  min-width: 170px;
+  padding: 0.25rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+.menu button {
+  min-height: 40px;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+.menu button:hover,
+.menu button:focus-visible {
+  background: var(--surface-sunken);
+}
+.menu button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.destructive {
+  color: var(--accent-strong) !important;
+}
+.orderHint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  text-align: center;
+}
+.empty h3,
+.empty p {
+  margin: 0;
+}
+.empty p {
+  color: var(--text-secondary);
+}
+.loading {
+  display: grid;
+  gap: 0.5rem;
+}
+.skeleton {
+  height: 4.25rem;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--surface-sunken),
+    var(--surface-raised),
+    var(--surface-sunken)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(29, 49, 36, 0.42);
+}
+.modal {
+  width: min(100%, 30rem);
+  max-width: 30rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+.modal h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+.modal > p {
+  margin: 0.5rem 0 1.25rem;
+  color: var(--text-secondary);
+}
+.modal form {
+  display: grid;
+  gap: 0.5rem;
+}
+.modal label {
+  font-weight: 650;
+}
+.modal input {
+  min-height: 48px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+.modal input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.error {
+  color: var(--accent-strong);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+.deleteButton {
+  min-height: 48px;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-strong);
+  color: var(--surface-raised);
+  font-weight: 700;
+  cursor: pointer;
+}
+.deleteButton:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.deleteButton:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
-
-.iconButton:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-sm, 0 1px 2px rgb(15 23 42 / 0.08));
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
-
-.message {
-  margin: 0;
-  color: var(--color-success, #18794e);
-  font-weight: 700;
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (max-width: 48rem) {
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .header > button {
+    width: 100%;
+  }
+  .actionLabel {
+    display: none;
+  }
+  .row {
+    grid-template-columns: 28px 24px minmax(0, 1fr) auto;
+    gap: 0.5rem;
+  }
+  .modal {
+    align-self: end;
+    width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+  .row {
+    transition: none;
+  }
 }
