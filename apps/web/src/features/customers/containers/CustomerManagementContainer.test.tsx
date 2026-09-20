@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../../composition/mock.js";
 import { CustomerManagementContainer } from "./CustomerManagementContainer.js";
@@ -13,6 +13,7 @@ describe("CustomerManagementContainer", () => {
       </PortsProvider>,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Nuevo cliente" }));
     fireEvent.change(screen.getByLabelText("Nombre visible"), {
       target: { value: "Ada Lovelace" },
     });
@@ -20,9 +21,7 @@ describe("CustomerManagementContainer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Crear cliente" }));
 
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Cliente creado."));
-    await waitFor(() =>
-      expect(screen.getByRole("article", { name: "Cliente Ada Lovelace" })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("Ada Lovelace")).toBeInTheDocument());
     expect(
       (await ports.customers.listAll()).some((customer) => customer.displayName === "Ada Lovelace"),
     ).toBe(true);
@@ -95,6 +94,8 @@ describe("CustomerManagementContainer", () => {
     );
 
     await waitFor(() => expect(screen.getByText("Cliente Temporal")).toBeInTheDocument());
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    fireEvent.click(screen.getByRole("group"));
     fireEvent.click(screen.getByRole("button", { name: "Eliminar cliente Cliente Temporal" }));
 
     await waitFor(() => expect(screen.queryByText("Cliente Temporal")).not.toBeInTheDocument());

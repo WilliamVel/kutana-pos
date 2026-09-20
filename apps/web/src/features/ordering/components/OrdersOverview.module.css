@@ -11,6 +11,17 @@
 .ordersSection {
   display: contents;
 }
+.loadingState {
+  min-height: 5rem;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+}
+.refreshing {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
 .ordersHeader {
   display: none;
 }

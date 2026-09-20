@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import styles from "./RegisterWorkspace.module.css";
 
 export interface RegisterWorkspaceProps {
@@ -17,6 +17,7 @@ export interface RegisterWorkspaceProps {
   readonly railHidden?: boolean;
   /** Allows secondary center content to extend beyond the fixed workspace card. */
   readonly centerOverflowVisible?: boolean;
+  readonly selectedTableId?: string | null;
 }
 
 /**
@@ -33,21 +34,30 @@ export function RegisterWorkspace({
   rail,
   railHidden = false,
   centerOverflowVisible = false,
+  selectedTableId = null,
 }: RegisterWorkspaceProps): JSX.Element {
   const [mobileView, setMobileView] = useState<"order" | "products">("order");
-  const [orderCount, setOrderCount] = useState(0);
+  const [orderCount, setOrderCount] = useState<number | null>(null);
   const [createdNotice, setCreatedNotice] = useState(false);
+  const createdNoticeTimeoutRef = useRef<number | null>(null);
   const workspaceClass = railHidden ? styles.workspaceFocused : styles.workspace;
 
   useEffect(() => {
     const onOrderUpdated = (event: Event): void => {
-      const detail = (event as CustomEvent<{ orderCount?: number; productCount?: number }>).detail;
+      const detail = (event as CustomEvent<{ orderId?: string; tableId?: string; orderCount?: number; productCount?: number }>).detail;
+      if (detail.tableId !== selectedTableId) return;
       if (typeof detail.orderCount === "number") setOrderCount(detail.orderCount);
     };
     const onProductsRequested = (): void => setMobileView("products");
     const onOrderCreated = (): void => {
       setCreatedNotice(true);
-      window.setTimeout(() => setCreatedNotice(false), 2200);
+      if (createdNoticeTimeoutRef.current !== null) {
+        window.clearTimeout(createdNoticeTimeoutRef.current);
+      }
+      createdNoticeTimeoutRef.current = window.setTimeout(() => {
+        createdNoticeTimeoutRef.current = null;
+        setCreatedNotice(false);
+      }, 2200);
     };
     window.addEventListener("kutana.order.updated", onOrderUpdated);
     window.addEventListener("kutana.mobile.products", onProductsRequested);
@@ -56,14 +66,22 @@ export function RegisterWorkspace({
       window.removeEventListener("kutana.order.updated", onOrderUpdated);
       window.removeEventListener("kutana.mobile.products", onProductsRequested);
       window.removeEventListener("kutana.order.created", onOrderCreated);
+      if (createdNoticeTimeoutRef.current !== null) {
+        window.clearTimeout(createdNoticeTimeoutRef.current);
+        createdNoticeTimeoutRef.current = null;
+      }
     };
-  }, []);
+  }, [selectedTableId]);
+
+  useEffect(() => {
+    setOrderCount(null);
+  }, [selectedTableId]);
 
   return (
     <div className={workspaceClass} data-mobile-view={mobileView}>
       <div className={styles.mobileTabs} role="tablist" aria-label="Vista de la orden">
         <button type="button" role="tab" aria-selected={mobileView === "order"} onClick={() => setMobileView("order")}>
-          <span aria-hidden="true">▤</span> Pedido <strong>{orderCount}</strong>
+          <span aria-hidden="true">▤</span> Pedido {orderCount === null ? null : <strong>{orderCount}</strong>}
         </button>
         {!railHidden ? (
           <button type="button" role="tab" aria-selected={mobileView === "products"} onClick={() => setMobileView("products")}>

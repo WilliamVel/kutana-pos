@@ -22,6 +22,20 @@ const ROWS: OrdersOverviewRow[] = [
 ];
 
 describe("OrdersOverview", () => {
+  it("does not present an empty state during the initial load", () => {
+    render(
+      <OrdersOverview
+        rows={[]}
+        loadState="initial-loading"
+        selectedTableId={null}
+        onSelectTable={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("No hay órdenes abiertas.")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Cargando órdenes…");
+  });
+
   it("lists each table's order with status, item count, and formatted total", () => {
     render(<OrdersOverview rows={ROWS} selectedTableId={null} onSelectTable={vi.fn()} />);
 

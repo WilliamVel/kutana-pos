@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type {
   Order,
   OrderStatus as DomainOrderStatus,
@@ -21,6 +21,15 @@ const STATUS_MAP: Record<DomainOrderStatus, OrderStatus> = {
   paid: "paid",
   closed_with_pending: "closed-with-pending",
 };
+
+export type OrdersOverviewLoadState =
+  | "initial-loading"
+  | "refreshing"
+  | "success"
+  | "empty"
+  | "error";
+
+export type SelectedOrderState = "pending" | "valid" | "invalid";
 
 function isActiveVisibleOrder(order: Order): boolean {
   return order.status !== "paid" && order.status !== "closed_with_pending";
@@ -56,28 +65,21 @@ async function toRow(
 export interface OrdersOverviewContainerProps {
   readonly selectedTableId: string | null;
   readonly onSelectTable: (tableId: string) => void;
+  readonly onSelectionStateChange?: (state: SelectedOrderState) => void;
   readonly onOrderRemoved?: () => void;
   readonly onNewOrder?: () => void;
   readonly newOrder?: ReactNode;
-  /**
-   * Bump this to force a full table-list + rows reload. The `OrderEvents`
-   * subscription is keyed by each table's `currentOrderId` captured at load
-   * time, so a table that becomes occupied AFTER mount (the "New order"
-   * flow) is invisible until the list is re-fetched. App increments this
-   * when a new order is created.
-   */
   readonly reloadKey?: number;
 }
 
 /**
- * Fetches every table's current order and subscribes to `OrderEvents` so
- * this all-orders view updates in realtime when a waiter device edits an
- * order — the core "waiter -> register realtime" story. Holds no markup;
- * hands fully-formed rows to the presentational `OrdersOverview`.
+ * Loads a complete snapshot of the active-order list before replacing the
+ * visible rows. Existing rows remain visible while a later snapshot loads.
  */
 export function OrdersOverviewContainer({
   selectedTableId,
   onSelectTable,
+  onSelectionStateChange,
   onOrderRemoved,
   onNewOrder,
   newOrder,
@@ -92,60 +94,80 @@ export function OrdersOverviewContainer({
   const [rows, setRows] = useState<OrdersOverviewRow[]>([]);
   const [tableList, setTableList] = useState<Table[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [eventsReady, setEventsReady] = useState(false);
+  const [loadState, setLoadState] = useState<OrdersOverviewLoadState>("initial-loading");
+  const requestIdRef = useRef(0);
+  const mountedRef = useRef(false);
+  const hasConfirmedSnapshotRef = useRef(false);
 
-  const refreshTable = useCallback(
-    async (table: Table) => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const loadTableRow = useCallback(
+    async (table: Table): Promise<OrdersOverviewRow | null> => {
       console.info("[orders] loading table", { tableId: table.id, label: table.label });
       const order = await orders.findByTable(table.id);
       console.info("[orders] table response", { tableId: table.id, order });
       const row = await toRow(table, order, personalAccounts, payments);
-      setRows((current) => {
-        const withoutTable = current.filter((existing) => existing.tableId !== table.id);
-        return row ? [...withoutTable, row] : withoutTable;
-      });
       console.info("[orders] row result", { tableId: table.id, row });
-      return order;
+      return row;
     },
     [orders, payments, personalAccounts],
   );
 
   useEffect(() => {
     let cancelled = false;
+    const requestId = ++requestIdRef.current;
+    const hasPreviousSnapshot = hasConfirmedSnapshotRef.current;
+    setLoadError(null);
+    setLoadState(hasPreviousSnapshot ? "refreshing" : "initial-loading");
+    console.info("[orders] loading tables");
 
     async function load(): Promise<void> {
-      setLoadError(null);
-      setEventsReady(false);
-      console.info("[orders] loading tables");
-
       try {
         const allTables = await tables.listAll();
         console.info("[orders] tables response", allTables);
-        if (cancelled) return;
-        setTableList(allTables);
-        setRows([]);
+        if (cancelled || !mountedRef.current || requestId !== requestIdRef.current) return;
 
-        const results = await Promise.allSettled(allTables.map((table) => refreshTable(table)));
+        const results = await Promise.allSettled(allTables.map((table) => loadTableRow(table)));
+        if (cancelled || !mountedRef.current || requestId !== requestIdRef.current) return;
+
         const failures = results.filter(
           (result): result is PromiseRejectedResult => result.status === "rejected",
         );
         failures.forEach((failure) => {
           console.error("[orders] failed loading table", failure.reason);
         });
-        if (failures.length === allTables.length && allTables.length > 0) {
+        if (failures.length > 0) {
           throw failures[0]?.reason ?? new Error("Unable to load orders");
         }
+
+        const successfulResults = results.filter(
+          (result): result is PromiseFulfilledResult<OrdersOverviewRow | null> => result.status === "fulfilled",
+        );
+        const nextRows = successfulResults
+          .map((result) => result.value)
+          .filter((row): row is OrdersOverviewRow => row !== null);
+
+        // Publish one complete snapshot. Never expose the intermediate rows
+        // produced while the individual table requests are still pending.
+        setTableList(allTables);
+        setRows(nextRows);
+        hasConfirmedSnapshotRef.current = true;
+        setLoadState(nextRows.length > 0 ? "success" : "empty");
         console.info("[orders] load completed", {
           tables: allTables.length,
-          rows: failures.length === 0 ? "loaded" : `partial (${failures.length} failed)`,
+          rows: nextRows.length,
         });
-        setEventsReady(true);
       } catch (error) {
         console.error("[orders] failed loading orders", error);
-        if (!cancelled) {
-          setLoadError(error instanceof Error ? error.message : String(error));
-          setEventsReady(true);
-        }
+        if (cancelled || !mountedRef.current || requestId !== requestIdRef.current) return;
+        setLoadError(error instanceof Error ? error.message : String(error));
+        // A failed refresh is non-destructive: keep the last confirmed rows.
+        setLoadState("error");
       }
     }
 
@@ -153,7 +175,59 @@ export function OrdersOverviewContainer({
     return () => {
       cancelled = true;
     };
-  }, [tables, refreshTable, reloadKey]);
+  }, [loadTableRow, reloadKey, tables]);
+
+  const refreshTable = useCallback(
+    async (table: Table): Promise<void> => {
+      const requestId = ++requestIdRef.current;
+      setLoadState((current) => current === "initial-loading" ? current : "refreshing");
+      try {
+        const row = await loadTableRow(table);
+        if (!mountedRef.current || requestId !== requestIdRef.current) return;
+        setRows((current) => {
+          const withoutTable = current.filter((existing) => existing.tableId !== table.id);
+          return row ? [...withoutTable, row] : withoutTable;
+        });
+        setLoadError(null);
+        setLoadState((current) => current === "initial-loading" ? current : "success");
+      } catch (error) {
+        if (!mountedRef.current || requestId !== requestIdRef.current) return;
+        console.error("[orders] failed refreshing table", { tableId: table.id, error });
+        setLoadError(error instanceof Error ? error.message : String(error));
+        setLoadState("error");
+      }
+    },
+    [loadTableRow],
+  );
+
+  useEffect(() => {
+    if (!hasConfirmedSnapshotRef.current) return;
+
+    const unsubscribes = tableList.map((table) => {
+      return table.currentOrderId
+        ? events.subscribe(table.currentOrderId, () => {
+            void refreshTable(table);
+          })
+        : () => {};
+    });
+    return () => {
+      for (const unsubscribe of unsubscribes) unsubscribe();
+    };
+  }, [tableList, events, refreshTable]);
+
+  useEffect(() => {
+    if (!selectedTableId) {
+      onSelectionStateChange?.("invalid");
+      return;
+    }
+    if (loadState === "initial-loading" || loadState === "refreshing") {
+      onSelectionStateChange?.("pending");
+      return;
+    }
+    onSelectionStateChange?.(
+      rows.some((row) => row.tableId === selectedTableId) ? "valid" : "invalid",
+    );
+  }, [loadState, onSelectionStateChange, rows, selectedTableId]);
 
   async function removeEmptyOrder(tableId: string): Promise<void> {
     const table = await tables.findById(tableId);
@@ -161,9 +235,6 @@ export function OrdersOverviewContainer({
     if (!table || !order || order.lineItems.length > 0) return;
 
     await orders.deleteEmpty(order.id, order.version);
-    // The HTTP adapter frees the table atomically with the order deletion.
-    // The mock adapter only removes the order, so keep this fallback for it
-    // without attempting a stale table update against PostgreSQL.
     const updatedTable = await tables.findById(tableId);
     if (updatedTable?.currentOrderId === order.id) {
       await tables.save(
@@ -175,36 +246,16 @@ export function OrdersOverviewContainer({
     onOrderRemoved?.();
   }
 
-  useEffect(() => {
-    if (!eventsReady) return;
-
-    // Subscribe to every open order, not only the selected table. The cards
-    // represent the whole active-order list, so a waiter editing another
-    // order must refresh that card as well. The HTTP adapter still shares one
-    // global EventSource; the order id only routes events locally.
-    const unsubscribes = tableList.map((table) => {
-      // The subscription uses the table's CURRENT order id and is rebuilt
-      // whenever the table list is reloaded (including after a new order).
-      return table.currentOrderId
-        ? events.subscribe(table.currentOrderId, () => {
-            void refreshTable(table);
-          })
-        : () => {};
-    });
-    return () => {
-      for (const unsubscribe of unsubscribes) unsubscribe();
-    };
-  }, [tableList, events, eventsReady, refreshTable]);
-
   return (
     <OrdersOverview
-      rows={rows.sort((a, b) => a.tableLabel.localeCompare(b.tableLabel))}
+      rows={[...rows].sort((a, b) => a.tableLabel.localeCompare(b.tableLabel))}
       selectedTableId={selectedTableId}
       onSelectTable={onSelectTable}
       onRemoveEmptyOrder={(tableId) => void removeEmptyOrder(tableId)}
       onNewOrder={onNewOrder}
       newOrder={newOrder}
       loadError={loadError}
+      loadState={loadState}
     />
   );
 }

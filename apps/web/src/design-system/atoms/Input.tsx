@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { forwardRef, useId } from "react";
 import styles from "./Input.module.css";
 
 export interface InputProps {
@@ -7,39 +7,41 @@ export interface InputProps {
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly error?: string;
-  readonly type?: "text" | "number" | "password";
+  readonly type?: "text" | "number" | "password" | "email" | "tel";
   readonly name?: string;
   readonly autoComplete?: string;
-  readonly inputMode?: "decimal" | "numeric" | "search" | "text";
-  /** Renders a `<textarea>` instead of an `<input>` for longer free-text content (e.g. a description). */
+  readonly inputMode?: "decimal" | "numeric" | "search" | "text" | "tel" | "email";
   readonly multiline?: boolean;
   readonly placeholder?: string;
   readonly required?: boolean;
   readonly min?: number;
+  readonly maxLength?: number;
   readonly onBlur?: () => void;
 }
 
-/** Purely presentational atom: props in, markup out. No port access. */
-export function Input({
-  id,
-  label,
-  value,
-  onChange,
-  error,
-  type = "text",
-  name,
-  autoComplete,
-  inputMode,
-  multiline = false,
-  placeholder,
-  required = false,
-  min,
-  onBlur,
-}: InputProps): JSX.Element {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  {
+    id,
+    label,
+    value,
+    onChange,
+    error,
+    type = "text",
+    name,
+    autoComplete,
+    inputMode,
+    multiline = false,
+    placeholder,
+    required = false,
+    min,
+    maxLength,
+    onBlur,
+  }: InputProps,
+  ref,
+): JSX.Element {
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const errorId = useId();
-
   return (
     <div className={styles.field}>
       <label className={styles.label} htmlFor={inputId}>
@@ -54,6 +56,7 @@ export function Input({
           value={value}
           placeholder={placeholder}
           required={required}
+          maxLength={maxLength}
           onBlur={onBlur}
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={Boolean(error)}
@@ -61,6 +64,7 @@ export function Input({
         />
       ) : (
         <input
+          ref={ref}
           id={inputId}
           name={name}
           autoComplete={autoComplete}
@@ -71,6 +75,7 @@ export function Input({
           placeholder={placeholder}
           required={required}
           min={min}
+          maxLength={maxLength}
           onBlur={onBlur}
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={Boolean(error)}
@@ -84,4 +89,4 @@ export function Input({
       ) : null}
     </div>
   );
-}
+});

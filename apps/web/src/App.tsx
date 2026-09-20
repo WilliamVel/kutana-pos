@@ -26,7 +26,6 @@ import { CustomerManagementContainer } from "./features/customers/containers/Cus
 import { UserManagementContainer } from "./features/users/containers/UserManagementContainer.js";
 import { AnalyticsScreen } from "./features/analytics/AnalyticsScreen.js";
 import { canAccessScreen } from "./app-shell/screens.js";
-import styles from "./App.module.css";
 
 /** Center-column sub-state of the unified Register workspace. */
 type CenterView = "account" | "payment" | "assignment";
@@ -42,8 +41,9 @@ export function App(): JSX.Element {
   const [session, setSession] = useState<AuthSession | null>(() => auth.currentSession());
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
   const [screen, setScreen] = useState<ScreenId>("register");
-  const [isNavigating, setIsNavigating] = useState(false);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [selectedOrderReady, setSelectedOrderReady] = useState(false);
+  const [selectedOrderListReady, setSelectedOrderListReady] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [centerView, setCenterView] = useState<CenterView>("account");
@@ -57,12 +57,6 @@ export function App(): JSX.Element {
     setSelectedTicketId(null);
     setSelectedAccountId(null);
   };
-
-  useEffect(() => {
-    if (!isNavigating) return;
-    const timeoutId = window.setTimeout(() => setIsNavigating(false), 280);
-    return () => window.clearTimeout(timeoutId);
-  }, [isNavigating, screen]);
 
   useEffect(() => {
     const expireSession = (): void => {
@@ -80,14 +74,24 @@ export function App(): JSX.Element {
   const navigate = (next: ScreenId): void => {
     if (!session) return;
     if (!canAccessScreen(next, session.role)) return;
-    if (next === "register") resetCenter();
+    if (next === "register") {
+      resetCenter();
+      setSelectedOrderReady(false);
+      setSelectedOrderListReady(false);
+    } else {
+      // Keep the table selection for a possible return to Orders, but require
+      // the Orders container to validate it again before showing actions.
+      setSelectedOrderReady(false);
+      setSelectedOrderListReady(false);
+    }
     setEditingProduct(null);
-    setIsNavigating(true);
     setScreen(next);
   };
 
   const selectTable = (tableId: string): void => {
     setSelectedTableId(tableId);
+    setSelectedOrderReady(false);
+    setSelectedOrderListReady(false);
     resetCenter();
   };
 
@@ -135,17 +139,20 @@ export function App(): JSX.Element {
     } else {
       center = (
         <>
-          <OrderTicketPanelContainer tableId={selectedTableId} />
+          <OrderTicketPanelContainer
+            tableId={selectedTableId}
+            onLoadStateChange={(state) => setSelectedOrderReady(state === "ready")}
+          />
           <ButtonRow>
-            <Button
+            {selectedOrderReady && selectedOrderListReady ? <Button
               variant="secondary"
               ariaLabel="Dividir cuenta"
               onClick={() => setCenterView("assignment")}
             >
               <Icon name="split" size={22} />
               Dividir
-            </Button>
-            <Button
+            </Button> : null}
+            {selectedOrderReady && selectedOrderListReady ? <Button
               ariaLabel="Pagar mesa completa"
               onClick={() => {
                 setSelectedTicketId(null);
@@ -155,7 +162,7 @@ export function App(): JSX.Element {
             >
               <Icon name="cash" size={22} />
               Pagar
-            </Button>
+            </Button> : null}
           </ButtonRow>
         </>
       );
@@ -252,10 +259,24 @@ export function App(): JSX.Element {
                 }
                 selectedTableId={selectedTableId}
                 onSelectTable={selectTable}
+                onSelectionStateChange={(state) => {
+                  if (state === "valid") {
+                    setSelectedOrderListReady(true);
+                    return;
+                  }
+                  setSelectedOrderListReady(false);
+                  if (state === "invalid" && selectedTableId) {
+                    setSelectedTableId(null);
+                    setSelectedOrderReady(false);
+                    resetCenter();
+                  }
+                }}
                 onNewOrder={() => setNewOrderRequest((request) => request + 1)}
                 onOrderRemoved={() => {
                   resetCenter();
                   setSelectedTableId(null);
+                  setSelectedOrderReady(false);
+                  setSelectedOrderListReady(false);
                   setOrdersReloadKey((key) => key + 1);
                 }}
                 reloadKey={ordersReloadKey}
@@ -266,6 +287,7 @@ export function App(): JSX.Element {
           emptyCenter="Selecciona un pedido para ver sus cuentas a cobrar."
           centerOverflowVisible={centerView !== "account"}
           railHidden={centerView !== "account"}
+          selectedTableId={selectedTableId}
           rail={
             selectedTableId && centerView === "account" ? (
               <AddItemContainer tableId={selectedTableId} />
@@ -278,12 +300,6 @@ export function App(): JSX.Element {
             )
           }
         />
-      ) : null}
-
-      {isNavigating ? (
-        <div className={styles.navigationLoading} role="status" aria-live="polite">
-          <span className={styles.loader}>Cargando sección…</span>
-        </div>
       ) : null}
     </AppShell>
   );

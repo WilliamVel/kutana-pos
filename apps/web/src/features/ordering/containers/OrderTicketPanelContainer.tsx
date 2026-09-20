@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ConflictError } from "@kutana/shared/errors/conflict-error.js";
 import type {
   Order,
@@ -70,6 +70,7 @@ function aggregateLines(
 
 export interface OrderTicketPanelContainerProps {
   readonly tableId: string;
+  readonly onLoadStateChange?: (state: "loading" | "ready" | "empty" | "error") => void;
 }
 
 /**
@@ -80,6 +81,7 @@ export interface OrderTicketPanelContainerProps {
  */
 export function OrderTicketPanelContainer({
   tableId,
+  onLoadStateChange,
 }: OrderTicketPanelContainerProps): JSX.Element | null {
   const tables = useTables();
   const orders = useOrders();
@@ -94,25 +96,31 @@ export function OrderTicketPanelContainer({
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [accountAllocations, setAccountAllocations] = useState<AccountLineAllocation[]>([]);
   const [accountPaidById, setAccountPaidById] = useState<Record<string, number>>({});
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "empty" | "error">("loading");
+  const mountedRef = useRef(false);
+  const requestIdRef = useRef(0);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadOrder = useCallback(async (orderOverride?: Order): Promise<void> => {
+    const requestId = ++requestIdRef.current;
+    try {
+      // These two lookups do not depend on each other.
+      const [foundTable, foundOrder] = await Promise.all([
+        tables.findById(tableId),
+        orderOverride ? Promise.resolve(orderOverride) : orders.findByTable(tableId),
+      ]);
+      if (!mountedRef.current || requestId !== requestIdRef.current) return;
 
-    async function load(): Promise<void> {
-      const foundTable = await tables.findById(tableId);
-      if (cancelled) return;
-      setTable(foundTable);
-      const foundOrder = await orders.findByTable(tableId);
-      if (cancelled) return;
-      setOrder(foundOrder);
-      window.setTimeout(() => window.dispatchEvent(new CustomEvent("kutana.order.updated", {
-        detail: { orderCount: foundOrder?.lineItems.reduce((sum, line) => sum + line.quantity, 0) ?? 0 },
-      })), 0);
-      if (!foundOrder) {
+      if (!foundTable || !foundOrder || foundOrder.status === "paid" || foundOrder.status === "closed_with_pending") {
+        setTable(foundTable);
+        setOrder(null);
         setAccounts([]);
+        setCustomers([]);
         setAccountAllocations([]);
+        setAccountPaidById({});
+        setLoadState("empty");
         return;
       }
+
       const [foundAccounts, foundAllocations, allCustomers] = await Promise.all([
         personalAccounts.listByOrder(foundOrder.id),
         personalAccounts.listAllocationsByOrder(foundOrder.id),
@@ -123,7 +131,11 @@ export function OrderTicketPanelContainer({
           payments.listByTarget({ kind: "personal_account", accountId: account.id }),
         ),
       );
-      if (cancelled) return;
+      if (!mountedRef.current || requestId !== requestIdRef.current) return;
+
+      // Publish the complete visible snapshot in one React update batch.
+      setTable(foundTable);
+      setOrder(foundOrder);
       setAccounts(foundAccounts);
       setCustomers(allCustomers);
       setAccountAllocations(foundAllocations);
@@ -131,27 +143,40 @@ export function OrderTicketPanelContainer({
         account.id,
         paymentsByAccount[index]?.reduce((sum, payment) => sum + payment.amountCents, 0) ?? 0,
       ])));
-
+      setLoadState("ready");
+      window.dispatchEvent(new CustomEvent("kutana.order.updated", {
+        detail: {
+          orderId: foundOrder.id,
+          tableId,
+          orderCount: foundOrder.lineItems.reduce((sum, line) => sum + line.quantity, 0),
+        },
+      }));
+    } catch (error) {
+      if (!mountedRef.current || requestId !== requestIdRef.current) return;
+      console.error("[orders] failed loading selected order", { tableId, error });
+      setLoadState("error");
     }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [tableId, tables, orders, personalAccounts, customersPort, payments]);
+  }, [customersPort, orders, payments, personalAccounts, tableId, tables]);
 
   useEffect(() => {
-    if (!order) return;
+    mountedRef.current = true;
+    void loadOrder();
+    return () => {
+      mountedRef.current = false;
+      requestIdRef.current += 1;
+    };
+  }, [loadOrder]);
+
+  useEffect(() => {
+    onLoadStateChange?.(loadState);
+  }, [loadState, onLoadStateChange]);
+
+  useEffect(() => {
+    if (loadState !== "ready" || !order) return;
     return events.subscribe(order.id, (event) => {
-      const nextOrder = event.payload.status === "paid" || event.payload.status === "closed_with_pending"
-        ? null
-        : event.payload;
-      setOrder(nextOrder);
-      window.dispatchEvent(new CustomEvent("kutana.order.updated", {
-        detail: { orderCount: nextOrder?.lineItems.reduce((sum, line) => sum + line.quantity, 0) ?? 0 },
-      }));
+      void loadOrder(event.payload);
     });
-  }, [order?.id, events]);
+  }, [events, loadOrder, loadState, order?.id]);
 
   async function handleRemoveLine(lineId: string): Promise<void> {
     const current = await orders.findByTable(tableId);
@@ -174,9 +199,6 @@ export function OrderTicketPanelContainer({
             currentTable.version,
           );
         }
-        setOrder(null);
-      } else {
-        setOrder(saved);
       }
       events.publish({
         type: shouldCloseEmptyOrder ? "order.closed" : "order.updated",
@@ -186,16 +208,23 @@ export function OrderTicketPanelContainer({
         at: new Date().toISOString(),
         payload: saved,
       });
+      void loadOrder();
     } catch (error) {
       if (error instanceof ConflictError) {
-        setOrder((error.currentSnapshot as Order | null) ?? null);
+        void loadOrder();
       } else {
         throw error;
       }
     }
   }
 
-  if (!table || !order) return null;
+  if (loadState === "loading") {
+    return <p role="status">Cargando orden…</p>;
+  }
+  if (loadState === "error") {
+    return <p role="alert">No se pudo cargar la orden.</p>;
+  }
+  if (loadState === "empty" || !table || !order) return null;
 
   const accountOwnerLabel = (account: PersonalAccount): string => {
     if (account.owner.kind === "free_name") return account.owner.freeName;

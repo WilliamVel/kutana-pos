@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import type { OrderStatus } from "../../../design-system/molecules/StatusPill.js";
 import { PriceTag } from "../../../design-system/molecules/PriceTag.js";
 import { StatusPill } from "../../../design-system/molecules/StatusPill.js";
+import type { OrdersOverviewLoadState } from "../containers/OrdersOverviewContainer.js";
 import styles from "./OrdersOverview.module.css";
 
 export interface OrdersOverviewRow {
@@ -26,6 +27,7 @@ export interface OrdersOverviewProps {
   readonly onNewOrder?: () => void;
   readonly newOrder?: ReactNode;
   readonly loadError?: string | null;
+  readonly loadState?: OrdersOverviewLoadState;
 }
 
 /**
@@ -42,6 +44,7 @@ export function OrdersOverview({
   onNewOrder,
   newOrder,
   loadError = null,
+  loadState = rows.length === 0 ? "empty" : "success",
 }: OrdersOverviewProps): JSX.Element {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -52,11 +55,26 @@ export function OrdersOverview({
     return matchesQuery && matchesFilter;
   }), [filter, query, rows]);
 
-  if (rows.length === 0) {
+  if (loadState === "initial-loading") {
+    return (
+      <section className={styles.loadingState} aria-label="Órdenes activas" role="status">
+        <p>Cargando órdenes…</p>
+      </section>
+    );
+  }
+
+  if (loadState === "error" && rows.length === 0) {
+    return (
+      <section className={styles.loadingState} aria-label="Órdenes activas" role="alert">
+        <p className={styles.error}>Error cargando órdenes: {loadError ?? "No se pudieron cargar las órdenes."}</p>
+      </section>
+    );
+  }
+
+  if (rows.length === 0 && loadState === "empty") {
     return (
       <div>
         <p className={styles.empty}>No hay órdenes abiertas.</p>
-        {loadError ? <p className={styles.error}>Error cargando órdenes: {loadError}</p> : null}
       </div>
     );
   }
@@ -77,6 +95,8 @@ export function OrdersOverview({
         <h2>Órdenes activas</h2>
         <button type="button" className={styles.allButton} onClick={() => setSheetOpen(true)}>Ver todas ({rows.length}) <span aria-hidden="true">›</span></button>
       </header>
+      {loadState === "refreshing" ? <p className={styles.refreshing} role="status">Actualizando órdenes…</p> : null}
+      {loadState === "error" && loadError ? <p className={styles.error} role="alert">No se pudo actualizar la lista: {loadError}</p> : null}
       <div className={styles.carousel}>
         {newOrder ? <div className={styles.newOrderSlot}>{newOrder}</div> : null}
         <div className={styles.list} aria-label="Mesas activas">

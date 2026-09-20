@@ -1,12 +1,175 @@
 .screen {
   display: grid;
-  grid-template-columns: minmax(20rem, 0.8fr) minmax(0, 1fr);
-  gap: var(--space-4);
-  align-items: stretch;
+  min-width: 0;
 }
-
-@media (max-width: 920px) {
-  .screen {
-    grid-template-columns: 1fr;
+.detailBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(29, 49, 36, 0.28);
+}
+.detail {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 28rem);
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+.detailHeader {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 72px;
+  padding: 24px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.detailHeader h2 {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.detailMain {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  gap: 24px;
+  padding: 24px;
+  overflow-y: auto;
+}
+.identity h3 {
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-size: clamp(1.75rem, 5vw, 2rem);
+  line-height: 1.1;
+}
+.balanceCard {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-lg);
+  background: var(--surface-active);
+}
+.balanceCard span,
+.contactSection h3,
+.notesSection h3 {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.balanceCard strong {
+  color: var(--accent-strong);
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.contactSection,
+.notesSection {
+  display: grid;
+  gap: 16px;
+}
+.contactSection h3,
+.notesSection h3 {
+  margin: 0;
+}
+.contactItem {
+  display: grid;
+  gap: 4px;
+}
+.contactItem > span {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+.contactItem a,
+.contactItem strong {
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.contactItem a {
+  text-decoration: underline;
+  text-decoration-color: var(--border-active);
+  text-underline-offset: 3px;
+}
+.notesSection p {
+  margin: 0;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.muted {
+  color: var(--text-secondary) !important;
+}
+.detailFooter {
+  flex: 0 0 auto;
+  padding: 16px 24px 24px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-raised);
+}
+.close {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 1.75rem;
+  cursor: pointer;
+}
+.primaryAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  align-self: auto;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-strong);
+  color: var(--surface-raised);
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.primaryAction:focus-visible,
+.close:focus-visible,
+.contactItem a:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+@media (max-width: 48rem) {
+  .detail {
+    width: 100%;
+  }
+  .detailHeader,
+  .detailFooter {
+    padding-inline: 20px;
+  }
+  .detailMain {
+    gap: 20px;
+    padding: 20px;
   }
 }
