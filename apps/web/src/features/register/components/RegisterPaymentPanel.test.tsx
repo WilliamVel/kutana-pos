@@ -122,6 +122,14 @@ describe("RegisterPaymentPanel", () => {
     expect(onAmountToPayChange).toHaveBeenCalledWith(1000);
   });
 
+  it("shows product count, keeps checkout lines read-only, and blocks unresolved products", () => {
+    renderPanel({ productsError: "No se pudieron resolver los productos." });
+    expect(screen.getByText(/2 unidades · 1 producto/)).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("No se pudieron resolver los productos.");
+    expect(screen.queryByRole("button", { name: /Eliminar/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cobrar ·/ })).toBeDisabled();
+  });
+
   it("shows the remaining balance so partial payments toward one ticket are visible", () => {
     renderPanel({ remainingBalanceCents: 500 });
     expect(screen.getByText("$5.00")).toBeInTheDocument();

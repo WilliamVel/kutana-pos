@@ -18,6 +18,7 @@ export interface LineItemRowProps {
   readonly statusLabel?: LinePaymentStatus;
   readonly paidCents?: number;
   readonly onRemove?: () => void;
+  readonly readOnly?: boolean;
   readonly layout?: LineItemRowLayout;
 }
 
@@ -70,9 +71,9 @@ function ProductDetails({
   </>;
 }
 
-function Action({ name, pourSizeMl, onRemove }: Pick<LineItemRowProps, "name" | "pourSizeMl" | "onRemove">): JSX.Element {
+function Action({ name, pourSizeMl, onRemove, readOnly = false }: Pick<LineItemRowProps, "name" | "pourSizeMl" | "onRemove" | "readOnly">): JSX.Element {
   return <span className={styles.actionCell}>
-    {onRemove ? (
+    {readOnly ? null : onRemove ? (
       <button
         type="button"
         className={styles.remove}
@@ -98,6 +99,7 @@ export function LineItemRow({
   paidCents = 0,
   settlementTotalCents = totalCents,
   onRemove,
+  readOnly = false,
   layout = "mobile",
 }: LineItemRowProps): JSX.Element {
   if (layout === "table") {
@@ -106,15 +108,15 @@ export function LineItemRow({
       <td className={styles.productCell}><div className={styles.productDetails}><ProductDetails name={name} quantity={quantity} pourSizeMl={pourSizeMl} isAdjustment={isAdjustment} statusLabel={statusLabel} paidCents={paidCents} settlementTotalCents={settlementTotalCents} /></div></td>
       <td className={styles.priceCell}><PriceTag cents={unitPriceCents} /> c/u</td>
       <td className={styles.totalCell}><PriceTag cents={unitPriceCents * quantity} /></td>
-      <td className={styles.actionTableCell}><Action name={name} pourSizeMl={pourSizeMl} onRemove={onRemove} /></td>
+      <td className={styles.actionTableCell}><Action name={name} pourSizeMl={pourSizeMl} onRemove={onRemove} readOnly={readOnly} /></td>
     </tr>;
   }
 
-  return <div className={styles.mobileRow} data-status={statusLabel ?? "normal"} tabIndex={0}>
+  return <div className={`${styles.mobileRow} ${readOnly ? styles.readOnlyRow : ""}`} data-status={statusLabel ?? "normal"} tabIndex={readOnly ? undefined : 0}>
     <span className={styles.quantityCell}><span className={styles.quantity}>{quantity}×</span></span>
     <div className={styles.mobileProduct}><ProductDetails name={name} quantity={quantity} pourSizeMl={pourSizeMl} isAdjustment={isAdjustment} statusLabel={statusLabel} paidCents={paidCents} settlementTotalCents={settlementTotalCents} /></div>
     <span className={styles.mobilePrice}><PriceTag cents={unitPriceCents} /> c/u</span>
     <span className={styles.mobileTotal}><PriceTag cents={unitPriceCents * quantity} /></span>
-    <Action name={name} pourSizeMl={pourSizeMl} onRemove={onRemove} />
+    <Action name={name} pourSizeMl={pourSizeMl} onRemove={onRemove} readOnly={readOnly} />
   </div>;
 }

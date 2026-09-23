@@ -193,6 +193,7 @@ export function RegisterPaymentContainer({
   const [amountToPayCents, setAmountToPayCents] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const processingGuard = useRef(false);
   const availableMethods = methodRegistry.filter(isPaymentMethodDisplayable);
 
@@ -206,13 +207,20 @@ export function RegisterPaymentContainer({
     let cancelled = false;
 
     async function load(): Promise<void> {
-      const table = await tables.findById(tableId);
-      if (!table?.currentOrderId) return;
+      try {
+        const table = await tables.findById(tableId);
+      if (!table?.currentOrderId) {
+        if (!cancelled) {
+          setLoadState("error");
+          setErrorMessage("No hay una orden activa para cobrar.");
+        }
+        return;
+      }
       setTableLabel(table.label);
-      const foundOrder = await orders.findByTable(tableId);
-      if (cancelled || !foundOrder) return;
-      setOrder(foundOrder);
-      setCustomers(await customersPort.listAll());
+        const foundOrder = await orders.findByTable(tableId);
+        if (cancelled || !foundOrder) return;
+        setOrder(foundOrder);
+        setCustomers(await customersPort.listAll());
 
       if (personalAccountId) {
         const [account, orderAccountAllocations, accountPayments] = await Promise.all([
@@ -225,6 +233,7 @@ export function RegisterPaymentContainer({
         setAccountAllocations(orderAccountAllocations);
         setPayments(accountPayments);
         setTicket(null);
+        setLoadState("ready");
         return;
       }
 
@@ -251,9 +260,16 @@ export function RegisterPaymentContainer({
       setAllocations(orderAllocations);
       setOrderAccounts(foundAccounts);
       setOrderAccountAllocations(foundAccountAllocations);
+      setLoadState("ready");
 
       const ticketPayments = await paymentsPort.listByTicket(activeTicket.id);
       if (!cancelled) setPayments(ticketPayments);
+    } catch (error) {
+      if (!cancelled) {
+        setLoadState("error");
+        setErrorMessage(error instanceof Error ? error.message : "No se pudo cargar la orden.");
+      }
+    }
     }
 
     void load();
@@ -272,6 +288,8 @@ export function RegisterPaymentContainer({
     tickets,
   ]);
 
+  if (loadState === "loading" && !order) return <p role="status">Cargando orden…</p>;
+  if (loadState === "error" && !order) return <p role="alert">{errorMessage ?? "No se pudo cargar la orden."}</p>;
   if (!order || (!ticket && !personalAccount)) return null;
 
   const activeAccountAllocations = personalAccount
@@ -308,6 +326,12 @@ export function RegisterPaymentContainer({
   }));
 
   const lines = personalAccount ? accountLines : ticketLines;
+  const productsError = loadState === "error"
+    ? errorMessage ?? "No se pudieron recuperar los productos de la orden."
+    : order.lineItems.length > 0 && lines.length === 0
+      ? "No se pudieron resolver los productos de esta orden. Regresa al pedido e inténtalo nuevamente."
+      : null;
+  const productsReady = loadState === "ready" && lines.length > 0 && productsError === null;
   const subtotalCents = lines.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0);
   const taxCents = Math.max(
     0,
@@ -343,6 +367,7 @@ export function RegisterPaymentContainer({
   }
 
   const canConfirm =
+    productsReady &&
     effectiveAmountToPayCents > 0 &&
     effectiveAmountToPayCents <= remainingBalanceCents &&
     selectedMethod !== undefined &&
@@ -489,10 +514,13 @@ export function RegisterPaymentContainer({
       orderStatus={remainingBalanceCents < totalCents ? "Pago parcial" : "Pendiente"}
       onBack={onBack}
       lines={lines}
+      isLoadingProducts={loadState === "loading"}
+      productsError={productsError}
       subtotalCents={subtotalCents}
       taxCents={taxCents}
       totalCents={totalCents}
       remainingBalanceCents={remainingBalanceCents}
+      paidCents={alreadyPaidCents}
       amountToPayCents={effectiveAmountToPayCents}
       onAmountToPayChange={setAmountToPayCents}
       methods={availableMethods.map((method) => ({

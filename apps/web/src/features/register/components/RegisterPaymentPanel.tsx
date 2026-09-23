@@ -29,10 +29,13 @@ export interface RegisterPaymentPanelProps {
   readonly orderStatus?: string;
   readonly onBack?: () => void;
   readonly lines: readonly RegisterPaymentPanelLine[];
+  readonly isLoadingProducts?: boolean;
+  readonly productsError?: string | null;
   readonly subtotalCents: number;
   readonly taxCents: number;
   readonly totalCents: number;
   readonly remainingBalanceCents: number;
+  readonly paidCents?: number;
   readonly amountToPayCents: number;
   readonly onAmountToPayChange: (cents: number) => void;
   readonly methods: readonly RegisterPaymentMethodOption[];
@@ -82,10 +85,13 @@ export function RegisterPaymentPanel({
   orderStatus = "Pendiente",
   onBack,
   lines,
+  isLoadingProducts = false,
+  productsError = null,
   subtotalCents,
   taxCents,
   totalCents,
   remainingBalanceCents,
+  paidCents = 0,
   amountToPayCents,
   onAmountToPayChange,
   methods,
@@ -100,6 +106,9 @@ export function RegisterPaymentPanel({
   errorMessage = null,
 }: RegisterPaymentPanelProps): JSX.Element {
   const selectedMethod = methods.find((method) => method.code === selectedMethodCode);
+  const unitsCount = lines.reduce((count, line) => count + line.quantity, 0);
+  const productCount = lines.length;
+  const productsReady = !isLoadingProducts && !productsError;
   const showTenderedInput = selectedMethod?.requiresTendered ?? false;
   const requiresManualConfirmation = Boolean(
     selectedMethod && !selectedMethod.requiresTendered && /transfer|qr/i.test(selectedMethod.label),
@@ -118,6 +127,7 @@ export function RegisterPaymentPanel({
       ? `Faltan $${((amountToPayCents - tenderedCents) / 100).toFixed(2)}`
       : null;
   const blockingMessage =
+    productsError ??
     amountError ??
     tenderedError ??
     (!selectedMethod
@@ -153,15 +163,14 @@ export function RegisterPaymentPanel({
           <div className={styles.paneHeader}>
             <h3>Productos incluidos</h3>
             <span data-numeric="true">
-              {lines.reduce((count, line) => count + line.quantity, 0)}{" "}
-              {lines.reduce((count, line) => count + line.quantity, 0) === 1
-                ? "unidad"
-                : "unidades"}
+              {unitsCount} {unitsCount === 1 ? "unidad" : "unidades"} · {productCount} {productCount === 1 ? "producto" : "productos"}
             </span>
           </div>
           <div className={styles.lines}>
-            {lines.length === 0 ? (
-              <p className={styles.emptyLines}>No hay productos asignados a este pago.</p>
+            {isLoadingProducts ? <p className={styles.emptyLines} role="status">Cargando productos…</p> : null}
+            {productsError ? <p className={styles.error} role="alert">{productsError}</p> : null}
+            {!isLoadingProducts && !productsError && lines.length === 0 ? (
+              <p className={styles.emptyLines}>La orden no contiene productos.</p>
             ) : null}
             {lines.map((line) => (
               <LineItemRow
@@ -172,6 +181,8 @@ export function RegisterPaymentPanel({
                 totalCents={line.totalCents}
                 pourSizeMl={line.pourSizeMl}
                 isAdjustment={line.isAdjustment}
+                readOnly
+                layout="mobile"
               />
             ))}
           </div>
@@ -197,6 +208,12 @@ export function RegisterPaymentPanel({
               <span>Total de la orden</span>
               <PriceTag cents={totalCents} />
             </div>
+            {paidCents > 0 ? (
+              <div className={styles.totalRow}>
+                <span>Pagado anteriormente</span>
+                <PriceTag cents={paidCents} />
+              </div>
+            ) : null}
           </div>
 
           <div className={styles.amountBlock}>
@@ -299,7 +316,7 @@ export function RegisterPaymentPanel({
                       : "Cambio"}
                 </span>
                 <strong data-numeric="true">
-                  {changeDueCents === null ? "—" : `$${(changeDueCents / 100).toFixed(2)}`}
+                  {changeDueCents === null ? "Ingresa el efectivo recibido" : changeDueCents === 0 ? "Pago exacto" : `$${(changeDueCents / 100).toFixed(2)}`}
                 </strong>
               </div>
             </div>
@@ -318,7 +335,7 @@ export function RegisterPaymentPanel({
           <Button
             onClick={onConfirmPayment}
             disabled={
-              !canConfirm || (requiresManualConfirmation && !manualConfirmation) || isProcessing
+              !productsReady || !canConfirm || (requiresManualConfirmation && !manualConfirmation) || isProcessing
             }
           >
             {isProcessing
