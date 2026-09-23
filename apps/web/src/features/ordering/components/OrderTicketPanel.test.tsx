@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { OrderTicketPanel, type OrderTicketPanelLine } from "./OrderTicketPanel.js";
 
@@ -65,6 +65,46 @@ describe("OrderTicketPanel", () => {
     expect(screen.getByText("$10.00")).toBeInTheDocument();
     expect(screen.getByText("Saldo pendiente")).toBeInTheDocument();
     expect(screen.getByText("$5.12")).toBeInTheDocument();
+  });
+
+  it("groups mixed payment states, exposes amounts, filters, and closes with Escape", () => {
+    render(
+      <OrderTicketPanel
+        tableLabel="Mesa 1"
+        status="active"
+        lines={LINES}
+        subtotalCents={1350}
+        taxCents={162}
+        totalCents={512}
+        paidCents={1000}
+        paidLineCount={1}
+        pendingLineCount={1}
+        paymentDetails={[{
+          id: "line-1",
+          name: "KUTANA Pilsener 500ml",
+          quantity: 2,
+          unitPriceCents: 350,
+          totalCents: 784,
+          paidCents: 392,
+          pourSizeMl: 500,
+          payerLabels: ["Ana"],
+          paidQuantity: 1,
+          pendingQuantity: 1,
+          status: "partial",
+          members: [{ id: "unit-1", payerLabels: ["Ana"], paidCents: 392, status: "paid" }],
+        }]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver detalle de pagos" }));
+    expect(screen.getByRole("dialog", { name: "Mesa 1" })).toBeInTheDocument();
+    expect(screen.getByText("KUTANA Pilsener · 500 ml × 2")).toBeInTheDocument();
+    expect(screen.getByText("$7.84")).toBeInTheDocument();
+    expect(screen.getByText("$3.92 pagado · $3.92 pendiente")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Pendientes" }));
+    expect(screen.getByText("KUTANA Pilsener · 500 ml × 2")).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("shows an empty state when the order has no line items yet", () => {

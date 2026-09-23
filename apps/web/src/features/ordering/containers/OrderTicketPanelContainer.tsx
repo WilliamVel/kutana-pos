@@ -26,6 +26,7 @@ import {
 import {
   OrderTicketPanel,
   type OrderPaymentDetailLine,
+  type OrderPaymentDetailMember,
   type OrderTicketPanelLine,
 } from "../components/OrderTicketPanel.js";
 import type { OrderStatus } from "../../../design-system/molecules/StatusPill.js";
@@ -267,24 +268,51 @@ export function OrderTicketPanelContainer({
     });
   }
   const lines = aggregateLines(order.lineItems, paidCentsByLineId);
-  const paymentDetails: OrderPaymentDetailLine[] = order.lineItems.map((line) => {
-    const lineAllocations = accountAllocations.filter(
-      (allocation) => allocation.lineItemId === line.id,
-    );
-    const payerIds = [...new Set(lineAllocations.map((allocation) => allocation.accountId))];
-    const payerLabels = payerIds.map((accountId) => {
-      const account = accounts.find((candidate) => candidate.id === accountId);
-      return account ? accountOwnerLabel(account) : accountId;
-    });
+  const paymentDetailsByKey = new Map<string, OrderPaymentDetailLine>();
+  order.lineItems.forEach((line) => {
+    const lineAllocations = accountAllocations.filter((allocation) => allocation.lineItemId === line.id);
+    const payerLabels = [...new Set(lineAllocations.map((allocation) => {
+      const account = accounts.find((candidate) => candidate.id === allocation.accountId);
+      return account ? accountOwnerLabel(account) : "Asignación no disponible";
+    }))];
     const paidCents = paidCentsByLineId.get(line.id) ?? 0;
-    return {
-      id: line.id,
-      name: line.nameSnapshot,
-      quantity: line.quantity,
-      payerLabels,
-      status: paidCents >= line.totalCents && line.totalCents > 0 ? "paid" : paidCents > 0 ? "partial" : "pending",
-    };
+    const status = paidCents >= line.totalCents && line.totalCents > 0 ? "paid" : paidCents > 0 ? "partial" : "pending" as const;
+    const unitCents = line.quantity > 0 ? Math.round(line.totalCents / line.quantity) : 0;
+    const key = orderLineGroupingKey({ ...line, name: line.nameSnapshot });
+    const member: OrderPaymentDetailMember = { id: line.id, payerLabels, paidCents, status };
+    const existing = paymentDetailsByKey.get(key);
+    if (existing) {
+      const paidQuantity = existing.paidQuantity + Math.min(line.quantity, unitCents > 0 ? Math.floor(paidCents / unitCents) : 0);
+      paymentDetailsByKey.set(key, {
+        ...existing,
+        quantity: existing.quantity + line.quantity,
+        totalCents: existing.totalCents + line.totalCents,
+        paidCents: existing.paidCents + paidCents,
+        paidQuantity,
+        pendingQuantity: existing.pendingQuantity + line.quantity - Math.min(line.quantity, unitCents > 0 ? Math.floor(paidCents / unitCents) : 0),
+        payerLabels: [...new Set([...existing.payerLabels, ...payerLabels])],
+        status: existing.paidCents + paidCents >= existing.totalCents + line.totalCents && existing.totalCents + line.totalCents > 0 ? "paid" : existing.paidCents + paidCents > 0 ? "partial" : "pending",
+        members: [...(existing.members ?? []), member],
+      });
+    } else {
+      const paidQuantity = Math.min(line.quantity, unitCents > 0 ? Math.floor(paidCents / unitCents) : 0);
+      paymentDetailsByKey.set(key, {
+        id: line.id,
+        name: line.nameSnapshot,
+        quantity: line.quantity,
+        unitPriceCents: line.unitPriceCents,
+        totalCents: line.totalCents,
+        paidCents,
+        pourSizeMl: line.pourSizeMl as OrderPaymentDetailLine["pourSizeMl"],
+        payerLabels,
+        paidQuantity,
+        pendingQuantity: line.quantity - paidQuantity,
+        status,
+        members: [member],
+      });
+    }
   });
+  const paymentDetails = [...paymentDetailsByKey.values()];
   const subtotalCents = order.lineItems.reduce(
     (sum, line) => sum + line.unitPriceCents * line.quantity,
     0,
@@ -307,12 +335,8 @@ export function OrderTicketPanelContainer({
       taxCents={taxCents}
       totalCents={totalCents}
       paidCents={accountPaidCents}
-      paidLineCount={paymentDetails
-        .filter((line) => line.status === "paid")
-        .reduce((sum, line) => sum + line.quantity, 0)}
-      pendingLineCount={paymentDetails
-        .filter((line) => line.status !== "paid")
-        .reduce((sum, line) => sum + line.quantity, 0)}
+      paidLineCount={paymentDetails.reduce((sum, line) => sum + line.paidQuantity, 0)}
+      pendingLineCount={paymentDetails.reduce((sum, line) => sum + line.pendingQuantity, 0)}
       paymentDetails={paymentDetails}
       onRemoveLine={
         order.status === "paid" || order.status === "closed_with_pending"
