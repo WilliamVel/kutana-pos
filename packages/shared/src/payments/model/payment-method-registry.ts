@@ -22,6 +22,12 @@ export interface PaymentMethodRegistryEntry {
 
 export type PaymentMethodRegistry = readonly PaymentMethodRegistryEntry[];
 
+/** Methods marked inactive, test, fixture or sandbox are never offered to a cashier. */
+export function isPaymentMethodDisplayable(entry: PaymentMethodRegistryEntry): boolean {
+  const marker = `${entry.code} ${entry.label}`.toLocaleLowerCase();
+  return entry.active && !/(test|fixture|sandbox|disabled|prueba)/i.test(marker);
+}
+
 export function createPaymentMethodRegistry(
   entries: readonly PaymentMethodRegistryEntry[],
 ): PaymentMethodRegistry {

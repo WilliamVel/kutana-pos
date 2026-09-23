@@ -103,13 +103,13 @@ describe("RegisterPaymentPanel", () => {
 
   it("disables the confirm-payment button until canConfirm is true", () => {
     renderPanel({ canConfirm: false });
-    expect(screen.getByRole("button", { name: "Confirmar pago" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Cobrar ·/ })).toBeDisabled();
   });
 
   it("calls onConfirmPayment when confirm is pressed and enabled", () => {
     const onConfirmPayment = vi.fn();
     renderPanel({ canConfirm: true, onConfirmPayment });
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar pago" }));
+    fireEvent.click(screen.getByRole("button", { name: /Cobrar ·/ }));
     expect(onConfirmPayment).toHaveBeenCalledOnce();
   });
 
@@ -117,7 +117,7 @@ describe("RegisterPaymentPanel", () => {
     const onAmountToPayChange = vi.fn();
     renderPanel({ remainingBalanceCents: 1500, amountToPayCents: 1500, onAmountToPayChange });
 
-    fireEvent.change(screen.getByLabelText("Monto a pagar ahora"), { target: { value: "10.00" } });
+    fireEvent.change(screen.getByLabelText("Monto a cobrar"), { target: { value: "10.00" } });
 
     expect(onAmountToPayChange).toHaveBeenCalledWith(1000);
   });

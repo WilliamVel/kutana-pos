@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { OrderStatus } from "../../../design-system/molecules/StatusPill.js";
 import { PriceTag } from "../../../design-system/molecules/PriceTag.js";
 import { StatusPill } from "../../../design-system/molecules/StatusPill.js";
@@ -101,14 +101,13 @@ export function OrdersOverview({
         {newOrder ? <div className={styles.newOrderSlot}>{newOrder}</div> : null}
         <div className={styles.list} aria-label="Mesas activas">
         {rows.map((row) => (
-          <div key={row.tableId} className={styles.row} data-table-id={row.tableId} data-selected={row.tableId === selectedTableId}>
-            <button type="button" className={styles.rowMain} aria-pressed={row.tableId === selectedTableId} onClick={() => onSelectTable(row.tableId)}>
-              <span className={styles.identity}><strong>{row.tableLabel}</strong><span className={styles.meta}>{row.itemCount} productos</span></span>
-              {row.tableId === selectedTableId ? <StatusPill status={row.status} /> : null}
-              <span className={styles.balance}><small>Pendiente</small><PriceTag cents={row.totalCents} /></span>
-            </button>
-            {row.itemCount === 0 ? <button type="button" className={styles.removeButton} aria-label={`Eliminar orden vacía de ${row.tableLabel}`} onClick={() => onRemoveEmptyOrder(row.tableId)}>×</button> : null}
-          </div>
+          <OrderCard
+            key={row.tableId}
+            row={row}
+            selected={row.tableId === selectedTableId}
+            onSelectTable={onSelectTable}
+            onRemoveEmptyOrder={onRemoveEmptyOrder}
+          />
         ))}
         </div>
       </div>
@@ -130,5 +129,74 @@ export function OrdersOverview({
         </div>
       ) : null}
     </section>
+  );
+}
+
+interface OrderCardProps {
+  readonly row: OrdersOverviewRow;
+  readonly selected: boolean;
+  readonly onSelectTable: (tableId: string) => void;
+  readonly onRemoveEmptyOrder: (tableId: string) => void;
+}
+
+function OrderCard({ row, selected, onSelectTable, onRemoveEmptyOrder }: OrderCardProps): JSX.Element {
+  const titleRef = useRef<HTMLElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const tooltipId = `order-title-tooltip-${row.tableId}`;
+  const isContinuousLabel = !/\s/.test(row.tableLabel) && row.tableLabel.length > 32;
+
+  useLayoutEffect(() => {
+    const title = titleRef.current;
+    if (!title) return undefined;
+
+    const updateTruncation = (): void => {
+      setIsTruncated(title.scrollHeight > title.clientHeight + 1 || title.scrollWidth > title.clientWidth + 1);
+    };
+
+    updateTruncation();
+    window.addEventListener("resize", updateTruncation);
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateTruncation);
+    observer?.observe(title);
+
+    return () => {
+      window.removeEventListener("resize", updateTruncation);
+      observer?.disconnect();
+    };
+  }, [row.tableLabel]);
+
+  const showTooltip = (): void => {
+    if (isTruncated) setTooltipOpen(true);
+  };
+
+  return (
+    <div className={styles.row} data-table-id={row.tableId} data-selected={selected}>
+      <button
+        type="button"
+        className={styles.rowMain}
+        aria-describedby={tooltipOpen && isTruncated ? tooltipId : undefined}
+        aria-pressed={selected}
+        onClick={() => onSelectTable(row.tableId)}
+        onFocus={showTooltip}
+        onBlur={() => setTooltipOpen(false)}
+      >
+        <span
+          className={styles.identity}
+          onMouseEnter={showTooltip}
+          onMouseLeave={() => setTooltipOpen(false)}
+        >
+          <strong data-order-title ref={titleRef} className={isContinuousLabel ? styles.continuousLabel : undefined} aria-label={row.tableLabel}>
+            {row.tableLabel}
+          </strong>
+        </span>
+        <span className={styles.badges} aria-label="Estados de la orden">
+          {selected ? <StatusPill status={row.status} /> : null}
+        </span>
+        <span className={styles.meta}>{row.itemCount} productos</span>
+        <span className={styles.balance}><small>Pendiente</small><PriceTag cents={row.totalCents} /></span>
+        {tooltipOpen && isTruncated ? <span id={tooltipId} className={styles.titleTooltip} role="tooltip">{row.tableLabel}</span> : null}
+      </button>
+      {row.itemCount === 0 ? <button type="button" className={styles.removeButton} aria-label={`Eliminar orden vacía de ${row.tableLabel}`} onClick={() => onRemoveEmptyOrder(row.tableId)}>×</button> : null}
+    </div>
   );
 }

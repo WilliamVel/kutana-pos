@@ -1,6 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Pool } from "pg";
-import type { PaymentMethodRegistry, PaymentMethodRegistryEntry } from "@kutana/shared/payments/model/payment-method-registry.js";
+import {
+  isPaymentMethodDisplayable,
+  type PaymentMethodRegistry,
+  type PaymentMethodRegistryEntry,
+} from "@kutana/shared/payments/model/payment-method-registry.js";
 import type { PaymentMethodRepository } from "@kutana/shared/payments/ports/payment-method-repository.js";
 import { PostgresPool } from "../../../infrastructure/postgres/postgres-pool.js";
 
@@ -28,6 +32,6 @@ export class PostgresPaymentMethodRepository implements PaymentMethodRepository 
     const result = await this.pool.query<PaymentMethodRow>(
       "SELECT code, label, requires_tendered, active, sort_order FROM payment_methods ORDER BY sort_order, code",
     );
-    return result.rows.map(mapPaymentMethod);
+    return result.rows.map(mapPaymentMethod).filter(isPaymentMethodDisplayable);
   }
 }

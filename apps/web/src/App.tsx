@@ -104,15 +104,13 @@ export function App(): JSX.Element {
             tableId={selectedTableId}
             ticketId={selectedTicketId ?? undefined}
             personalAccountId={selectedAccountId ?? undefined}
+            onBack={resetCenter}
             onPaymentComplete={() => {
               resetCenter();
               setSelectedTableId(null);
               setOrdersReloadKey((key) => key + 1);
             }}
           />
-          <Button variant="secondary" onClick={resetCenter}>
-            Volver al pedido
-          </Button>
         </>
       );
     } else if (centerView === "assignment") {

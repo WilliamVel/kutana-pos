@@ -1,5 +1,8 @@
 .workspace {
   display: grid;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   grid-template-columns: minmax(0, 18rem) minmax(0, 1fr) minmax(0, 20rem);
   gap: var(--space-5);
   align-items: start;
@@ -7,6 +10,9 @@
 
 .workspaceFocused {
   display: grid;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
   gap: var(--space-5);
   align-items: start;
@@ -20,15 +26,17 @@
 }
 
 .center {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  width: 100%;
   min-width: 0;
   max-width: 100%;
+  flex-direction: column;
+  gap: var(--space-4);
   height: calc(100vh - 10rem);
   min-height: 0;
   padding: var(--space-5);
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   background-color: var(--surface-raised);
@@ -36,8 +44,15 @@
 }
 
 .centerOverflowVisible {
+  display: flex;
   height: auto;
   overflow: visible;
+}
+
+.center > :global(.row) {
+  position: static;
+  width: 100%;
+  flex: 0 0 auto;
 }
 
 .rail {
@@ -64,6 +79,9 @@
   .workspace,
   .workspaceFocused {
     display: flex;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     flex-direction: column;
     gap: 0.75rem;
   }
@@ -159,6 +177,9 @@
   }
 
   .center {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     height: auto;
     max-height: none;
     overflow: visible;

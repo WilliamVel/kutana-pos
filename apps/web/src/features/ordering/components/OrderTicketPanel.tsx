@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { PourSize } from "@kutana/shared/catalog/model/product.js";
-import { LineItemRow } from "../../../design-system/molecules/LineItemRow.js";
+import { LineItemRow, type LinePaymentStatus } from "../../../design-system/molecules/LineItemRow.js";
 import { PriceTag } from "../../../design-system/molecules/PriceTag.js";
 import { StatusPill, type OrderStatus } from "../../../design-system/molecules/StatusPill.js";
 import styles from "./OrderTicketPanel.module.css";
@@ -19,11 +19,14 @@ export interface OrderTicketPanelLine {
   readonly quantity: number;
   /** Integer cents. */
   readonly unitPriceCents: number;
-  /** Integer cents. */
+  /** Integer cents — visible pre-tax line subtotal. */
   readonly totalCents: number;
+  /** Integer cents — persisted gross amount used only for payment state. */
+  readonly settlementTotalCents?: number;
   readonly pourSizeMl: PourSize | null;
   readonly isAdjustment: boolean;
-  readonly paymentStatus?: "paid" | "partial" | "pending";
+  readonly paymentStatus?: LinePaymentStatus;
+  readonly paidCents?: number;
   readonly payerLabels?: readonly string[];
 }
 
@@ -82,35 +85,76 @@ export function OrderTicketPanel({
       <div className={styles.header}>
         <div>
           <h2>{tableLabel}</h2>
-          <p className={styles.orderMeta}>{lines.reduce((count, line) => count + line.quantity, 0)} productos</p>
+          <p className={styles.orderMeta}>
+            {lines.reduce((count, line) => count + line.quantity, 0)} unidades · {lines.length} ítems
+          </p>
         </div>
         <StatusPill status={status} />
       </div>
       {lines.length === 0 ? (
         <p className={styles.empty}>Todavía no hay productos en esta orden.</p>
       ) : (
-        <div className={styles.lines}>
-          {lines.map((line) => (
-            <LineItemRow
-              key={line.id}
-              name={line.name}
-              quantity={line.quantity}
-              unitPriceCents={line.unitPriceCents}
-              totalCents={line.totalCents}
-              pourSizeMl={line.pourSizeMl}
-              isAdjustment={line.isAdjustment}
-              statusLabel={line.paymentStatus}
-              onRemove={
-                onRemoveLine && !line.isAdjustment
-                  ? () => onRemoveLine(line.id)
-                  : undefined
-              }
-            />
-          ))}
-        </div>
+        <>
+          <div className={styles.desktopLines} data-layout-products>
+            <table className={styles.lineTable}>
+              <colgroup>
+                <col className={styles.quantityColumn} />
+                <col className={styles.productColumn} />
+                <col className={styles.priceColumn} />
+                <col className={styles.totalColumn} />
+                <col className={styles.actionColumn} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col" />
+                  <th scope="col">Producto</th>
+                  <th scope="col" className={styles.priceHeader}>Precio</th>
+                  <th scope="col" className={styles.totalHeader}>Total</th>
+                  <th scope="col" />
+                </tr>
+              </thead>
+              <tbody>
+                {lines.map((line) => (
+                  <LineItemRow
+                    key={line.id}
+                    layout="table"
+                    name={line.name}
+                    quantity={line.quantity}
+                    unitPriceCents={line.unitPriceCents}
+                    totalCents={line.totalCents}
+                    settlementTotalCents={line.settlementTotalCents}
+                    pourSizeMl={line.pourSizeMl}
+                    isAdjustment={line.isAdjustment}
+                    statusLabel={line.paymentStatus}
+                    paidCents={line.paidCents}
+                    onRemove={onRemoveLine && !line.isAdjustment ? () => onRemoveLine(line.id) : undefined}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className={styles.mobileLines}>
+            {lines.map((line) => (
+              <LineItemRow
+                key={line.id}
+                layout="mobile"
+                name={line.name}
+                quantity={line.quantity}
+                unitPriceCents={line.unitPriceCents}
+                totalCents={line.totalCents}
+                settlementTotalCents={line.settlementTotalCents}
+                pourSizeMl={line.pourSizeMl}
+                isAdjustment={line.isAdjustment}
+                statusLabel={line.paymentStatus}
+                paidCents={line.paidCents}
+                onRemove={onRemoveLine && !line.isAdjustment ? () => onRemoveLine(line.id) : undefined}
+              />
+            ))}
+          </div>
+        </>
       )}
 
-      <div className={styles.totals}>
+      <div className={styles.totals} data-layout-summary>
         <div className={styles.totalRow}>
           <span>Subtotal</span>
           <PriceTag cents={subtotalCents} />
@@ -118,6 +162,10 @@ export function OrderTicketPanel({
         <div className={styles.totalRow}>
           <span>Impuestos</span>
           <PriceTag cents={taxCents} />
+        </div>
+        <div className={styles.totalRow}>
+          <span>Total</span>
+          <PriceTag cents={subtotalCents + taxCents} />
         </div>
         {paidCents > 0 ? (
           <div className={styles.totalRow}>
@@ -132,7 +180,7 @@ export function OrderTicketPanel({
         {hasPaymentDetails ? (
           <>
             <p className={styles.paymentSummary}>
-              {paidLineCount} producto(s) pagado(s) · {pendingLineCount} pendiente(s)
+              {paidLineCount} {paidLineCount === 1 ? "unidad pagada" : "unidades pagadas"} · {pendingLineCount} {pendingLineCount === 1 ? "pendiente" : "pendientes"}
             </p>
             <button
               type="button"
@@ -145,7 +193,11 @@ export function OrderTicketPanel({
         ) : null}
       </div>
       {showPaymentDetails ? (
-        <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setShowPaymentDetails(false)}>
+        <div
+          className={styles.modalBackdrop}
+          role="presentation"
+          onMouseDown={() => setShowPaymentDetails(false)}
+        >
           <section
             className={styles.paymentModal}
             role="dialog"
@@ -158,16 +210,33 @@ export function OrderTicketPanel({
                 <p className={styles.paymentEyebrow}>Detalle de pagos</p>
                 <h3 id="order-payment-details-title">{tableLabel}</h3>
               </div>
-              <button type="button" className={styles.closeModalButton} onClick={() => setShowPaymentDetails(false)} aria-label="Cerrar detalle de pagos">×</button>
+              <button
+                type="button"
+                className={styles.closeModalButton}
+                onClick={() => setShowPaymentDetails(false)}
+                aria-label="Cerrar detalle de pagos"
+              >
+                ×
+              </button>
             </div>
             <ul className={styles.paymentList}>
               {paymentDetails.map((line) => (
                 <li key={line.id}>
                   <span>
-                    <strong>{line.name} × {line.quantity}</strong>
-                    <small>{line.payerLabels.length > 0 ? line.payerLabels.join(", ") : "Sin asignar"}</small>
+                    <strong>
+                      {line.name} × {line.quantity}
+                    </strong>
+                    <small>
+                      {line.payerLabels.length > 0 ? line.payerLabels.join(", ") : "Sin asignar"}
+                    </small>
                   </span>
-                  <span>{line.status === "paid" ? "Pagado" : line.status === "partial" ? "Pago parcial" : "Pendiente"}</span>
+                  <span>
+                    {line.status === "paid"
+                      ? "Pagado"
+                      : line.status === "partial"
+                        ? "Pago parcial"
+                        : "Pendiente"}
+                  </span>
                 </li>
               ))}
             </ul>

@@ -66,6 +66,20 @@ describe("OrdersOverview", () => {
     );
   });
 
+  it("preserves long labels for assistive technology and the hover tooltip", () => {
+    const longLabel = "cliente@dominio-muy-largo.example/" + "x".repeat(60);
+    render(
+      <OrdersOverview
+        rows={[{ ...ROWS[0]!, tableId: "long-label", tableLabel: longLabel }]}
+        selectedTableId="long-label"
+        onSelectTable={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: new RegExp(longLabel) })).not.toHaveAttribute("title");
+    expect(screen.getByText(longLabel)).toHaveAttribute("aria-label", longLabel);
+  });
+
   it("shows an empty state when there are no open orders", () => {
     render(<OrdersOverview rows={[]} selectedTableId={null} onSelectTable={vi.fn()} />);
     expect(screen.getByText("No hay órdenes abiertas.")).toBeInTheDocument();

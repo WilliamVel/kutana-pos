@@ -2,6 +2,7 @@ export type IconName =
   | "beer"
   | "warning"
   | "check"
+  | "progress"
   | "close"
   | "trash"
   | "receipt"
@@ -15,6 +16,8 @@ export type IconName =
   | "folder"
   | "split"
   | "cash"
+  | "bank"
+  | "qr"
   | "edit"
   | "menu"
   | "chevron-down"
@@ -62,6 +65,8 @@ function IconGlyph({ name }: { name: IconName }): JSX.Element {
       return <path d="M12 3 2 21h20L12 3Zm0 6v5m0 3h.01" strokeWidth={2} />;
     case "check":
       return <path d="m4 12 6 6L20 6" strokeWidth={2} />;
+    case "progress":
+      return <path d="M12 3a9 9 0 1 0 9 9" strokeWidth={2.5} strokeLinecap="round" />;
     case "close":
       return <path d="M6 6 18 18M18 6 6 18" strokeWidth={2} />;
     case "trash":
@@ -139,6 +144,24 @@ function IconGlyph({ name }: { name: IconName }): JSX.Element {
       return (
         <path
           d="M3 7h18v10H3V7Zm3 3h.01M18 14h.01M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      );
+    case "bank":
+      return (
+        <path
+          d="M3 10h18M5 10v9m4-9v9m6-9v9m4-9v9M3 21h18L12 3 3 10Z"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      );
+    case "qr":
+      return (
+        <path
+          d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm11 0v3m0 3h2m3 0v-6h-3"
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"

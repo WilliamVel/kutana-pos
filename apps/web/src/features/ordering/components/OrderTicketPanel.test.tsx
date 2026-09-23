@@ -37,11 +37,15 @@ describe("OrderTicketPanel", () => {
     );
 
     expect(screen.getByText("Table 1")).toBeInTheDocument();
-    expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
-    expect(screen.getByText("Loaded Nachos")).toBeInTheDocument();
+    expect(screen.getAllByText("KUTANA Pilsener 500ml").length).toBe(2);
+    expect(screen.getAllByText("Loaded Nachos").length).toBe(2);
+    expect(screen.getAllByText("$7.00").length).toBe(2);
+    expect(screen.getAllByText("$6.50").length).toBeGreaterThanOrEqual(1);
+    expect(LINES.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0)).toBe(1350);
+    expect(screen.queryByText("$7.84")).not.toBeInTheDocument();
     expect(screen.getByText("$13.50")).toBeInTheDocument(); // subtotal
     expect(screen.getByText("$1.62")).toBeInTheDocument(); // tax — persisted at sale time, not recomputed
-    expect(screen.getByText("$15.12")).toBeInTheDocument(); // total
+    expect(screen.getAllByText("$15.12").length).toBe(2); // total and balance
   });
 
   it("shows paid and remaining balances when the order has partial payments", () => {

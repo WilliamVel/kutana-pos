@@ -1,61 +1,120 @@
 import type { PourSize } from "@kutana/shared/catalog/model/product.js";
 import { Icon } from "../atoms/Icon.js";
 import { PriceTag } from "./PriceTag.js";
+import { formatCents } from "./format-cents.js";
 import styles from "./LineItemRow.module.css";
+
+export type LinePaymentStatus = "paid" | "partial" | "pending" | "new" | "sent" | "void";
+export type LineItemRowLayout = "table" | "mobile";
 
 export interface LineItemRowProps {
   readonly name: string;
   readonly quantity: number;
-  /** Integer cents. */
   readonly unitPriceCents: number;
-  /** Integer cents. */
   readonly totalCents: number;
+  readonly settlementTotalCents?: number;
   readonly pourSizeMl?: PourSize | null;
   readonly isAdjustment?: boolean;
-  readonly statusLabel?: string;
-  /** When provided, renders a compact "remove this line" control. */
+  readonly statusLabel?: LinePaymentStatus;
+  readonly paidCents?: number;
   readonly onRemove?: () => void;
+  readonly layout?: LineItemRowLayout;
 }
 
-/**
- * Purely presentational molecule: props in, markup out, no port access.
- * Renders one Order line item — the row primitive used by order, account, and
- * payment panels.
- */
+function displayName(name: string, pourSizeMl?: PourSize | null): string {
+  if (!pourSizeMl) return name;
+  return name.replace(new RegExp(`\\s*${pourSizeMl}\\s*ml\\b`, "i"), "").trim();
+}
+
+const statusCopy: Record<LinePaymentStatus, { label: string; icon: "check" | "progress" | "warning" }> = {
+  paid: { label: "Pagado", icon: "check" },
+  partial: { label: "Parcial", icon: "progress" },
+  pending: { label: "Pendiente", icon: "warning" },
+  new: { label: "Nuevo", icon: "warning" },
+  sent: { label: "Enviado", icon: "check" },
+  void: { label: "Anulado", icon: "warning" },
+};
+
+function Status({ statusLabel, paidCents = 0, settlementTotalCents = 0 }: { readonly statusLabel?: LinePaymentStatus; readonly paidCents?: number; readonly settlementTotalCents?: number }): JSX.Element | null {
+  const status = statusLabel ? statusCopy[statusLabel] : null;
+  if (!status) return null;
+  const detail = statusLabel === "partial" && paidCents > 0
+    ? ` · ${formatCents(paidCents)} de ${formatCents(settlementTotalCents)}`
+    : "";
+  return <><Icon name={status.icon} size={14} />{status.label}{detail}</>;
+}
+
+function ProductDetails({
+  name,
+  pourSizeMl,
+  isAdjustment,
+  statusLabel,
+  quantity,
+  paidCents,
+  settlementTotalCents,
+}: Pick<LineItemRowProps, "name" | "pourSizeMl" | "isAdjustment" | "statusLabel" | "quantity" | "paidCents" | "settlementTotalCents">): JSX.Element {
+  const variant = pourSizeMl ? `${pourSizeMl} ml` : isAdjustment ? "Ajuste" : "";
+  return <>
+    <span className={styles.name}>
+      {displayName(name, pourSizeMl)}
+      {displayName(name, pourSizeMl) !== name ? <span className={styles.srOnly}>{name}</span> : null}
+      <span className={styles.srOnly}>x{quantity}</span>
+    </span>
+    {variant || statusLabel ? (
+      <span className={styles.variant}>
+        {variant}
+        {variant && statusLabel ? " · " : ""}
+        {statusLabel ? <span className={styles.paymentStatus}><Status statusLabel={statusLabel} paidCents={paidCents} settlementTotalCents={settlementTotalCents} /></span> : null}
+      </span>
+    ) : null}
+  </>;
+}
+
+function Action({ name, pourSizeMl, onRemove }: Pick<LineItemRowProps, "name" | "pourSizeMl" | "onRemove">): JSX.Element {
+  return <span className={styles.actionCell}>
+    {onRemove ? (
+      <button
+        type="button"
+        className={styles.remove}
+        aria-label={`Eliminar ${displayName(name, pourSizeMl)}`}
+        title={`Eliminar ${displayName(name, pourSizeMl)}`}
+        onClick={(event) => { event.stopPropagation(); onRemove(); }}
+      >
+        <Icon name="trash" size={18} />
+      </button>
+    ) : <span className={styles.actionPlaceholder} aria-hidden="true" />}
+  </span>;
+}
+
+/** Shared data/handlers rendered by the desktop table and mobile list layouts. */
 export function LineItemRow({
   name,
   quantity,
+  unitPriceCents,
   totalCents,
   pourSizeMl,
   isAdjustment = false,
   statusLabel,
+  paidCents = 0,
+  settlementTotalCents = totalCents,
   onRemove,
+  layout = "mobile",
 }: LineItemRowProps): JSX.Element {
-  return (
-    <div className={styles.row}>
-      <div className={styles.details}>
-        <span className={styles.name}>{name}</span>
-        <span className={styles.quantity}>x{quantity}</span>
-        {pourSizeMl ? <span className={styles.pourSize}>{pourSizeMl}ml</span> : null}
-        {isAdjustment ? <span className={styles.adjustmentLabel}>Adjustment</span> : null}
-        {statusLabel ? <span className={styles.statusLabel}>{statusLabel}</span> : null}
-      </div>
-      <div className={styles.trailing}>
-        <PriceTag cents={totalCents} />
-        {onRemove ? (
-          <button
-            type="button"
-            className={styles.remove}
-            aria-label={`Quitar producto ${name}`}
-            title="Quitar producto"
-            onClick={() => {
-              onRemove();
-            }}
-          >
-            <Icon name="trash" size={14} />
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
+  if (layout === "table") {
+    return <tr className={styles.tableRow} data-status={statusLabel ?? "normal"}>
+      <td className={styles.quantityCell}><span className={styles.quantity}>{quantity}×</span></td>
+      <td className={styles.productCell}><div className={styles.productDetails}><ProductDetails name={name} quantity={quantity} pourSizeMl={pourSizeMl} isAdjustment={isAdjustment} statusLabel={statusLabel} paidCents={paidCents} settlementTotalCents={settlementTotalCents} /></div></td>
+      <td className={styles.priceCell}><PriceTag cents={unitPriceCents} /> c/u</td>
+      <td className={styles.totalCell}><PriceTag cents={unitPriceCents * quantity} /></td>
+      <td className={styles.actionTableCell}><Action name={name} pourSizeMl={pourSizeMl} onRemove={onRemove} /></td>
+    </tr>;
+  }
+
+  return <div className={styles.mobileRow} data-status={statusLabel ?? "normal"} tabIndex={0}>
+    <span className={styles.quantityCell}><span className={styles.quantity}>{quantity}×</span></span>
+    <div className={styles.mobileProduct}><ProductDetails name={name} quantity={quantity} pourSizeMl={pourSizeMl} isAdjustment={isAdjustment} statusLabel={statusLabel} paidCents={paidCents} settlementTotalCents={settlementTotalCents} /></div>
+    <span className={styles.mobilePrice}><PriceTag cents={unitPriceCents} /> c/u</span>
+    <span className={styles.mobileTotal}><PriceTag cents={unitPriceCents * quantity} /></span>
+    <Action name={name} pourSizeMl={pourSizeMl} onRemove={onRemove} />
+  </div>;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createPaymentMethodRegistry,
+  isPaymentMethodDisplayable,
   requiresTendered,
   type PaymentMethodCode,
 } from "./payment-method-registry.js";
@@ -51,6 +52,18 @@ describe("PaymentMethodRegistry", () => {
     expect(registry.find((entry) => entry.code === "QR_PAYMENT")).not.toBe(
       registry.find((entry) => entry.code === "BANK_TRANSFER"),
     );
+  });
+
+  it("does not expose inactive or test/fixture methods to the cashier", () => {
+    expect(
+      isPaymentMethodDisplayable({
+        ...registry[0]!,
+        code: "FIXTURE_METHOD" as PaymentMethodCode,
+        label: "Fixture Method",
+      }),
+    ).toBe(false);
+    expect(isPaymentMethodDisplayable({ ...registry[0]!, active: false })).toBe(false);
+    expect(isPaymentMethodDisplayable(registry[0]!)).toBe(true);
   });
 
   it("throws when asking about an unregistered method code", () => {

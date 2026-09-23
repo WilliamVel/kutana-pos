@@ -29,13 +29,56 @@ describe("LineItemRow", () => {
       />,
     );
 
-    expect(screen.getByText("500ml")).toBeInTheDocument();
+    expect(screen.getByText("500 ml")).toBeInTheDocument();
   });
 
   it("does not render a pour size badge for unit-kind items", () => {
     render(<LineItemRow name="Loaded Nachos" quantity={1} unitPriceCents={650} totalCents={650} />);
 
     expect(screen.queryByText(/ml$/)).not.toBeInTheDocument();
+  });
+
+  it("renders complete paid and partial payment states without a truncated Pago label", () => {
+    const { rerender } = render(
+      <LineItemRow
+        name="Blonde Ale"
+        quantity={1}
+        unitPriceCents={1000}
+        totalCents={1120}
+        statusLabel="partial"
+        paidCents={560}
+      />,
+    );
+
+    expect(screen.getByText(/Parcial/)).toBeInTheDocument();
+    expect(screen.getByText(/Parcial/).textContent).toContain("$5.60 de $11.20");
+    expect(screen.queryByText(/^Pago$/)).not.toBeInTheDocument();
+
+    rerender(
+      <LineItemRow
+        name="Blonde Ale"
+        quantity={1}
+        unitPriceCents={1000}
+        totalCents={1120}
+        statusLabel="paid"
+      />,
+    );
+    expect(screen.getByText("Pagado")).toBeInTheDocument();
+  });
+
+  it("does not repeat tax copy and labels the destructive action accessibly", () => {
+    render(
+      <LineItemRow
+        name="Blonde Ale"
+        quantity={1}
+        unitPriceCents={500}
+        totalCents={560}
+        onRemove={() => undefined}
+      />,
+    );
+
+    expect(screen.queryByText(/incluye impuestos/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Eliminar Blonde Ale" })).toBeInTheDocument();
   });
 
   it("marks adjustment lines distinctly from ordinary lines", () => {
@@ -49,6 +92,6 @@ describe("LineItemRow", () => {
       />,
     );
 
-    expect(screen.getByText("Adjustment")).toBeInTheDocument();
+    expect(screen.getByText("Ajuste")).toBeInTheDocument();
   });
 });

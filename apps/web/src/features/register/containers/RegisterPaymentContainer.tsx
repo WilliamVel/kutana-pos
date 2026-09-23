@@ -1,5 +1,6 @@
 import { createUuid } from "@kutana/shared/platform/uuid.js";
-import { useEffect, useState } from "react";
+import { isPaymentMethodDisplayable } from "@kutana/shared/payments/model/payment-method-registry.js";
+import { useEffect, useRef, useState } from "react";
 import { createAllocation, type Allocation } from "@kutana/shared/billing/model/allocation.js";
 import {
   accountBalance,
@@ -29,6 +30,7 @@ import {
   useTables,
   useTickets,
 } from "../../../composition/PortsProvider.js";
+import { aggregateOrderLines } from "../../../design-system/molecules/aggregate-order-lines.js";
 import {
   RegisterPaymentPanel,
   type RegisterPaymentPanelLine,
@@ -38,6 +40,7 @@ export interface RegisterPaymentContainerProps {
   readonly tableId: string;
   readonly personalAccountId?: string;
   readonly onPaymentComplete?: () => void;
+  readonly onBack?: () => void;
   /**
    * @deprecated Legacy milestone-1 ticket payment path. Whole-table payment
    * still uses tickets while personal-account settlement uses `personalAccountId`.
@@ -48,10 +51,15 @@ export interface RegisterPaymentContainerProps {
 function ownerLabel(account: PersonalAccount, customers: readonly Customer[]): string {
   const { owner } = account;
   if (owner.kind === "free_name") return owner.freeName;
-  return customers.find((customer) => customer.id === owner.customerId)?.displayName ?? owner.customerId;
+  return (
+    customers.find((customer) => customer.id === owner.customerId)?.displayName ?? owner.customerId
+  );
 }
 
-function toAccountPayments(accountId: string, payments: readonly Payment[]): AccountPaymentAmount[] {
+function toAccountPayments(
+  accountId: string,
+  payments: readonly Payment[],
+): AccountPaymentAmount[] {
   return payments.map((payment) => ({ accountId, amountCents: payment.amountCents }));
 }
 
@@ -60,20 +68,27 @@ function unpaidLineItems(
   accounts: readonly PersonalAccount[],
   allocations: readonly AccountLineAllocation[],
 ): Order["lineItems"] {
-  const paidAccountIds = new Set(accounts.filter((account) => account.status === "paid").map((account) => account.id));
+  const paidAccountIds = new Set(
+    accounts.filter((account) => account.status === "paid").map((account) => account.id),
+  );
   return order.lineItems.flatMap((line) => {
     const paidQuantity = allocations
-      .filter((allocation) => allocation.lineItemId === line.id && paidAccountIds.has(allocation.accountId))
+      .filter(
+        (allocation) =>
+          allocation.lineItemId === line.id && paidAccountIds.has(allocation.accountId),
+      )
       .reduce((sum, allocation) => sum + allocation.quantity, 0);
     const remainingQuantity = line.quantity - paidQuantity;
     if (remainingQuantity <= 0) return [];
     if (paidQuantity <= 0) return [line];
-    return [{
-      ...line,
-      quantity: remainingQuantity,
-      taxCents: Math.round((line.taxCents / line.quantity) * remainingQuantity),
-      totalCents: Math.round((line.totalCents / line.quantity) * remainingQuantity),
-    }];
+    return [
+      {
+        ...line,
+        quantity: remainingQuantity,
+        taxCents: Math.round((line.taxCents / line.quantity) * remainingQuantity),
+        totalCents: Math.round((line.totalCents / line.quantity) * remainingQuantity),
+      },
+    ];
   });
 }
 
@@ -82,32 +97,35 @@ function accountLinesForDisplay(
   allocations: readonly AccountLineAllocation[],
   accountId: string,
 ): RegisterPaymentPanelLine[] {
-  const grouped = new Map<string, RegisterPaymentPanelLine>();
-  for (const allocation of allocations.filter((item) => item.accountId === accountId)) {
-    const line = order.lineItems.find((candidate) => candidate.id === allocation.lineItemId);
-    if (!line) continue;
-    const key = [line.productId, line.nameSnapshot, line.unitPriceCents, line.pourSizeMl ?? "", line.taxRateBp].join("|");
-    const totalCents = Math.round((line.totalCents / line.quantity) * allocation.quantity);
-    const existing = grouped.get(key);
-    if (existing) {
-      grouped.set(key, {
-        ...existing,
-        quantity: existing.quantity + allocation.quantity,
-        totalCents: existing.totalCents + totalCents,
-      });
-    } else {
-      grouped.set(key, {
-        id: allocation.id,
-        name: line.nameSnapshot,
-        quantity: allocation.quantity,
-        unitPriceCents: line.unitPriceCents,
-        totalCents,
-        pourSizeMl: line.pourSizeMl as RegisterPaymentPanelLine["pourSizeMl"],
-        isAdjustment: line.isAdjustment,
-      });
-    }
-  }
-  return [...grouped.values()];
+  const displayLines = allocations
+    .filter((item) => item.accountId === accountId)
+    .flatMap((allocation) => {
+      const line = order.lineItems.find((candidate) => candidate.id === allocation.lineItemId);
+      if (!line) return [];
+      return [
+        {
+          id: allocation.id,
+          productId: line.productId,
+          name: line.nameSnapshot,
+          quantity: allocation.quantity,
+          unitPriceCents: line.unitPriceCents,
+          totalCents: Math.round((line.totalCents / line.quantity) * allocation.quantity),
+          taxCents: Math.round((line.taxCents / line.quantity) * allocation.quantity),
+          taxRateBp: line.taxRateBp,
+          pourSizeMl: line.pourSizeMl,
+          isAdjustment: line.isAdjustment,
+        },
+      ];
+    });
+  return aggregateOrderLines(displayLines).map((line) => ({
+    id: line.id,
+    name: line.name,
+    quantity: line.quantity,
+    unitPriceCents: line.unitPriceCents,
+    totalCents: line.totalCents,
+    pourSizeMl: line.pourSizeMl as RegisterPaymentPanelLine["pourSizeMl"],
+    isAdjustment: line.isAdjustment,
+  }));
 }
 
 function allQuantitiesAssigned(
@@ -125,7 +143,7 @@ function allQuantitiesAssigned(
 function paymentMethodLabel(code: string, fallback: string): string {
   const labels: Record<string, string> = {
     CASH: "Efectivo",
-    BANK_TRANSFER: "Transferencia bancaria",
+    BANK_TRANSFER: "Transferencia",
     QR_PAYMENT: "Pago QR",
   };
 
@@ -144,6 +162,7 @@ export function RegisterPaymentContainer({
   tableId,
   personalAccountId,
   onPaymentComplete,
+  onBack,
   ticketId,
 }: RegisterPaymentContainerProps): JSX.Element | null {
   const tables = useTables();
@@ -156,13 +175,16 @@ export function RegisterPaymentContainer({
   const methodRegistry = usePaymentMethods();
 
   const [order, setOrder] = useState<Order | null>(null);
+  const [tableLabel, setTableLabel] = useState<string>("Orden seleccionada");
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [personalAccount, setPersonalAccount] = useState<PersonalAccount | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [accountAllocations, setAccountAllocations] = useState<AccountLineAllocation[]>([]);
   const [orderAccounts, setOrderAccounts] = useState<PersonalAccount[]>([]);
-  const [orderAccountAllocations, setOrderAccountAllocations] = useState<AccountLineAllocation[]>([]);
+  const [orderAccountAllocations, setOrderAccountAllocations] = useState<AccountLineAllocation[]>(
+    [],
+  );
   const [payments, setPayments] = useState<Payment[]>([]);
   const [selectedMethodCode, setSelectedMethodCode] = useState<string>(
     methodRegistry[0]?.code ?? "",
@@ -171,12 +193,14 @@ export function RegisterPaymentContainer({
   const [amountToPayCents, setAmountToPayCents] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const processingGuard = useRef(false);
+  const availableMethods = methodRegistry.filter(isPaymentMethodDisplayable);
 
   useEffect(() => {
-    if (!selectedMethodCode && methodRegistry[0]) {
-      setSelectedMethodCode(methodRegistry[0].code);
+    if (!selectedMethodCode && availableMethods[0]) {
+      setSelectedMethodCode(availableMethods[0].code);
     }
-  }, [methodRegistry, selectedMethodCode]);
+  }, [availableMethods, selectedMethodCode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -184,6 +208,7 @@ export function RegisterPaymentContainer({
     async function load(): Promise<void> {
       const table = await tables.findById(tableId);
       if (!table?.currentOrderId) return;
+      setTableLabel(table.label);
       const foundOrder = await orders.findByTable(tableId);
       if (cancelled || !foundOrder) return;
       setOrder(foundOrder);
@@ -235,7 +260,17 @@ export function RegisterPaymentContainer({
     return () => {
       cancelled = true;
     };
-  }, [accountsPort, customersPort, orders, paymentsPort, personalAccountId, tableId, ticketId, tables, tickets]);
+  }, [
+    accountsPort,
+    customersPort,
+    orders,
+    paymentsPort,
+    personalAccountId,
+    tableId,
+    ticketId,
+    tables,
+    tickets,
+  ]);
 
   if (!order || (!ticket && !personalAccount)) return null;
 
@@ -248,7 +283,11 @@ export function RegisterPaymentContainer({
 
   const isWholeTablePayment = !personalAccount && ticketId === undefined;
   const allocatedLineItemIds = ticket
-    ? new Set(allocations.filter((allocation) => allocation.ticketId === ticket.id).map((a) => a.lineItemId))
+    ? new Set(
+        allocations
+          .filter((allocation) => allocation.ticketId === ticket.id)
+          .map((a) => a.lineItemId),
+      )
     : new Set<string>();
   const remainingOrderLineItems = unpaidLineItems(order, orderAccounts, orderAccountAllocations);
   const ticketLineItems = ticket
@@ -256,9 +295,11 @@ export function RegisterPaymentContainer({
       ? remainingOrderLineItems
       : remainingOrderLineItems.filter((line) => allocatedLineItemIds.has(line.id))
     : [];
-  const ticketLines: RegisterPaymentPanelLine[] = ticketLineItems.map((line) => ({
+  const ticketLines: RegisterPaymentPanelLine[] = aggregateOrderLines(
+    ticketLineItems.map((line) => ({ ...line, name: line.nameSnapshot })),
+  ).map((line) => ({
     id: line.id,
-    name: line.nameSnapshot,
+    name: line.name,
     quantity: line.quantity,
     unitPriceCents: line.unitPriceCents,
     totalCents: line.totalCents,
@@ -268,21 +309,24 @@ export function RegisterPaymentContainer({
 
   const lines = personalAccount ? accountLines : ticketLines;
   const subtotalCents = lines.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0);
-  const taxCents = Math.max(0, lines.reduce((sum, line) => sum + line.totalCents, 0) - subtotalCents);
+  const taxCents = Math.max(
+    0,
+    lines.reduce((sum, line) => sum + line.totalCents, 0) - subtotalCents,
+  );
   const totalCents = personalAccount
     ? accountBalance({
-      accountId: personalAccount.id,
-      lineItems: order.lineItems,
-      allocations: accountAllocations,
-      payments: toAccountPayments(personalAccount.id, payments),
-    }).totalCents
+        accountId: personalAccount.id,
+        lineItems: order.lineItems,
+        allocations: accountAllocations,
+        payments: toAccountPayments(personalAccount.id, payments),
+      }).totalCents
     : isWholeTablePayment
       ? ticketLines.reduce((sum, line) => sum + line.totalCents, 0)
       : ticketTotals(ticket!.id, order.lineItems, allocations).cents;
   const alreadyPaidCents = paymentsTotal(payments);
   const remainingBalanceCents = Math.max(0, totalCents - alreadyPaidCents);
 
-  const selectedMethod = methodRegistry.find((method) => method.code === selectedMethodCode);
+  const selectedMethod = availableMethods.find((method) => method.code === selectedMethodCode);
   const methodRequiresTendered = selectedMethod?.requiresTendered ?? false;
   const effectiveAmountToPayCents = amountToPayCents ?? remainingBalanceCents;
 
@@ -306,8 +350,12 @@ export function RegisterPaymentContainer({
       (tenderedCents !== null && tenderedCents >= effectiveAmountToPayCents));
 
   async function handleConfirmPayment(): Promise<void> {
+    if (processingGuard.current) return;
+    processingGuard.current = true;
     console.info("[RegisterPayment] Confirmar pago presionado", {
-      target: personalAccount ? { kind: "personal_account", accountId: personalAccount.id } : { kind: "ticket", ticketId: ticket?.id },
+      target: personalAccount
+        ? { kind: "personal_account", accountId: personalAccount.id }
+        : { kind: "ticket", ticketId: ticket?.id },
       methodCode: selectedMethodCode || null,
       amountCents: effectiveAmountToPayCents,
       tenderedCents,
@@ -315,6 +363,7 @@ export function RegisterPaymentContainer({
     });
 
     if (!canConfirm || !selectedMethod) {
+      processingGuard.current = false;
       console.warn("[RegisterPayment] Pago no confirmado: datos incompletos o inválidos", {
         selectedMethodCode: selectedMethodCode || null,
         amountCents: effectiveAmountToPayCents,
@@ -334,6 +383,7 @@ export function RegisterPaymentContainer({
       console.error("[RegisterPayment] Error al procesar pago", error);
       setErrorMessage(`No se pudo procesar el pago: ${message}`);
     } finally {
+      processingGuard.current = false;
       setIsProcessing(false);
     }
   }
@@ -348,9 +398,11 @@ export function RegisterPaymentContainer({
         methodCode: selectedMethod.code as PaymentMethodCode,
         amountCents: effectiveAmountToPayCents,
         tenderedCents: methodRequiresTendered && tenderedCents !== null ? tenderedCents : null,
-        changeCents: methodRequiresTendered && tenderedCents !== null
-          ? computeChange({ remainingCents: effectiveAmountToPayCents, tenderedCents }).changeCents
-          : null,
+        changeCents:
+          methodRequiresTendered && tenderedCents !== null
+            ? computeChange({ remainingCents: effectiveAmountToPayCents, tenderedCents })
+                .changeCents
+            : null,
         recordedAt: new Date().toISOString(),
       };
       await paymentsPort.record(newPayment);
@@ -362,7 +414,11 @@ export function RegisterPaymentContainer({
       const paidCents = paymentsTotal(updatedPayments);
       const status = derivePersonalAccountStatus({ totalCents, paidCents, isPending: false });
       const saved = await accountsPort.save(
-        { ...personalAccount, status, closedAt: status === "paid" ? new Date().toISOString() : null },
+        {
+          ...personalAccount,
+          status,
+          closedAt: status === "paid" ? new Date().toISOString() : null,
+        },
         accountAllocations,
         personalAccount.version,
       );
@@ -388,7 +444,7 @@ export function RegisterPaymentContainer({
 
     if (!ticket) return;
 
-    const updatedPayments = applyPayment(methodRegistry, payments, {
+    const updatedPayments = applyPayment(availableMethods, payments, {
       ticketId: ticket.id,
       methodCode: selectedMethod.code as PaymentMethodCode,
       amountCents: effectiveAmountToPayCents,
@@ -406,12 +462,12 @@ export function RegisterPaymentContainer({
       const paidTicket = withStatus(ticket, "paid");
       const allocationsToSave = isWholeTablePayment
         ? order!.lineItems.map(
-          (line) =>
-            allocations.find(
-              (allocation) =>
-                allocation.ticketId === ticket.id && allocation.lineItemId === line.id,
-            ) ?? createAllocation({ lineItemId: line.id, ticketId: ticket.id }),
-        )
+            (line) =>
+              allocations.find(
+                (allocation) =>
+                  allocation.ticketId === ticket.id && allocation.lineItemId === line.id,
+              ) ?? createAllocation({ lineItemId: line.id, ticketId: ticket.id }),
+          )
         : allocations;
       const saved = await tickets.save(paidTicket, allocationsToSave, ticket.version);
       setTicket(saved);
@@ -426,8 +482,12 @@ export function RegisterPaymentContainer({
 
   return (
     <RegisterPaymentPanel
-      title={personalAccount ? `Cobrar a ${ownerLabel(personalAccount, customers)}` : undefined}
-      subtitle={personalAccount ? "Cobrale a esta cuenta personal con el mismo flujo de pago." : undefined}
+      title={personalAccount ? `Cobrar a ${ownerLabel(personalAccount, customers)}` : tableLabel}
+      subtitle={
+        personalAccount ? "Cobrale a esta cuenta personal con el mismo flujo de pago." : undefined
+      }
+      orderStatus={remainingBalanceCents < totalCents ? "Pago parcial" : "Pendiente"}
+      onBack={onBack}
       lines={lines}
       subtotalCents={subtotalCents}
       taxCents={taxCents}
@@ -435,7 +495,7 @@ export function RegisterPaymentContainer({
       remainingBalanceCents={remainingBalanceCents}
       amountToPayCents={effectiveAmountToPayCents}
       onAmountToPayChange={setAmountToPayCents}
-      methods={methodRegistry.map((method) => ({
+      methods={availableMethods.map((method) => ({
         code: method.code,
         label: paymentMethodLabel(method.code, method.label),
         requiresTendered: method.requiresTendered,
