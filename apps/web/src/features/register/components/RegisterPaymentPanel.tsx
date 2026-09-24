@@ -1,10 +1,11 @@
 import type { PourSize } from "@kutana/shared/catalog/model/product.js";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../design-system/atoms/Button.js";
 import { Icon } from "../../../design-system/atoms/Icon.js";
 import { Input } from "../../../design-system/atoms/Input.js";
 import { LineItemRow } from "../../../design-system/molecules/LineItemRow.js";
 import { PriceTag } from "../../../design-system/molecules/PriceTag.js";
+import type { PaymentReviewInfo } from "../payment-review.js";
 import styles from "./RegisterPaymentPanel.module.css";
 
 export interface RegisterPaymentPanelLine {
@@ -48,6 +49,9 @@ export interface RegisterPaymentPanelProps {
   readonly canConfirm: boolean;
   readonly isProcessing?: boolean;
   readonly errorMessage?: string | null;
+  readonly paymentReview?: PaymentReviewInfo | null;
+  readonly onDismissError?: () => void;
+  readonly onReviewError?: () => void;
 }
 
 function parseDollarsToCents(input: string): number {
@@ -104,6 +108,9 @@ export function RegisterPaymentPanel({
   canConfirm,
   isProcessing = false,
   errorMessage = null,
+  paymentReview = null,
+  onDismissError,
+  onReviewError,
 }: RegisterPaymentPanelProps): JSX.Element {
   const selectedMethod = methods.find((method) => method.code === selectedMethodCode);
   const unitsCount = lines.reduce((count, line) => count + line.quantity, 0);
@@ -114,7 +121,26 @@ export function RegisterPaymentPanel({
     selectedMethod && !selectedMethod.requiresTendered && /transfer|qr/i.test(selectedMethod.label),
   );
   const [manualConfirmation, setManualConfirmation] = useState(false);
+  const errorDialogRef = useRef<HTMLDivElement>(null);
+  const errorOpenerRef = useRef<HTMLElement | null>(null);
+  const dismissErrorRef = useRef(onDismissError);
+  dismissErrorRef.current = onDismissError;
   useEffect(() => setManualConfirmation(false), [selectedMethodCode]);
+  useEffect(() => {
+    if (!errorMessage) {
+      const opener = errorOpenerRef.current;
+      errorOpenerRef.current = null;
+      if (opener?.isConnected) opener.focus();
+      return;
+    }
+    errorOpenerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    errorDialogRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") dismissErrorRef.current?.();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [errorMessage]);
   const postPaymentBalance = Math.max(0, remainingBalanceCents - amountToPayCents);
   const amountError =
     amountToPayCents <= 0
@@ -323,9 +349,41 @@ export function RegisterPaymentPanel({
           ) : null}
 
           {errorMessage ? (
-            <p role="alert" className={styles.error}>
-              {errorMessage}
-            </p>
+            <div className={styles.modalBackdrop} role="presentation">
+              <div
+                ref={errorDialogRef}
+                className={styles.errorDialog}
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="payment-error-title"
+                aria-describedby="payment-error-description"
+                tabIndex={-1}
+              >
+                <div className={paymentReview ? styles.successIcon : styles.errorIcon} aria-hidden="true">
+                  {paymentReview ? "✓" : "!"}
+                </div>
+                <h3 id="payment-error-title">{paymentReview ? "Pago registrado" : "No se pudo completar el cobro"}</h3>
+                <p id="payment-error-description">{errorMessage}</p>
+                {paymentReview ? (
+                  <ul className={styles.reviewReasons}>
+                    {paymentReview.unresolvedProducts > 0 ? (
+                      <li>{paymentReview.unresolvedProducts} producto(s) necesitan asignación.</li>
+                    ) : null}
+                    {paymentReview.unpaidAccounts > 0 ? (
+                      <li>{paymentReview.unpaidAccounts} cuenta(s) todavía tienen saldo.</li>
+                    ) : null}
+                  </ul>
+                ) : null}
+                <div className={styles.errorActions}>
+                  {onReviewError && paymentReview ? (
+                    <Button onClick={onReviewError}>Revisar esta mesa</Button>
+                  ) : null}
+                  <Button variant="secondary" onClick={onDismissError ?? (() => undefined)}>
+                    Volver a la mesa
+                  </Button>
+                </div>
+              </div>
+            </div>
           ) : null}
           {!canConfirm && blockingMessage ? (
             <p className={styles.blockingMessage} role="status">

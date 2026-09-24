@@ -1,8 +1,8 @@
 .panel {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  display: flex;
   height: 100%;
   flex: 1 1 auto;
+  flex-direction: column;
   gap: 0.75rem;
   width: 100%;
   max-width: 100%;
@@ -19,14 +19,14 @@
 .orderSummary { display: flex; align-items: center; gap: 0.4rem; min-width: 0; width: 100%; max-width: 100%; padding: 0.7rem 0.85rem; border-radius: 0.75rem; background: var(--surface-sunken); color: var(--text-primary); }
 .orderSummary > span:nth-child(3) { overflow: hidden; text-overflow: ellipsis; }
 .orderSummary .orderSummaryStatus { margin-left: auto; }
-.desktopLines { min-height: 0; width: 100%; max-width: 100%; min-width: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.desktopLines { min-height: 0; width: 100%; max-width: 100%; min-width: 0; flex: 0 1 auto; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-width: thin; }
 .lineTable { width: 100%; max-width: 100%; min-width: 0; border-collapse: collapse; table-layout: fixed; }
-.quantityColumn { width: 56px; }
+.quantityColumn { width: 3.5rem; }
 .productColumn { width: auto; }
-.priceColumn { width: 140px; }
-.totalColumn { width: 120px; }
-.actionColumn { width: 48px; }
-.lineTable th { padding: 0 0 8px; color: var(--text-secondary); font-size: 0.72rem; font-weight: 700; text-align: left; text-transform: uppercase; letter-spacing: 0.04em; }
+.priceColumn { width: clamp(7rem, 18%, 9rem); }
+.totalColumn { width: clamp(6.25rem, 15%, 7.5rem); }
+.actionColumn { width: 3rem; }
+.lineTable th { padding: 0 0 8px; color: var(--text-secondary); font-size: 0.72rem; font-weight: 700; text-align: left; text-transform: uppercase; letter-spacing: 0.04em; white-space: normal; overflow-wrap: anywhere; }
 .lineTable th:first-child, .lineTable th:nth-child(2) { padding-left: 24px; }
 .lineTable th:last-child { padding-right: 8px; }
 .priceHeader, .totalHeader { text-align: right !important; font-variant-numeric: tabular-nums; }
@@ -70,12 +70,19 @@
   .paymentFilters { margin-right: var(--space-4); margin-left: var(--space-4); }
   .paymentList { padding-right: var(--space-4); padding-left: var(--space-4); }
 }
-@media (max-width: 64rem) {
-  .panel { display: flex; width: 100%; max-width: 100%; min-width: 0; height: auto; max-height: none; flex-direction: column; gap: 0.7rem; padding: 0; overflow: visible; background: transparent; }
+@container (max-width: 64rem) {
+  .panel { width: 100%; height: auto; max-height: none; padding: 0; overflow: visible; background: transparent; }
   .header { padding: 0.15rem 0.2rem; }
   .header h2 { font-size: 1.35rem; }
   .desktopLines { display: none; }
   .mobileLines { display: block; width: 100%; max-width: 100%; min-width: 0; margin: 0; }
-  .totals { width: 100%; max-width: 100%; min-width: 0; }
-  .totals { margin-top: 0.2rem; padding: 1rem; border-radius: 0.85rem; background: var(--surface-raised); box-shadow: var(--shadow-sm); }
+  .totals { width: 100%; max-width: 100%; min-width: 0; margin-top: 0.2rem; padding: 1rem; border-radius: 0.85rem; background: var(--surface-raised); box-shadow: var(--shadow-sm); }
+}
+
+@media (max-width: 48rem) {
+  .panel { min-height: 0; }
+}
+
+@media (max-width: 48rem) and (max-height: 42rem) {
+  .totals { padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
 }

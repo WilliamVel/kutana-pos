@@ -23,11 +23,7 @@ const STATUS_MAP: Record<DomainOrderStatus, OrderStatus> = {
 };
 
 export type OrdersOverviewLoadState =
-  | "initial-loading"
-  | "refreshing"
-  | "success"
-  | "empty"
-  | "error";
+  "initial-loading" | "refreshing" | "success" | "empty" | "error";
 
 export type SelectedOrderState = "pending" | "valid" | "invalid";
 
@@ -146,7 +142,8 @@ export function OrdersOverviewContainer({
         }
 
         const successfulResults = results.filter(
-          (result): result is PromiseFulfilledResult<OrdersOverviewRow | null> => result.status === "fulfilled",
+          (result): result is PromiseFulfilledResult<OrdersOverviewRow | null> =>
+            result.status === "fulfilled",
         );
         const nextRows = successfulResults
           .map((result) => result.value)
@@ -180,7 +177,7 @@ export function OrdersOverviewContainer({
   const refreshTable = useCallback(
     async (table: Table): Promise<void> => {
       const requestId = ++requestIdRef.current;
-      setLoadState((current) => current === "initial-loading" ? current : "refreshing");
+      setLoadState((current) => (current === "initial-loading" ? current : "refreshing"));
       try {
         const row = await loadTableRow(table);
         if (!mountedRef.current || requestId !== requestIdRef.current) return;
@@ -189,7 +186,7 @@ export function OrdersOverviewContainer({
           return row ? [...withoutTable, row] : withoutTable;
         });
         setLoadError(null);
-        setLoadState((current) => current === "initial-loading" ? current : "success");
+        setLoadState((current) => (current === "initial-loading" ? current : "success"));
       } catch (error) {
         if (!mountedRef.current || requestId !== requestIdRef.current) return;
         console.error("[orders] failed refreshing table", { tableId: table.id, error });

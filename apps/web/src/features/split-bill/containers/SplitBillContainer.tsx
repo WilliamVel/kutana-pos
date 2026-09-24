@@ -27,6 +27,7 @@ import {
   usePaymentClosure,
   usePersonalAccounts,
   useTables,
+  useTickets,
 } from "../../../composition/PortsProvider.js";
 import { ConflictBanner } from "../components/ConflictBanner.js";
 import {
@@ -115,6 +116,7 @@ export function SplitBillContainer({
   onPayOrder,
 }: SplitBillContainerProps): JSX.Element | null {
   const tables = useTables();
+  const tickets = useTickets();
   const orders = useOrders();
   const customersPort = useCustomers();
   const accountsPort = usePersonalAccounts();
@@ -130,6 +132,7 @@ export function SplitBillContainer({
   const [accounts, setAccounts] = useState<PersonalAccount[]>([]);
   const [allocations, setAllocations] = useState<AccountLineAllocation[]>([]);
   const [payments, setPayments] = useState<AccountPaymentCache[]>([]);
+  const [tablePayments, setTablePayments] = useState<Payment[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [freeName, setFreeName] = useState("");
   const [allocationDraft, setAllocationDraft] = useState<AccountAllocationDraft>({
@@ -149,10 +152,14 @@ export function SplitBillContainer({
     ]);
     if (!foundTable || !foundOrder) return;
 
-    const [orderAccounts, orderAllocations] = await Promise.all([
+    const [orderAccounts, orderAllocations, orderTickets] = await Promise.all([
       accountsPort.listByOrder(foundOrder.id),
       accountsPort.listAllocationsByOrder(foundOrder.id),
+      tickets.listByOrder(foundOrder.id),
     ]);
+    const tablePayments = await Promise.all(
+      orderTickets.map((ticket) => paymentsPort.listByTicket(ticket.id)),
+    );
     const accountPayments = await Promise.all(
       orderAccounts.map(async (account) => ({
         accountId: account.id,
@@ -169,7 +176,8 @@ export function SplitBillContainer({
     setAccounts(orderAccounts);
     setAllocations(orderAllocations);
     setPayments(accountPayments);
-  }, [accountsPort, customersPort, orders, paymentsPort, tableId, tables]);
+    setTablePayments(tablePayments.flat());
+  }, [accountsPort, customersPort, orders, paymentsPort, tableId, tables, tickets]);
 
   useEffect(() => {
     void load();
@@ -264,7 +272,9 @@ export function SplitBillContainer({
     };
   });
   const tableTotalCents = order.lineItems.reduce((sum, line) => sum + line.totalCents, 0);
-  const tablePaidCents = accountRows.reduce((sum, account) => sum + account.paidCents, 0);
+  const tablePaidCents =
+    accountRows.reduce((sum, account) => sum + account.paidCents, 0) +
+    tablePayments.reduce((sum, payment) => sum + payment.amountCents, 0);
   const tableRemainingCents = Math.max(0, tableTotalCents - tablePaidCents);
 
   const createCustomerAccount = (): void => {

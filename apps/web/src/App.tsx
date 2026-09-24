@@ -26,6 +26,7 @@ import { CustomerManagementContainer } from "./features/customers/containers/Cus
 import { UserManagementContainer } from "./features/users/containers/UserManagementContainer.js";
 import { AnalyticsScreen } from "./features/analytics/AnalyticsScreen.js";
 import { canAccessScreen } from "./app-shell/screens.js";
+import { toast } from "sonner";
 
 /** Center-column sub-state of the unified Register workspace. */
 type CenterView = "account" | "payment" | "assignment";
@@ -42,6 +43,7 @@ export function App(): JSX.Element {
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
   const [screen, setScreen] = useState<ScreenId>("register");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedOrderReady, setSelectedOrderReady] = useState(false);
   const [selectedOrderListReady, setSelectedOrderListReady] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
@@ -49,10 +51,12 @@ export function App(): JSX.Element {
   const [centerView, setCenterView] = useState<CenterView>("account");
   const [ordersReloadKey, setOrdersReloadKey] = useState(0);
   const [newOrderRequest, setNewOrderRequest] = useState(0);
+  const [pendingCreatedTableId, setPendingCreatedTableId] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isChangePinOpen, setIsChangePinOpen] = useState(false);
 
   const resetCenter = (): void => {
+    setSelectedOrderId(null);
     setCenterView("account");
     setSelectedTicketId(null);
     setSelectedAccountId(null);
@@ -105,6 +109,16 @@ export function App(): JSX.Element {
             ticketId={selectedTicketId ?? undefined}
             personalAccountId={selectedAccountId ?? undefined}
             onBack={resetCenter}
+            onReviewPayment={() => {
+              setSelectedTicketId(null);
+              setSelectedAccountId(null);
+              setCenterView("assignment");
+            }}
+            onWholeTableClosed={(tableId) => {
+              toast.success("Pago registrado · Mesa cerrada", {
+                id: `payment-registered-table-closed-${tableId}`,
+              });
+            }}
             onPaymentComplete={() => {
               resetCenter();
               setSelectedTableId(null);
@@ -138,29 +152,34 @@ export function App(): JSX.Element {
       center = (
         <>
           <OrderTicketPanelContainer
+            key={`${selectedTableId}:${selectedOrderId ?? ""}`}
             tableId={selectedTableId}
             onLoadStateChange={(state) => setSelectedOrderReady(state === "ready")}
           />
-          <ButtonRow>
-            {selectedOrderReady && selectedOrderListReady ? <Button
-              variant="secondary"
-              ariaLabel="Dividir cuenta"
-              onClick={() => setCenterView("assignment")}
-            >
-              <Icon name="split" size={22} />
-              Dividir
-            </Button> : null}
-            {selectedOrderReady && selectedOrderListReady ? <Button
-              ariaLabel="Pagar mesa completa"
-              onClick={() => {
-                setSelectedTicketId(null);
-                setSelectedAccountId(null);
-                setCenterView("payment");
-              }}
-            >
-              <Icon name="cash" size={22} />
-              Pagar
-            </Button> : null}
+          <ButtonRow className="orderActions">
+            {selectedOrderReady && selectedOrderListReady ? (
+              <Button
+                variant="secondary"
+                ariaLabel="Dividir cuenta"
+                onClick={() => setCenterView("assignment")}
+              >
+                <Icon name="split" size={22} />
+                Dividir
+              </Button>
+            ) : null}
+            {selectedOrderReady && selectedOrderListReady ? (
+              <Button
+                ariaLabel="Pagar mesa completa"
+                onClick={() => {
+                  setSelectedTicketId(null);
+                  setSelectedAccountId(null);
+                  setCenterView("payment");
+                }}
+              >
+                <Icon name="cash" size={22} />
+                Pagar
+              </Button>
+            ) : null}
           </ButtonRow>
         </>
       );
@@ -248,7 +267,13 @@ export function App(): JSX.Element {
                   <NewOrderContainer
                     reloadKey={ordersReloadKey}
                     openRequest={newOrderRequest}
-                    onCreated={(tableId) => {
+                    onCreated={(tableId, orderId) => {
+                      toast.success("Orden creada", { id: `order-created-${orderId}`, duration: 4200 });
+                      setSelectedOrderId(orderId);
+                      // Keep this selection alive while the refreshed list catches up.
+                      // The list is keyed by table, while the API's saved order ID is
+                      // published by NewOrderContainer through OrderEvents.
+                      setPendingCreatedTableId(tableId);
                       selectTable(tableId);
                       window.dispatchEvent(new CustomEvent("kutana.mobile.products"));
                       setOrdersReloadKey((key) => key + 1);
@@ -260,10 +285,17 @@ export function App(): JSX.Element {
                 onSelectionStateChange={(state) => {
                   if (state === "valid") {
                     setSelectedOrderListReady(true);
+                    setPendingCreatedTableId(null);
                     return;
                   }
                   setSelectedOrderListReady(false);
-                  if (state === "invalid" && selectedTableId) {
+                  // A just-created order is not in the previous snapshot yet. Do
+                  // not let that transient invalid state clear the new workspace.
+                  if (
+                    state === "invalid" &&
+                    selectedTableId &&
+                    selectedTableId !== pendingCreatedTableId
+                  ) {
                     setSelectedTableId(null);
                     setSelectedOrderReady(false);
                     resetCenter();
@@ -283,7 +315,7 @@ export function App(): JSX.Element {
           }
           center={center}
           emptyCenter="Selecciona un pedido para ver sus cuentas a cobrar."
-          centerOverflowVisible={centerView !== "account"}
+          centerOverflowVisible={false}
           railHidden={centerView !== "account"}
           selectedTableId={selectedTableId}
           rail={

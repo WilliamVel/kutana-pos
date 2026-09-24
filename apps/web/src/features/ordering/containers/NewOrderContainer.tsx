@@ -6,8 +6,8 @@ import { useOrderEvents, useOrders, useTables } from "../../../composition/Ports
 import { NewOrderButton } from "../components/NewOrderButton.js";
 
 export interface NewOrderContainerProps {
-  /** Called with the table id after its new (empty) order is created. */
-  readonly onCreated: (tableId: string) => void;
+  /** Called with the table and persisted order IDs after creation succeeds. */
+  readonly onCreated: (tableId: string, orderId: string) => void;
   readonly reloadKey?: number;
   readonly openRequest?: number;
 }
@@ -19,7 +19,11 @@ export interface NewOrderContainerProps {
  * all-orders view picks up the new row. Follows the codebase's
  * read -> apply-domain-fn -> save -> catch-`ConflictError` seam.
  */
-export function NewOrderContainer({ onCreated, reloadKey = 0, openRequest = 0 }: NewOrderContainerProps): JSX.Element {
+export function NewOrderContainer({
+  onCreated,
+  reloadKey = 0,
+  openRequest = 0,
+}: NewOrderContainerProps): JSX.Element {
   const tables = useTables();
   const orders = useOrders();
   const events = useOrderEvents();
@@ -52,7 +56,7 @@ export function NewOrderContainer({ onCreated, reloadKey = 0, openRequest = 0 }:
       });
       setMessage(null);
       await loadFreeTables();
-      onCreated(table.id);
+      onCreated(table.id, savedOrder.id);
       window.dispatchEvent(new CustomEvent("kutana.order.created"));
     } catch (error) {
       if (error instanceof ConflictError) {
@@ -67,10 +71,14 @@ export function NewOrderContainer({ onCreated, reloadKey = 0, openRequest = 0 }:
   async function createTableAndOrder(label: string): Promise<void> {
     const normalizedLabel = label.trim().toLocaleLowerCase();
     const retiredTable = (await tables.listAll()).find(
-      (table) => table.status === "retired" && table.label.trim().toLocaleLowerCase() === normalizedLabel,
+      (table) =>
+        table.status === "retired" && table.label.trim().toLocaleLowerCase() === normalizedLabel,
     );
     const savedTable = retiredTable
-      ? await tables.save({ ...retiredTable, status: "free", currentOrderId: null }, retiredTable.version)
+      ? await tables.save(
+          { ...retiredTable, status: "free", currentOrderId: null },
+          retiredTable.version,
+        )
       : await tables.save(createTable({ label }), 0);
     await createOrderForTable(savedTable);
   }

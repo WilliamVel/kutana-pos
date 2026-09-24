@@ -35,8 +35,12 @@
 }
 
 /* Sonner lives below the fixed/sticky navigation and uses Kutana tokens. */
+:global([data-sonner-toaster]) {
+  z-index: 30 !important;
+}
+
 .toast {
-  width: min(32rem, calc(100vw - 2rem));
+  width: min(320px, calc(100vw - 2rem));
   min-height: 3.25rem;
   border: 1px solid var(--border-subtle) !important;
   border-radius: var(--radius-lg) !important;
@@ -61,6 +65,18 @@
 }
 
 @media (max-width: 48rem) {
+  :global([data-sonner-toaster]) {
+    right: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    align-items: center !important;
+    padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right)) !important;
+  }
+
+  .toast {
+    width: min(320px, calc(100vw - 2rem));
+  }
+
   /* Mobile owns one scroll context so the header can leave the viewport
      before the register tabs become sticky. */
   .shell {

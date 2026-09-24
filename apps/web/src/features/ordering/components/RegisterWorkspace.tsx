@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import styles from "./RegisterWorkspace.module.css";
 
 export interface RegisterWorkspaceProps {
@@ -38,8 +38,6 @@ export function RegisterWorkspace({
 }: RegisterWorkspaceProps): JSX.Element {
   const [mobileView, setMobileView] = useState<"order" | "products">("order");
   const [orderCount, setOrderCount] = useState<number | null>(null);
-  const [createdNotice, setCreatedNotice] = useState(false);
-  const createdNoticeTimeoutRef = useRef<number | null>(null);
   const workspaceClass = railHidden ? styles.workspaceFocused : styles.workspace;
 
   useEffect(() => {
@@ -49,27 +47,11 @@ export function RegisterWorkspace({
       if (typeof detail.orderCount === "number") setOrderCount(detail.orderCount);
     };
     const onProductsRequested = (): void => setMobileView("products");
-    const onOrderCreated = (): void => {
-      setCreatedNotice(true);
-      if (createdNoticeTimeoutRef.current !== null) {
-        window.clearTimeout(createdNoticeTimeoutRef.current);
-      }
-      createdNoticeTimeoutRef.current = window.setTimeout(() => {
-        createdNoticeTimeoutRef.current = null;
-        setCreatedNotice(false);
-      }, 2200);
-    };
     window.addEventListener("kutana.order.updated", onOrderUpdated);
     window.addEventListener("kutana.mobile.products", onProductsRequested);
-    window.addEventListener("kutana.order.created", onOrderCreated);
     return () => {
       window.removeEventListener("kutana.order.updated", onOrderUpdated);
       window.removeEventListener("kutana.mobile.products", onProductsRequested);
-      window.removeEventListener("kutana.order.created", onOrderCreated);
-      if (createdNoticeTimeoutRef.current !== null) {
-        window.clearTimeout(createdNoticeTimeoutRef.current);
-        createdNoticeTimeoutRef.current = null;
-      }
     };
   }, [selectedTableId]);
 
@@ -96,7 +78,6 @@ export function RegisterWorkspace({
         <div className={styles.empty}>{emptyCenter}</div>
       )}
       {railHidden ? null : <div className={styles.rail}>{rail}</div>}
-      {createdNotice ? <div className={styles.createdNotice} role="status">Orden creada</div> : null}
     </div>
   );
 }

@@ -1,4 +1,6 @@
 .workspace {
+  container-type: inline-size;
+  position: relative;
   display: grid;
   width: 100%;
   min-width: 0;
@@ -9,6 +11,8 @@
 }
 
 .workspaceFocused {
+  container-type: inline-size;
+  position: relative;
   display: grid;
   width: 100%;
   min-width: 0;
@@ -49,7 +53,7 @@
   overflow: visible;
 }
 
-.center > :global(.row) {
+.center > :global(.orderActions) {
   position: static;
   width: 100%;
   flex: 0 0 auto;
@@ -71,7 +75,6 @@
 }
 
 .mobileTabs { display: none; }
-.createdNotice { position: fixed; right: 1rem; bottom: 5rem; z-index: 70; padding: 0.65rem 0.9rem; border-radius: 0.7rem; background: var(--action-secondary-bg); color: var(--action-secondary-fg); font-size: 0.85rem; font-weight: 700; box-shadow: var(--shadow-md); }
 
 /* Stack the columns on narrow viewports, matching the app-shell
    breakpoint in AppShell.module.css. */
@@ -188,6 +191,16 @@
     border-radius: 0;
     background: transparent;
     box-shadow: none;
+  }
+
+  .center > :global(.orderActions) {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin-inline: calc(-1 * var(--space-4));
+    padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
+    background: var(--surface-page);
+    box-shadow: 0 -0.35rem 0.7rem rgb(29 49 36 / 12%);
   }
 
   .rail {

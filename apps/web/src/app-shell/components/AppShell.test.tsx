@@ -33,4 +33,15 @@ describe("AppShell", () => {
 
     expect(screen.getByText("action-slot")).toBeInTheDocument();
   });
+
+  it("mounts one accessible toast region below the navigation", () => {
+    render(
+      <AppShell topBar={<div>top</div>}>
+        <p>content</p>
+      </AppShell>,
+    );
+
+    const region = screen.getByRole("region", { name: /Avisos del POS/ });
+    expect(region).toHaveAttribute("aria-live", "polite");
+  });
 });

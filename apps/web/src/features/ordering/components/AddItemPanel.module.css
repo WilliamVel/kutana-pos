@@ -149,6 +149,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.4rem;
   align-self: stretch;
   min-height: 2.25rem;
   margin-top: auto;
@@ -165,23 +166,35 @@
   color: var(--text-secondary);
 }
 
+.addSpinner {
+  width: 0.8rem;
+  height: 0.8rem;
+  flex: 0 0 auto;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: add-spin 700ms linear infinite;
+}
+
+@keyframes add-spin {
+  to { transform: rotate(360deg); }
+}
+
 .success {
-  position: fixed;
-  z-index: 30;
-  right: max(1rem, env(safe-area-inset-right));
-  bottom: max(1rem, env(safe-area-inset-bottom));
-  left: max(1rem, env(safe-area-inset-left));
-  display: flex;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.8rem 0.9rem;
+  margin: 0;
+  padding: 0.55rem 0.7rem;
   border-radius: 0.75rem;
   background: var(--action-secondary-bg);
   color: var(--action-secondary-fg);
   box-shadow: var(--shadow-lg);
   font-size: 0.9rem;
   font-weight: 700;
-  animation: toast-in 220ms ease-out both;
+  animation: toast-in 180ms ease-out both;
 }
 
 .success button {
@@ -205,7 +218,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .success {
+  .success,
+  .addSpinner {
     animation: none;
   }
 }

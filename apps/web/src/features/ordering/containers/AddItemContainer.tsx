@@ -121,10 +121,11 @@ export function AddItemContainer({ tableId }: AddItemContainerProps): JSX.Elemen
     } catch (error) {
       if (error instanceof ConflictError) {
         setOrder((error.currentSnapshot as Order | null) ?? null);
-        setConflict("this order just changed — your item wasn't added, try again");
+        setConflict("El pedido cambió; el producto no se agregó. Intenta nuevamente.");
       } else {
-        throw error;
+        setConflict("No se pudo agregar el producto. Intenta nuevamente.");
       }
+      throw error;
     }
   }
 
@@ -134,7 +135,7 @@ export function AddItemContainer({ tableId }: AddItemContainerProps): JSX.Elemen
     <AddItemPanel
       products={catalog}
       categories={categoryNames}
-      onAdd={(id, quantity) => void handleAdd(id, quantity)}
+      onAdd={(id, quantity) => handleAdd(id, quantity)}
       disabled={disabled}
       conflictMessage={conflict}
       onDismissConflict={() => setConflict(null)}

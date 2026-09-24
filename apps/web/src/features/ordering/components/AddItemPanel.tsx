@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "../../../design-system/atoms/Button.js";
 import { PriceTag } from "../../../design-system/molecules/PriceTag.js";
 import styles from "./AddItemPanel.module.css";
@@ -17,7 +18,7 @@ export interface AddItemPanelProduct {
 
 export interface AddItemPanelProps {
   readonly products: readonly AddItemPanelProduct[];
-  readonly onAdd: (productId: string, quantity: number) => void;
+  readonly onAdd: (productId: string, quantity: number) => Promise<void>;
   /** Ordered category names for the tab strip; derived from products when omitted. */
   readonly categories?: readonly string[];
   /** True when the order is paid / can no longer be modified. */
@@ -45,15 +46,10 @@ export function AddItemPanel({
 }: AddItemPanelProps): JSX.Element {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>(ALL_TAB);
-  const [addedProduct, setAddedProduct] = useState<string | null>(null);
-  const toastTimer = useRef<number | null>(null);
+  const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(() => new Set());
+  const [addRequestNumber, setAddRequestNumber] = useState(0);
 
-  useEffect(() => () => {
-    if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
-  }, []);
-
-  const categoryNames =
-    categories ?? [...new Set(products.map((product) => product.categoryName))];
+  const categoryNames = categories ?? [...new Set(products.map((product) => product.categoryName))];
   const tabs = [ALL_TAB, ...categoryNames];
 
   // Client-side filter only. Real server-side search (`GET /products?q=`)
@@ -94,13 +90,6 @@ export function AddItemPanel({
         ))}
       </div>
 
-      {addedProduct ? (
-        <div className={styles.success} role="status" aria-live="polite">
-          <span aria-hidden="true">✓</span> {addedProduct} agregado
-          <button type="button" onClick={() => setAddedProduct(null)} aria-label="Cerrar confirmación">×</button>
-        </div>
-      ) : null}
-
       {conflictMessage ? (
         <div className={styles.conflict} role="alert">
           <p>{conflictMessage}</p>
@@ -123,23 +112,30 @@ export function AddItemPanel({
                 className={styles.tile}
                 aria-label={`Agregar ${product.name}`}
                 disabled={disabled}
-                onClick={() => {
-                  onAdd(product.id, 1);
-                  setAddedProduct(product.name);
-                  if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
-                  toastTimer.current = window.setTimeout(() => {
-                    setAddedProduct(null);
-                    toastTimer.current = null;
-                  }, 1800);
+                onClick={async () => {
+                  if (pendingProductIds.has(product.id)) return;
+                  setPendingProductIds((current) => new Set(current).add(product.id));
+                  try {
+                    await onAdd(product.id, 1);
+                    const requestNumber = addRequestNumber + 1;
+                    setAddRequestNumber(requestNumber);
+                    toast.success(`${product.name} agregado`, {
+                      id: `product-added-${product.id}-${requestNumber}`,
+                      duration: 2600,
+                    });
+                  } catch {
+                    // The container exposes the actionable conflict/error message.
+                  } finally {
+                    setPendingProductIds((current) => {
+                      const next = new Set(current);
+                      next.delete(product.id);
+                      return next;
+                    });
+                  }
                 }}
               >
                 {product.imageUrl ? (
-                  <img
-                    className={styles.thumb}
-                    src={product.imageUrl}
-                    alt=""
-                    loading="lazy"
-                  />
+                  <img className={styles.thumb} src={product.imageUrl} alt="" loading="lazy" />
                 ) : (
                   <span className={styles.placeholder} aria-hidden="true">
                     {product.name.charAt(0)}
@@ -147,8 +143,11 @@ export function AddItemPanel({
                 )}
                 <span className={styles.name}>{product.name}</span>
                 <PriceTag cents={product.priceCents} />
-                <span className={styles.add} aria-hidden="true">
-                  + Agregar
+                <span className={styles.add} aria-live="polite">
+                  <span className={styles.addLabel}>+ Agregar</span>
+                  {pendingProductIds.has(product.id) ? (
+                    <span className={styles.addSpinner} aria-label="Guardando" />
+                  ) : null}
                 </span>
               </button>
             </li>

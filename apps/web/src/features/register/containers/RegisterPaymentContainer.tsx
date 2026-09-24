@@ -1,6 +1,7 @@
 import { createUuid } from "@kutana/shared/platform/uuid.js";
 import { isPaymentMethodDisplayable } from "@kutana/shared/payments/model/payment-method-registry.js";
 import { useEffect, useRef, useState } from "react";
+import { HttpError } from "../../../adapters/http/http-client.js";
 import { createAllocation, type Allocation } from "@kutana/shared/billing/model/allocation.js";
 import {
   accountBalance,
@@ -35,11 +36,19 @@ import {
   RegisterPaymentPanel,
   type RegisterPaymentPanelLine,
 } from "../components/RegisterPaymentPanel.js";
+import type { PaymentReviewInfo } from "../payment-review.js";
+
+interface AccountPaymentCache {
+  readonly accountId: string;
+  readonly payments: readonly Payment[];
+}
 
 export interface RegisterPaymentContainerProps {
   readonly tableId: string;
   readonly personalAccountId?: string;
   readonly onPaymentComplete?: () => void;
+  readonly onWholeTableClosed?: (tableId: string) => void;
+  readonly onReviewPayment?: () => void;
   readonly onBack?: () => void;
   /**
    * @deprecated Legacy milestone-1 ticket payment path. Whole-table payment
@@ -61,6 +70,10 @@ function toAccountPayments(
   payments: readonly Payment[],
 ): AccountPaymentAmount[] {
   return payments.map((payment) => ({ accountId, amountCents: payment.amountCents }));
+}
+
+function toCachedAccountPayments(entries: readonly AccountPaymentCache[]): AccountPaymentAmount[] {
+  return entries.flatMap((entry) => toAccountPayments(entry.accountId, entry.payments));
 }
 
 function unpaidLineItems(
@@ -128,16 +141,35 @@ function accountLinesForDisplay(
   }));
 }
 
-function allQuantitiesAssigned(
-  order: Order,
-  allocations: readonly AccountLineAllocation[],
-): boolean {
-  return order.lineItems.every((line) => {
-    const assigned = allocations
-      .filter((allocation) => allocation.lineItemId === line.id)
-      .reduce((sum, allocation) => sum + allocation.quantity, 0);
-    return assigned >= line.quantity;
-  });
+function paymentReviewInfo(error: unknown): PaymentReviewInfo | null {
+  if (!(error instanceof HttpError) || error.status !== 409 || !error.responseBody) return null;
+  try {
+    const body = JSON.parse(error.responseBody) as {
+      code?: string;
+      unresolvedLineItems?: unknown[];
+      blockingAccounts?: unknown[];
+    };
+    if (body.code !== "ORDER_REVIEW_REQUIRED") return null;
+    return {
+      unresolvedProducts: body.unresolvedLineItems?.length ?? 0,
+      unpaidAccounts: body.blockingAccounts?.length ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function paymentErrorMessage(error: unknown): string {
+  if (paymentReviewInfo(error)) {
+    return "El pago se registró. La mesa permanece abierta para completar una revisión.";
+  }
+  if (error instanceof HttpError) {
+    if (error.status === 409) return "La orden cambió mientras se registraba el pago. Actualizá la pantalla e intentá nuevamente.";
+    if (error.status >= 500) return "El servidor no pudo completar la operación. Intentá nuevamente en unos segundos.";
+    return "No se pudo completar el pago. Verificá los datos e intentá nuevamente.";
+  }
+  if (error instanceof TypeError) return "No se pudo conectar con el servidor. Verificá la conexión e intentá nuevamente.";
+  return "No se pudo completar el pago. Intentá nuevamente.";
 }
 
 function paymentMethodLabel(code: string, fallback: string): string {
@@ -162,6 +194,8 @@ export function RegisterPaymentContainer({
   tableId,
   personalAccountId,
   onPaymentComplete,
+  onWholeTableClosed,
+  onReviewPayment,
   onBack,
   ticketId,
 }: RegisterPaymentContainerProps): JSX.Element | null {
@@ -186,6 +220,7 @@ export function RegisterPaymentContainer({
     [],
   );
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [accountPayments, setAccountPayments] = useState<AccountPaymentCache[]>([]);
   const [selectedMethodCode, setSelectedMethodCode] = useState<string>(
     methodRegistry[0]?.code ?? "",
   );
@@ -193,6 +228,7 @@ export function RegisterPaymentContainer({
   const [amountToPayCents, setAmountToPayCents] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [paymentReview, setPaymentReview] = useState<PaymentReviewInfo | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const processingGuard = useRef(false);
   const availableMethods = methodRegistry.filter(isPaymentMethodDisplayable);
@@ -232,6 +268,7 @@ export function RegisterPaymentContainer({
         setPersonalAccount(account);
         setAccountAllocations(orderAccountAllocations);
         setPayments(accountPayments);
+        setAccountPayments([]);
         setTicket(null);
         setLoadState("ready");
         return;
@@ -262,12 +299,26 @@ export function RegisterPaymentContainer({
       setOrderAccountAllocations(foundAccountAllocations);
       setLoadState("ready");
 
-      const ticketPayments = await paymentsPort.listByTicket(activeTicket.id);
-      if (!cancelled) setPayments(ticketPayments);
+      const [ticketPayments, accountPaymentEntries] = await Promise.all([
+        paymentsPort.listByTicket(activeTicket.id),
+        Promise.all(
+          foundAccounts.map(async (account) => ({
+            accountId: account.id,
+            payments: await paymentsPort.listByTarget({
+              kind: "personal_account",
+              accountId: account.id,
+            }),
+          })),
+        ),
+      ]);
+      if (!cancelled) {
+        setPayments(ticketPayments);
+        setAccountPayments(accountPaymentEntries);
+      }
     } catch (error) {
       if (!cancelled) {
         setLoadState("error");
-        setErrorMessage(error instanceof Error ? error.message : "No se pudo cargar la orden.");
+        setErrorMessage(paymentErrorMessage(error));
       }
     }
     }
@@ -347,7 +398,13 @@ export function RegisterPaymentContainer({
     : isWholeTablePayment
       ? ticketLines.reduce((sum, line) => sum + line.totalCents, 0)
       : ticketTotals(ticket!.id, order.lineItems, allocations).cents;
-  const alreadyPaidCents = paymentsTotal(payments);
+  const accountPaidCents = accountPayments.reduce(
+    (sum, entry) => sum + paymentsTotal(entry.payments),
+    0,
+  );
+  const alreadyPaidCents = isWholeTablePayment
+    ? accountPaidCents + paymentsTotal(payments)
+    : paymentsTotal(payments);
   const remainingBalanceCents = Math.max(0, totalCents - alreadyPaidCents);
 
   const selectedMethod = availableMethods.find((method) => method.code === selectedMethodCode);
@@ -400,13 +457,15 @@ export function RegisterPaymentContainer({
 
     setIsProcessing(true);
     setErrorMessage(null);
+    setPaymentReview(null);
     try {
       await processPayment();
       console.info("[RegisterPayment] Pago procesado correctamente");
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       console.error("[RegisterPayment] Error al procesar pago", error);
-      setErrorMessage(`No se pudo procesar el pago: ${message}`);
+      const review = paymentReviewInfo(error);
+      if (review) setPaymentReview(review);
+      setErrorMessage(paymentErrorMessage(error));
     } finally {
       processingGuard.current = false;
       setIsProcessing(false);
@@ -449,25 +508,91 @@ export function RegisterPaymentContainer({
       );
       setPersonalAccount(saved);
       if (status === "paid") {
-        const [finalAccounts, finalAllocations] = await Promise.all([
-          accountsPort.listByOrder(order!.id),
-          accountsPort.listAllocationsByOrder(order!.id),
-        ]);
-        if (
-          finalAccounts.length > 0 &&
-          finalAccounts.every((account) => account.status === "paid") &&
-          allQuantitiesAssigned(order!, finalAllocations)
-        ) {
-          // Once every product belongs to a paid account, close the parent
-          // order too so it no longer appears as an unpaid table.
-          await paymentClosure.closeOrder(order!.id);
-        }
+        // Let the persisted closure rules decide whether the whole table can
+        // close. If they reject it, the payment remains recorded and the
+        // review popup receives the concrete blocking reasons.
+        await paymentClosure.closeOrder(order!.id);
         onPaymentComplete?.();
       }
       return;
     }
 
-    if (!ticket) return;
+    if (!ticket || !order) return;
+
+    if (isWholeTablePayment && orderAccounts.length > 0) {
+      let amountLeft = effectiveAmountToPayCents;
+      const nextAccountPayments = accountPayments.map((entry) => ({
+        ...entry,
+        payments: [...entry.payments],
+      }));
+      const accountById = new Map(orderAccounts.map((account) => [account.id, account]));
+      const accountBalances = orderAccounts.map((account) =>
+        accountBalance({
+          accountId: account.id,
+          lineItems: order.lineItems,
+          allocations: orderAccountAllocations,
+          payments: toCachedAccountPayments(nextAccountPayments),
+        }),
+      );
+      for (const [index, balance] of accountBalances.entries()) {
+        if (amountLeft <= 0) break;
+        const amount = Math.min(amountLeft, balance.remainingCents);
+        if (amount <= 0) continue;
+        const payment: Payment = {
+          id: createUuid(),
+          target: { kind: "personal_account", accountId: orderAccounts[index]!.id },
+          methodCode: selectedMethod.code as PaymentMethodCode,
+          amountCents: amount,
+          tenderedCents: null,
+          changeCents: null,
+          recordedAt: new Date().toISOString(),
+        };
+        await paymentsPort.record(payment);
+        const accountId = orderAccounts[index]!.id;
+        const entry = nextAccountPayments.find((candidate) => candidate.accountId === accountId);
+        if (entry) entry.payments = [...entry.payments, payment];
+        amountLeft -= amount;
+        const account = accountById.get(accountId);
+        if (account) {
+          const paidCents = balance.paidCents + amount;
+          await accountsPort.save(
+            {
+              ...account,
+              status: derivePersonalAccountStatus({
+                totalCents: balance.totalCents,
+                paidCents,
+                isPending: false,
+              }),
+              closedAt: paidCents >= balance.totalCents ? new Date().toISOString() : null,
+            },
+            orderAccountAllocations,
+            account.version,
+          );
+        }
+      }
+
+      let nextTicketPayments = payments;
+      if (amountLeft > 0) {
+        nextTicketPayments = applyPayment(availableMethods, payments, {
+          ticketId: ticket.id,
+          methodCode: selectedMethod.code as PaymentMethodCode,
+          amountCents: amountLeft,
+          tenderedCents: methodRequiresTendered && tenderedCents !== null ? tenderedCents : undefined,
+        });
+        const ticketPayment = nextTicketPayments[nextTicketPayments.length - 1];
+        if (ticketPayment) await paymentsPort.record(ticketPayment);
+      }
+      setAccountPayments(nextAccountPayments);
+      setPayments(nextTicketPayments);
+      setTenderedCents(null);
+      setAmountToPayCents(null);
+      if (effectiveAmountToPayCents >= remainingBalanceCents) {
+        await paymentClosure.closeOrder(order.id);
+        onWholeTableClosed?.(tableId);
+        onPaymentComplete?.();
+      }
+      return;
+    }
 
     const updatedPayments = applyPayment(availableMethods, payments, {
       ticketId: ticket.id,
@@ -500,6 +625,7 @@ export function RegisterPaymentContainer({
         // A paid ticket is not enough: close the order and free the table so
         // the order disappears from the open-orders list.
         await paymentClosure.closeOrder(order!.id);
+        onWholeTableClosed?.(tableId);
       }
       onPaymentComplete?.();
     }
@@ -537,6 +663,12 @@ export function RegisterPaymentContainer({
       canConfirm={canConfirm}
       isProcessing={isProcessing}
       errorMessage={errorMessage}
+      paymentReview={paymentReview}
+      onDismissError={() => {
+        setErrorMessage(null);
+        setPaymentReview(null);
+      }}
+      onReviewError={onReviewPayment}
     />
   );
 }

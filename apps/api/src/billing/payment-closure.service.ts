@@ -67,7 +67,21 @@ export class PaymentClosureService {
         ],
         payments: payments.filter((p) => p.account_id !== null).map((p) => ({ accountId: p.account_id!, amountCents: p.amount_cents })),
       });
-      if (closure.kind !== "closed") throw new ConflictException(`Order ${orderId} requires review before closure`);
+      if (closure.kind !== "closed") {
+        throw new ConflictException({
+          code: "ORDER_REVIEW_REQUIRED",
+          message: "Order requires review before closure",
+          unresolvedLineItems: closure.unresolvedLineItems.map((item) => ({
+            lineItemId: item.lineItemId,
+            unresolvedQuantity: item.unresolvedQuantity,
+          })),
+          blockingAccounts: closure.blockingAccounts.map((account) => ({
+            accountId: account.accountId,
+            status: account.status,
+            remainingCents: account.remainingCents,
+          })),
+        });
+      }
 
       const closedAt = closure.order.closedAt!;
       const accountById = new Map(domainAccounts.map((account) => [account.id, account]));
