@@ -284,7 +284,11 @@ function OrderCard({
   };
 
   return (
-    <div className={styles.row} data-table-id={row.tableId} data-selected={selected}>
+    <div
+      className={`${styles.row} ${row.itemCount === 0 ? styles.hasRemove : ""}`}
+      data-table-id={row.tableId}
+      data-selected={selected}
+    >
       <button
         type="button"
         className={styles.rowMain}

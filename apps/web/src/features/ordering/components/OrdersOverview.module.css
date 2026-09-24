@@ -368,6 +368,7 @@
 }
 
 .row {
+  position: relative;
   display: flex;
   align-items: stretch;
   border: 1px solid var(--border-subtle);
@@ -427,7 +428,7 @@
 .meta {
   grid-area: count;
   min-width: 0;
-  overflow-wrap: break-word;
+  overflow-wrap: normal;
   word-break: normal;
 }
 
@@ -510,11 +511,46 @@
 
 @media (max-width: 64rem) {
   .rowMain {
-    gap: 0.4rem 0.55rem;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "title"
+      "badges"
+      "count"
+      "payment";
+    grid-template-rows: auto auto auto auto;
+    align-items: start;
+    gap: 0.4rem;
+    width: 100%;
+  }
+
+  .row.hasRemove .rowMain {
+    padding-right: 2.75rem;
   }
 
   .rowMain .identity {
     width: 100%;
+  }
+
+  .meta {
+    min-width: max-content;
+    white-space: nowrap;
+  }
+
+  .balance {
+    justify-self: start;
+    align-items: flex-start;
+    min-width: max-content;
+    text-align: left;
+  }
+
+  .removeButton {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    z-index: 1;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin: 0;
   }
 }
 
