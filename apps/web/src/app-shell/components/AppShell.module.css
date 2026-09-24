@@ -34,9 +34,9 @@
   z-index: 10;
 }
 
-/* Sonner lives below the fixed/sticky navigation and uses Kutana tokens. */
+/* Sonner is viewport-level UI: above navigation/content, without depending on the scroll area. */
 :global([data-sonner-toaster]) {
-  z-index: 30 !important;
+  z-index: 50 !important;
 }
 
 .toast {
@@ -65,16 +65,27 @@
 }
 
 @media (max-width: 48rem) {
+  /* Sonner's mobile defaults use the mobile offsets as insets. Keep one
+     centered, viewport-sized layer instead of combining 100% width with
+     left/right insets (which caused the toast to start off-screen). */
   :global([data-sonner-toaster]) {
-    right: 0 !important;
+    top: calc(env(safe-area-inset-top) + 4.75rem) !important;
+    right: auto !important;
+    left: 50% !important;
+    width: min(320px, calc(100vw - 2rem - env(safe-area-inset-left) - env(safe-area-inset-right))) !important;
+    padding: 0 !important;
+    transform: translateX(-50%) !important;
+  }
+
+  :global([data-sonner-toaster] [data-sonner-toast]) {
     left: 0 !important;
+    right: 0 !important;
     width: 100% !important;
-    align-items: center !important;
-    padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right)) !important;
+    max-width: 100%;
   }
 
   .toast {
-    width: min(320px, calc(100vw - 2rem));
+    width: 100%;
   }
 
   /* Mobile owns one scroll context so the header can leave the viewport

@@ -125,10 +125,7 @@ export function NewOrderButton({
         onClick={() => setOpen(true)}
       >
         <span aria-hidden="true">+</span>
-        <span>
-          Nueva <br />
-          orden
-        </span>
+        <span>Nueva orden</span>
       </button>
 
       {open ? (
