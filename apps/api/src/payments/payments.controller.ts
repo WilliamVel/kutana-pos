@@ -1,6 +1,8 @@
 import { BadRequestException, Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import type { Payment, PaymentTarget } from "@kutana/shared/payments/model/payment.js";
 import type { PaymentMethodRegistry } from "@kutana/shared/payments/model/payment-method-registry.js";
+import { customerDebtBalance } from "@kutana/shared/billing/model/customer-debt-ledger.js";
+import { PostgresCustomerDebtRepository } from "../billing/adapters/postgres/customer-debt-repository.js";
 import { PostgresPaymentMethodRepository } from "./adapters/postgres/payment-method-repository.js";
 import { PostgresPaymentRepository } from "./adapters/postgres/payment-repository.js";
 
@@ -16,6 +18,7 @@ export class PaymentsController {
   constructor(
     private readonly payments: PostgresPaymentRepository,
     private readonly paymentMethods: PostgresPaymentMethodRepository,
+    private readonly debts?: PostgresCustomerDebtRepository,
   ) {}
 
   @Get("methods")
@@ -34,8 +37,25 @@ export class PaymentsController {
   }
 
   @Post()
-  recordPayment(@Body() body: Payment): Promise<Payment> {
+  async recordPayment(@Body() body: Payment): Promise<Payment> {
+    validatePaymentPayload(body);
+    if (body.target.kind === "customer_debt" && this.debts) {
+      const entries = await this.debts.listByCustomer(body.target.customerId);
+      const balanceCents = customerDebtBalance({ entries, customerId: body.target.customerId });
+      if (body.amountCents > balanceCents) {
+        throw new BadRequestException("Payment amount exceeds the outstanding balance");
+      }
+    }
     return this.payments.record(body);
+  }
+}
+
+function validatePaymentPayload(payment: Payment): void {
+  if (!payment?.id || !Number.isInteger(payment.amountCents) || payment.amountCents <= 0) {
+    throw new BadRequestException("Payment amount must be a positive integer number of cents");
+  }
+  if (!payment.target || !payment.methodCode || !payment.recordedAt) {
+    throw new BadRequestException("Payment is missing required fields");
   }
 }
 

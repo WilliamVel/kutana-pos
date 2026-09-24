@@ -53,8 +53,9 @@ describe("PendingDebtsContainer", () => {
     const row = screen.getByRole("article", { name: "Deuda de Ada Lovelace" });
     expect(row).toHaveTextContent("$15.00");
 
-    fireEvent.change(screen.getByLabelText("Monto de pago para Ada Lovelace"), { target: { value: "500" } });
-    fireEvent.click(within(row).getByRole("button", { name: "Registrar pago" }));
+    fireEvent.click(within(row).getByRole("button", { name: "Cobrar a Ada Lovelace" }));
+    fireEvent.change(screen.getByLabelText("Importe del pago (USD)"), { target: { value: "5.00" } });
+    fireEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
 
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/sin reabrir/i));
     await waitFor(() => expect(screen.getByRole("article", { name: "Deuda de Ada Lovelace" })).toHaveTextContent("$10.00"));
@@ -76,7 +77,7 @@ describe("PendingDebtsContainer", () => {
     renderContainer(ports);
 
     await waitFor(() => expect(screen.getByRole("article", { name: "Cuenta pendiente de Juan P." })).toBeInTheDocument());
-    fireEvent.change(screen.getByLabelText("Monto de pago para Juan P."), { target: { value: "100" } });
+    fireEvent.change(screen.getByLabelText("Monto de pago para Juan P. (USD)"), { target: { value: "1.00" } });
     fireEvent.click(screen.getByRole("button", { name: "Registrar pago" }));
 
     await waitFor(async () => expect(await ports.payments.listByTarget({ kind: "personal_account", accountId: account.id })).toHaveLength(1));

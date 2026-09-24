@@ -1,5 +1,5 @@
 import { createUuid } from "@kutana/shared/platform/uuid.js";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { accountBalance, createCustomer, type AccountLineAllocation, type Customer, type PersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
 import { createCustomerDebtEntry, customerDebtBalance } from "@kutana/shared/billing/model/customer-debt-ledger.js";
 import type { CustomerDebtEntry } from "@kutana/shared/billing/model/customer-debt-ledger.js";
@@ -30,23 +30,51 @@ export function PendingDebtsContainer(): JSX.Element {
   const [accountPaymentDrafts, setAccountPaymentDrafts] = useState<Record<string, string>>({});
   const [linkCustomerDrafts, setLinkCustomerDrafts] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
+  const [customerPaymentErrors, setCustomerPaymentErrors] = useState<Record<string, string>>({});
+  const [accountPaymentErrors, setAccountPaymentErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const loadGeneration = useRef(0);
+  const [customerListQuery, setCustomerListQuery] = useState({ page: 0, pageSize: 20, search: "", sort: "activity" as "activity" | "balance" });
+  const [globalTotals, setGlobalTotals] = useState<{ totalPendingCents: number; identifiedTotalCents: number; unlinkedTotalCents: number; totalRows: number } | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
-    const [allCustomers, entries, orders, pendingAccounts] = await Promise.all([
+    const generation = ++loadGeneration.current;
+    setLoading(true);
+    const [allCustomers, orders, pendingAccounts] = await Promise.all([
       customersPort.listAll(),
-      debtsPort.listAll(),
       ordersPort.listAll(),
       accountsPort.listPendingFreeName(),
     ]);
+    if (generation !== loadGeneration.current) return;
     setCustomers(allCustomers);
-    setCustomerDebts(toCustomerDebtRows(entries, allCustomers));
-    setUnlinkedAccounts(await toUnlinkedRows(pendingAccounts, orders, accountsPort, paymentsPort));
-  }, [accountsPort, customersPort, debtsPort, ordersPort, paymentsPort]);
+    const page = debtsPort.listPendingPage
+      ? await debtsPort.listPendingPage(customerListQuery)
+      : null;
+    if (page) {
+      setCustomerDebts(page.rows.map((row) => ({ ...row })));
+      setGlobalTotals({ totalPendingCents: page.totalPendingCents, identifiedTotalCents: page.identifiedTotalCents, unlinkedTotalCents: page.unlinkedTotalCents, totalRows: page.totalRows });
+    } else {
+      const entries = await debtsPort.listAll();
+      const rows = toCustomerDebtRows(entries, allCustomers);
+      setCustomerDebts(rows);
+      const identifiedTotalCents = rows.reduce((sum, row) => sum + row.balanceCents, 0);
+      setGlobalTotals((totals) => ({ ...(totals ?? { unlinkedTotalCents: 0 }), totalPendingCents: identifiedTotalCents, identifiedTotalCents, totalRows: rows.length }));
+    }
+    const unlinkedRows = await toUnlinkedRows(pendingAccounts, orders, accountsPort, paymentsPort);
+    if (generation !== loadGeneration.current) return;
+    setUnlinkedAccounts(unlinkedRows);
+    setGlobalTotals((totals) => totals ? ({ ...totals, unlinkedTotalCents: page?.unlinkedTotalCents ?? unlinkedRows.reduce((sum, row) => sum + row.remainingCents, 0) }) : totals);
+    setLoading(false);
+  }, [accountsPort, customersPort, customerListQuery, debtsPort, ordersPort, paymentsPort]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const onCustomerListQueryChange = useCallback((query: { search: string; sort: "activity" | "balance"; page: number }): void => {
+    setCustomerListQuery((current) => ({ ...current, ...query }));
+  }, []);
 
   const runMutation = useCallback(async (mutation: () => Promise<string>): Promise<void> => {
     setBusy(true);
@@ -54,6 +82,8 @@ export function PendingDebtsContainer(): JSX.Element {
       const nextMessage = await mutation();
       setMessage(nextMessage);
       await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo registrar el pago. Revisa la conexión e inténtalo de nuevo.");
     } finally {
       setBusy(false);
     }
@@ -75,7 +105,9 @@ export function PendingDebtsContainer(): JSX.Element {
 
   const payCustomerDebt = (customerId: string): void => {
     void runMutation(async () => {
-      const amountCents = positiveDraft(customerPaymentDrafts[customerId]);
+      const debt = customerDebts.find((row) => row.customerId === customerId);
+      const amountCents = validateDraft(customerPaymentDrafts[customerId], debt?.balanceCents);
+      if (!debt) throw new Error("La deuda ya no está disponible. Actualiza la lista.");
       const payment = await recordPayment({ kind: "customer_debt", customerId }, amountCents);
       await debtsPort.record(createCustomerDebtEntry({
         customerId,
@@ -85,19 +117,22 @@ export function PendingDebtsContainer(): JSX.Element {
         paymentId: payment.id,
       }));
       setCustomerPaymentDrafts((drafts) => ({ ...drafts, [customerId]: "" }));
+      setCustomerPaymentErrors((errors) => ({ ...errors, [customerId]: "" }));
       return "Pago de deuda registrado sin reabrir la mesa original.";
     });
   };
 
   const payUnlinkedAccount = (accountId: string): void => {
     void runMutation(async () => {
-      const amountCents = positiveDraft(accountPaymentDrafts[accountId]);
+      const row = unlinkedAccounts.find((candidate) => candidate.accountId === accountId);
+      const amountCents = validateDraft(accountPaymentDrafts[accountId], row?.remainingCents);
       const context = await getAccountContext(accountId, accountsPort, ordersPort, paymentsPort);
       await recordPayment({ kind: "personal_account", accountId }, Math.min(amountCents, context.remainingCents));
       if (amountCents >= context.remainingCents) {
         await accountsPort.save({ ...context.account, status: "paid", closedAt: new Date().toISOString() }, context.allocations, context.account.version);
       }
       setAccountPaymentDrafts((drafts) => ({ ...drafts, [accountId]: "" }));
+      setAccountPaymentErrors((errors) => ({ ...errors, [accountId]: "" }));
       return "Pago de cuenta pendiente registrado.";
     });
   };
@@ -153,9 +188,21 @@ export function PendingDebtsContainer(): JSX.Element {
       linkCustomerDrafts={linkCustomerDrafts}
       disabled={busy}
       message={message}
-      onCustomerPaymentDraftChange={(customerId, amount) => setCustomerPaymentDrafts((drafts) => ({ ...drafts, [customerId]: amount }))}
+      customerPaymentErrors={customerPaymentErrors}
+      accountPaymentErrors={accountPaymentErrors}
+      loading={loading}
+      globalTotals={globalTotals}
+      serverPagination={debtsPort.listPendingPage ? { page: customerListQuery.page, pageSize: customerListQuery.pageSize, totalRows: globalTotals?.totalRows ?? 0 } : undefined}
+      onCustomerListQueryChange={onCustomerListQueryChange}
+      onCustomerPaymentDraftChange={(customerId, amount) => {
+        setCustomerPaymentDrafts((drafts) => ({ ...drafts, [customerId]: amount }));
+        setCustomerPaymentErrors((errors) => ({ ...errors, [customerId]: validateDraftMessage(amount, customerDebts.find((row) => row.customerId === customerId)?.balanceCents) }));
+      }}
       onPayCustomerDebt={payCustomerDebt}
-      onAccountPaymentDraftChange={(accountId, amount) => setAccountPaymentDrafts((drafts) => ({ ...drafts, [accountId]: amount }))}
+      onAccountPaymentDraftChange={(accountId, amount) => {
+        setAccountPaymentDrafts((drafts) => ({ ...drafts, [accountId]: amount }));
+        setAccountPaymentErrors((errors) => ({ ...errors, [accountId]: validateDraftMessage(amount, unlinkedAccounts.find((row) => row.accountId === accountId)?.remainingCents) }));
+      }}
       onPayUnlinkedAccount={payUnlinkedAccount}
       onLinkCustomerDraftChange={(accountId, customerId) => setLinkCustomerDrafts((drafts) => ({ ...drafts, [accountId]: customerId }))}
       onLinkToCustomer={linkToCustomer}
@@ -171,6 +218,9 @@ function toCustomerDebtRows(entries: readonly CustomerDebtEntry[], customers: re
       displayName: customer.displayName,
       balanceCents: customerDebtBalance({ entries, customerId: customer.id }),
       lastDebtAt: entries.filter((entry) => entry.customerId === customer.id).at(-1)?.createdAt ?? customer.updatedAt,
+      debitCents: entries.filter((entry) => entry.customerId === customer.id && entry.direction === "debit").reduce((sum, entry) => sum + entry.amountCents, 0),
+      paidCents: entries.filter((entry) => entry.customerId === customer.id && entry.direction === "credit").reduce((sum, entry) => sum + entry.amountCents, 0),
+      sourceCount: new Set(entries.filter((entry) => entry.customerId === customer.id && entry.accountId).map((entry) => entry.accountId)).size,
     }))
     .filter((row) => row.balanceCents > 0);
 }
@@ -200,6 +250,8 @@ async function toUnlinkedRows(
       tableId: order.tableId,
       remainingCents: balance.remainingCents,
       createdAt: account.createdAt,
+      originalCents: balance.totalCents,
+      paidCents: balance.paidCents,
     };
   }));
   return rows.filter((row): row is UnlinkedPendingAccountRow => row !== null);
@@ -226,8 +278,25 @@ async function getAccountContext(
   return { account, order, allocations, remainingCents: balance.remainingCents };
 }
 
-function positiveDraft(value: string | undefined): number {
-  const amount = Number(value ?? 0);
-  if (!Number.isInteger(amount) || amount <= 0) throw new Error("El monto de pago debe ser un número positivo de centavos");
-  return amount;
+function parseDollarsToCents(value: string | undefined): number | null {
+  if (!value?.trim()) return null;
+  const normalized = value.trim().replace(",", ".");
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null;
+  const [whole, fraction = ""] = normalized.split(".");
+  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+  return Number.isSafeInteger(cents) ? cents : null;
+}
+
+function validateDraftMessage(value: string | undefined, balanceCents: number | undefined): string {
+  const amountCents = parseDollarsToCents(value);
+  if (amountCents === null) return !value?.trim() ? "Ingresa un importe en USD." : "Usa un importe válido con hasta dos decimales, por ejemplo 3,36.";
+  if (amountCents <= 0) return "El importe debe ser mayor que cero.";
+  if (balanceCents !== undefined && amountCents > balanceCents) return `El importe no puede superar el saldo de $${(balanceCents / 100).toFixed(2)}.`;
+  return "";
+}
+
+function validateDraft(value: string | undefined, balanceCents: number | undefined): number {
+  const error = validateDraftMessage(value, balanceCents);
+  if (error) throw new Error(error);
+  return parseDollarsToCents(value)!;
 }

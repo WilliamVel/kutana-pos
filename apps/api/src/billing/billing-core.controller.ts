@@ -13,6 +13,7 @@ import {
 } from "@nestjs/common";
 import type { Allocation } from "@kutana/shared/billing/model/allocation.js";
 import type { CustomerDebtEntry } from "@kutana/shared/billing/model/customer-debt-ledger.js";
+import type { PendingDebtPageQuery } from "@kutana/shared/billing/model/pending-debt-page.js";
 import type {
   AccountLineAllocation,
   Customer,
@@ -211,6 +212,17 @@ export class BillingCoreController {
       throw new BadRequestException("expectedVersion query parameter must be an integer");
     }
     return this.personalAccounts.delete(id, parsedExpectedVersion);
+  }
+
+  @Get("customer-debts/pending")
+  listPendingCustomerDebts(@Query() query: Partial<Record<keyof PendingDebtPageQuery, string>>): ReturnType<PostgresCustomerDebtRepository["listPendingPage"]> {
+    const page = Number(query.page ?? 0);
+    const pageSize = Number(query.pageSize ?? 20);
+    if (!Number.isInteger(page) || page < 0 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) {
+      throw new BadRequestException("page must be >= 0 and pageSize must be between 1 and 100");
+    }
+    if (query.sort && query.sort !== "activity" && query.sort !== "balance") throw new BadRequestException("Unsupported debt sort");
+    return this.customerDebts.listPendingPage({ page, pageSize, search: query.search, sort: query.sort as PendingDebtPageQuery["sort"] });
   }
 
   @Get("customer-debts")
