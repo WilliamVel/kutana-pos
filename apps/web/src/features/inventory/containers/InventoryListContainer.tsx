@@ -136,6 +136,7 @@ export function InventoryListContainer({
       searchQuery={searchQuery}
       onSearchQueryChange={(value) => { setSearchQuery(value); setPage(1); }}
       page={clampedPage}
+      pageSize={PAGE_SIZE}
       pageCount={pageCount}
       onPageChange={(value) => { setPage(value); document.getElementById("inventory-results")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
       onEditProduct={onEditProduct ? (id) => { const product = productById.get(id); if (product) onEditProduct(product); } : undefined}

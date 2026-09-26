@@ -151,6 +151,11 @@ describe("InventoryList", () => {
     expect(props.onPageChange).toHaveBeenCalledWith(1);
   });
 
+  it("uses the supplied page size when describing the visible range", () => {
+    renderList({ rows: ROWS, totalCount: 4, page: 2, pageSize: 2, pageCount: 2 });
+    expect(screen.getByText("Mostrando 3–4")).toBeInTheDocument();
+  });
+
   it("hides pagination controls when there is only one page", () => {
     renderList({ page: 1, pageCount: 1 });
     expect(screen.queryByRole("button", { name: "Página anterior" })).not.toBeInTheDocument();
