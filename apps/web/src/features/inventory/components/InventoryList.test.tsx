@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { InventoryList, type InventoryRow } from "./InventoryList.js";
+import styles from "./InventoryList.module.css";
 
 const ROWS: InventoryRow[] = [
   {
@@ -50,6 +51,8 @@ function renderList(overrides: Partial<React.ComponentProps<typeof InventoryList
   return props;
 }
 
+afterEach(() => vi.unstubAllGlobals());
+
 describe("InventoryList", () => {
   it("renders each product with its formatted price and correctly-typed stock label", () => {
     renderList();
@@ -60,6 +63,22 @@ describe("InventoryList", () => {
     // Volume stock MUST show millilitres, never a unit count for draft beer.
     expect(screen.getByText("4500ml")).toBeInTheDocument();
     expect(screen.getByText("48 unidades")).toBeInTheDocument();
+  });
+
+  it("owns the mobile price alignment without relying on PriceTag's internal class", () => {
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    renderList();
+    const mobileList = document.querySelector('ul[aria-label="Productos"]');
+    expect(mobileList).not.toBeNull();
+    const mobileCard = within(mobileList as HTMLElement)
+      .getByText("KUTANA Pilsener 500ml").closest("li");
+    expect(mobileCard).not.toBeNull();
+    expect(styles.cardPrice).toBeDefined();
+    expect(within(mobileCard!).getByText("$3.50").parentElement).toHaveClass(styles.cardPrice!);
   });
 
   it("shows the stock status pill matching each row's real status", () => {
