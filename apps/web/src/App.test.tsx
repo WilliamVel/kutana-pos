@@ -13,7 +13,7 @@ describe("App", () => {
       </PortsProvider>,
     );
 
-    expect(screen.getByRole("heading", { name: "Ingreso de usuario" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Mina" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
@@ -52,7 +52,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Categorías" }));
 
     expect(screen.getByRole("heading", { name: "Categorías" })).toBeInTheDocument();
-    expect(await screen.findByRole("form", { name: "Editar Draft Beer" })).toBeInTheDocument();
+    expect(await screen.findByRole("list", { name: "Categorías existentes" })).toBeInTheDocument();
   });
 
   it("opens customer management from the top bar", async () => {
@@ -71,7 +71,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Clientes" }));
 
     expect(screen.getByRole("heading", { name: "Clientes" })).toBeInTheDocument();
-    expect(screen.getByRole("form", { name: "Formulario de cliente" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Nuevo cliente" })).toBeInTheDocument();
   });
 
   it("edits an existing product from the inventory screen", async () => {
@@ -102,20 +102,19 @@ describe("App", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Inventario" }));
 
     await waitFor(() => expect(screen.getByText("Blonde Ale 330ml")).toBeInTheDocument());
-    const row = screen.getByRole("row", {
-      name: /Blonde Ale 330ml MENU-BLONDE-ALE-330 Draft Beer/,
-    });
-    fireEvent.click(within(row).getByRole("button", { name: "Editar" }));
+    const row = screen.getByText("Blonde Ale 330ml").closest("tr");
+    expect(row).not.toBeNull();
+    fireEvent.click(within(row!).getByRole("button", { name: "Editar producto Blonde Ale 330ml" }));
 
     await waitFor(() => expect(screen.getByDisplayValue("Blonde Ale 330ml")).toBeInTheDocument());
-    fireEvent.change(screen.getByLabelText("Nombre"), {
+    fireEvent.change(screen.getByLabelText("Nombre del producto *"), {
       target: { value: "Blonde Ale 330ml Editada" },
     });
-    fireEvent.change(screen.getByLabelText("Precio de venta (USD)"), { target: { value: "3.25" } });
+    fireEvent.change(screen.getByLabelText("Precio de venta * (USD)"), { target: { value: "3.25" } });
     fireEvent.submit(screen.getByRole("form"));
 
     await waitFor(() => expect(screen.getByText("Blonde Ale 330ml Editada")).toBeInTheDocument());
-    expect(screen.getByText("$3.25")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("$3.25")).toBeInTheDocument());
   });
 
   it("logs out from the account menu", async () => {
@@ -134,6 +133,6 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: /Cuenta\s+Mina/ }));
     fireEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
 
-    expect(screen.getByRole("heading", { name: "Ingreso de usuario" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
   });
 });

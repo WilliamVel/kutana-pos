@@ -32,8 +32,9 @@ describe("NewOrderContainer", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Nueva orden" }));
     fireEvent.click(await screen.findByRole("button", { name: "Table 4" }));
+    fireEvent.click(screen.getByRole("button", { name: "Crear orden" }));
 
-    await waitFor(() => expect(onCreated).toHaveBeenCalledWith("table-4"));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith("table-4", expect.any(String)));
 
     const order = await ports.orders.findByTable("table-4");
     expect(order).not.toBeNull();
@@ -58,10 +59,10 @@ describe("NewOrderContainer", () => {
     );
 
     fireEvent.click(await screen.findByRole("button", { name: "Nueva orden" }));
-    fireEvent.change(screen.getByLabelText("Nombre de mesa"), { target: { value: " barra " } });
-    fireEvent.click(screen.getByRole("button", { name: "Crear mesa" }));
+    fireEvent.change(screen.getByLabelText("Nombre o número"), { target: { value: " barra " } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear orden" }));
 
-    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(retired.id));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(retired.id, expect.any(String)));
     expect((await ports.tables.findById(retired.id))?.status).toBe("active");
   });
 
@@ -75,8 +76,8 @@ describe("NewOrderContainer", () => {
     );
 
     fireEvent.click(await screen.findByRole("button", { name: "Nueva orden" }));
-    fireEvent.change(screen.getByLabelText("Nombre de mesa"), { target: { value: "Barra" } });
-    fireEvent.click(screen.getByRole("button", { name: "Crear mesa" }));
+    fireEvent.change(screen.getByLabelText("Nombre o número"), { target: { value: "Barra" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear orden" }));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalled());
     const createdTableId = onCreated.mock.calls[0]?.[0] as string;

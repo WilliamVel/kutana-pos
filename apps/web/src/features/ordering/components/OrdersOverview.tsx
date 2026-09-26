@@ -68,7 +68,7 @@ export function OrdersOverview({
     const frame = window.requestAnimationFrame(() => {
       Array.from(document.querySelectorAll<HTMLElement>("[data-table-id]"))
         .find((element) => element.dataset.tableId === selectedTableId)
-        ?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+        ?.scrollIntoView?.({ behavior: "smooth", block: "nearest", inline: "nearest" });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [rows, selectedTableId]);
@@ -106,7 +106,7 @@ export function OrdersOverview({
       const card = Array.from(document.querySelectorAll<HTMLElement>("[data-table-id]")).find(
         (element) => element.dataset.tableId === tableId,
       );
-      card?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      card?.scrollIntoView?.({ behavior: "smooth", block: "nearest", inline: "center" });
     });
   };
 

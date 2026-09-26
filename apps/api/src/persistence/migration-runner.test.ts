@@ -26,6 +26,9 @@ describe("migration discovery", () => {
       "014_auth_refresh_tokens.sql",
       "015_auth_users.sql",
       "016_payment_closure_sales_history.sql",
+      "017_retired_tables.sql",
+      "018_pending_debt_query_indexes.sql",
+      "019_unique_table_labels_case_insensitive.sql",
     ]);
   });
 

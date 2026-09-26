@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { addLineItem } from "@kutana/shared/ordering/services/line-item-service.js";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
@@ -15,8 +15,8 @@ describe("OrderTicketPanelContainer", () => {
     );
 
     await waitFor(() => expect(screen.getByText("Table 1")).toBeInTheDocument());
-    expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
-    expect(screen.getByText("Loaded Nachos")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Loaded Nachos")).toBeInTheDocument();
   });
 
   it("groups repeated products into one visible counter", async () => {
@@ -39,10 +39,10 @@ describe("OrderTicketPanelContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument());
+    await waitFor(() => expect(within(screen.getByRole("table")).getByText("KUTANA Pilsener 500ml")).toBeInTheDocument());
 
-    expect(screen.getAllByText("KUTANA Pilsener 500ml")).toHaveLength(1);
-    expect(screen.getByText("x3")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getAllByText("KUTANA Pilsener 500ml")).toHaveLength(1);
+    expect(within(screen.getByRole("table")).getByText("x3")).toBeInTheDocument();
   });
 
   it("removes a product from the table order using the trash action", async () => {
@@ -53,10 +53,10 @@ describe("OrderTicketPanelContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Loaded Nachos")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Quitar producto Loaded Nachos" }));
+    await waitFor(() => expect(within(screen.getByRole("table")).getByText("Loaded Nachos")).toBeInTheDocument());
+    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Eliminar Loaded Nachos" }));
 
-    await waitFor(() => expect(screen.queryByText("Loaded Nachos")).not.toBeInTheDocument());
+    await waitFor(() => expect(within(screen.getByRole("table")).queryByText("Loaded Nachos")).not.toBeInTheDocument());
     const order = await ports.orders.findByTable("table-1");
     expect(order?.lineItems.some((line) => line.nameSnapshot === "Loaded Nachos")).toBe(false);
   });
@@ -69,10 +69,10 @@ describe("OrderTicketPanelContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Loaded Nachos")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Quitar producto Loaded Nachos" }));
-    await waitFor(() => expect(screen.queryByText("Loaded Nachos")).not.toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Quitar producto KUTANA Pilsener 500ml" }));
+    await waitFor(() => expect(within(screen.getByRole("table")).getByText("Loaded Nachos")).toBeInTheDocument());
+    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Eliminar Loaded Nachos" }));
+    await waitFor(() => expect(within(screen.getByRole("table")).queryByText("Loaded Nachos")).not.toBeInTheDocument());
+    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Eliminar KUTANA Pilsener" }));
 
     await waitFor(async () => expect((await ports.orders.findByTable("table-1"))?.status).toBe("paid"));
     await waitFor(async () =>
@@ -94,7 +94,7 @@ describe("OrderTicketPanelContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText("Loaded Nachos")).toBeInTheDocument());
+    await waitFor(() => expect(within(screen.getByRole("table")).getByText("Loaded Nachos")).toBeInTheDocument());
 
     const currentOrder = await ports.orders.findByTable("table-1");
     if (!currentOrder) throw new Error("expected seeded order");
@@ -115,6 +115,6 @@ describe("OrderTicketPanelContainer", () => {
       payload: updatedOrder,
     });
 
-    await waitFor(() => expect(screen.getByText("Beef Empanadas (3pc)")).toBeInTheDocument());
+    await waitFor(() => expect(within(screen.getByRole("table")).getByText("Beef Empanadas (3pc)")).toBeInTheDocument());
   });
 });

@@ -3,10 +3,21 @@ import { expect, test, type Page } from "@playwright/test";
 const labels = ["mas12", "Pedido wiliveliz24@gmail.com", "x".repeat(60), "Mesa de prueba"];
 
 async function openRegister(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    localStorage.setItem("kutana.auth.session", JSON.stringify({
+      operatorId: "operator-mina", displayName: "Mina", role: "admin",
+      token: "e2e-token", expiresAt: "2099-01-01T00:00:00.000Z",
+      refreshToken: "e2e-refresh-token", refreshExpiresAt: "2099-01-08T00:00:00.000Z",
+    }));
+  });
+  await page.route("http://localhost:3000/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const table = { id: "table-layout", label: "Mesa de prueba", status: "active", currentOrderId: "order-layout", version: 1 };
+    const order = { id: "order-layout", tableId: table.id, status: "active", openedAt: "2025-01-01T10:00:00.000Z", closedAt: null, customerId: null, version: 1, lineItems: [] };
+    const body = path === "/ordering/tables" ? [table] : path === "/ordering/orders" ? order : path === "/ordering/tables/table-layout" ? table : [];
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+  });
   await page.goto("/");
-  await page.getByLabel("Usuario").fill("Mina");
-  await page.locator('input[name="pin"]').fill("1234");
-  await page.getByRole("button", { name: "Ingresar" }).click();
   await expect(page.getByRole("heading", { name: "Órdenes activas" })).toBeVisible();
 }
 
@@ -43,11 +54,8 @@ test.describe("active order card layout", () => {
           const cardRect = card.getBoundingClientRect();
           const title = card.querySelector<HTMLElement>("[data-order-title]")!;
           const titleRect = title.getBoundingClientRect();
-          const range = document.createRange();
-          range.selectNodeContents(title);
-          const titleLines = new Set(
-            Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
-          ).size;
+          // A Range includes clipped lines even when -webkit-line-clamp hides them.
+          // Measure the painted box instead of counting its unclipped text fragments.
           const lineHeight = Number.parseFloat(getComputedStyle(title).lineHeight);
           const descendantsFit = Array.from(
             card.querySelectorAll<HTMLElement>("*:not([role=tooltip])"),
@@ -63,7 +71,6 @@ test.describe("active order card layout", () => {
           return {
             cardWidth: cardRect.width,
             titleWidth: titleRect.width,
-            titleLines,
             titleHeight: titleRect.height,
             maxTitleHeight: lineHeight * 2 + 2,
             wordBreak: getComputedStyle(title).wordBreak,
@@ -78,7 +85,6 @@ test.describe("active order card layout", () => {
       for (const measurement of measurements) {
         expect(measurement.cardWidth).toBeGreaterThan(120);
         expect(measurement.titleWidth).toBeGreaterThan(40);
-        expect(measurement.titleLines).toBeLessThanOrEqual(2);
         expect(measurement.titleHeight).toBeLessThanOrEqual(measurement.maxTitleHeight);
         expect(measurement.wordBreak).toBe("normal");
         expect(measurement.titleRight).toBeLessThanOrEqual(measurement.cardRight + 1);
