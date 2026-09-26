@@ -36,6 +36,7 @@ export interface PendingDebtsViewProps {
   readonly accountPaymentDrafts: Readonly<Record<string, string>>;
   readonly linkCustomerDrafts: Readonly<Record<string, string>>;
   readonly disabled?: boolean;
+  readonly activeAction?: string | null;
   readonly loading?: boolean;
   readonly message: string | null;
   readonly customerPaymentErrors: Readonly<Record<string, string>>;
@@ -75,6 +76,7 @@ export function PendingDebtsView({
   accountPaymentDrafts,
   linkCustomerDrafts,
   disabled = false,
+  activeAction = null,
   loading = false,
   message,
   customerPaymentErrors,
@@ -218,7 +220,7 @@ export function PendingDebtsView({
                         />
                         <div className={styles.actionColumn}>
                           <span className={styles.reviewText}>Saldo después: {formatMoney(Math.max(0, debt.balanceCents - parseDisplayAmount(customerPaymentDrafts[debt.customerId])))}</span>
-                          <Button onClick={() => onPayCustomerDebt(debt.customerId)} disabled={disabled || Boolean(customerPaymentErrors[debt.customerId]) || !customerPaymentDrafts[debt.customerId]}>Registrar pago</Button>
+                          <Button onClick={() => onPayCustomerDebt(debt.customerId)} loading={activeAction === `customer-payment:${debt.customerId}`} disabled={disabled || Boolean(customerPaymentErrors[debt.customerId]) || !customerPaymentDrafts[debt.customerId]}>Registrar pago</Button>
                         </div>
                       </div>
                     ) : null}
@@ -245,12 +247,12 @@ export function PendingDebtsView({
             <div className={styles.balanceBlock}><span>Restante</span><strong><PriceTag cents={account.remainingCents} /></strong></div>
             <div className={styles.paymentAction}>
               <Input label={`Monto de pago para ${account.freeName} (USD)`} type="text" inputMode="decimal" value={accountPaymentDrafts[account.accountId] ?? ""} onChange={(amount) => onAccountPaymentDraftChange(account.accountId, amount)} error={accountPaymentErrors[account.accountId]} placeholder="0,00" />
-              <ButtonRow><Button onClick={() => onPayUnlinkedAccount(account.accountId)} disabled={disabled || Boolean(accountPaymentErrors[account.accountId]) || !accountPaymentDrafts[account.accountId]}>Registrar pago</Button></ButtonRow>
+              <ButtonRow><Button onClick={() => onPayUnlinkedAccount(account.accountId)} loading={activeAction === `account-payment:${account.accountId}`} disabled={disabled || Boolean(accountPaymentErrors[account.accountId]) || !accountPaymentDrafts[account.accountId]}>Registrar pago</Button></ButtonRow>
             </div>
             <div className={styles.linkBox}>
               <label className={styles.field}>Vincular con cliente existente<select value={linkCustomerDrafts[account.accountId] ?? ""} onChange={(event) => onLinkCustomerDraftChange(account.accountId, event.target.value)} disabled={disabled || customers.length === 0}><option value="">Seleccionar cliente</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.displayName}</option>)}</select></label>
-              <Button variant="secondary" onClick={() => onLinkToCustomer(account.accountId)} disabled={disabled || !(linkCustomerDrafts[account.accountId] ?? "")}>Vincular cuenta</Button>
-              <Button variant="secondary" onClick={() => onCreateCustomerFromAccount(account.accountId)} disabled={disabled}>Crear cliente desde nombre libre</Button>
+              <Button variant="secondary" onClick={() => onLinkToCustomer(account.accountId)} loading={activeAction === `link:${account.accountId}`} disabled={disabled || !(linkCustomerDrafts[account.accountId] ?? "")}>Vincular cuenta</Button>
+              <Button variant="secondary" onClick={() => onCreateCustomerFromAccount(account.accountId)} loading={activeAction === `create:${account.accountId}`} disabled={disabled}>Crear cliente desde nombre libre</Button>
             </div>
           </article>)}
         </div>

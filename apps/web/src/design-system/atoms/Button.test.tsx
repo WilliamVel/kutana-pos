@@ -26,6 +26,25 @@ describe("Button", () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
+  it("shows progress and prevents repeated clicks while loading", () => {
+    const onClick = vi.fn();
+    const { rerender } = render(<Button onClick={onClick}>Guardar</Button>);
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    expect(onClick).toHaveBeenCalledOnce();
+
+    rerender(<Button onClick={onClick} loading>Guardar</Button>);
+    const button = screen.getByRole("button", { name: "Guardar" });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button.querySelector('[aria-hidden="true"]')).not.toBeNull();
+    fireEvent.click(button);
+    expect(onClick).toHaveBeenCalledOnce();
+
+    rerender(<Button onClick={onClick}>Guardar</Button>);
+    expect(button).not.toBeDisabled();
+    expect(button).not.toHaveAttribute("aria-busy");
+  });
+
   it("defaults to the primary variant", () => {
     render(<Button onClick={() => {}}>Confirm</Button>);
     expect(screen.getByRole("button", { name: "Confirm" }).dataset.variant).toBe("primary");

@@ -483,7 +483,7 @@ function CategoryModal({
               type="submit"
               onClick={() => {}}
               disabled={Boolean(validation) || unchanged || saving || disabled}
-              ariaBusy={saving}
+              loading={saving}
             >
               {saving ? "Guardando…" : mode === "create" ? "Crear categoría" : "Guardar cambios"}
             </Button>

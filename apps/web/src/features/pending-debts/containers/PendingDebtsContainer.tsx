@@ -33,6 +33,7 @@ export function PendingDebtsContainer(): JSX.Element {
   const [customerPaymentErrors, setCustomerPaymentErrors] = useState<Record<string, string>>({});
   const [accountPaymentErrors, setAccountPaymentErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [activeAction, setActiveAction] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const loadGeneration = useRef(0);
   const [customerListQuery, setCustomerListQuery] = useState({ page: 0, pageSize: 20, search: "", sort: "activity" as "activity" | "balance" });
@@ -76,8 +77,9 @@ export function PendingDebtsContainer(): JSX.Element {
     setCustomerListQuery((current) => ({ ...current, ...query }));
   }, []);
 
-  const runMutation = useCallback(async (mutation: () => Promise<string>): Promise<void> => {
+  const runMutation = useCallback(async (action: string, mutation: () => Promise<string>): Promise<void> => {
     setBusy(true);
+    setActiveAction(action);
     try {
       const nextMessage = await mutation();
       setMessage(nextMessage);
@@ -85,6 +87,7 @@ export function PendingDebtsContainer(): JSX.Element {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudo registrar el pago. Revisa la conexión e inténtalo de nuevo.");
     } finally {
+      setActiveAction(null);
       setBusy(false);
     }
   }, [load]);
@@ -104,7 +107,7 @@ export function PendingDebtsContainer(): JSX.Element {
   };
 
   const payCustomerDebt = (customerId: string): void => {
-    void runMutation(async () => {
+    void runMutation("customer-payment:" + customerId, async () => {
       const debt = customerDebts.find((row) => row.customerId === customerId);
       const amountCents = validateDraft(customerPaymentDrafts[customerId], debt?.balanceCents);
       if (!debt) throw new Error("La deuda ya no está disponible. Actualiza la lista.");
@@ -123,7 +126,7 @@ export function PendingDebtsContainer(): JSX.Element {
   };
 
   const payUnlinkedAccount = (accountId: string): void => {
-    void runMutation(async () => {
+    void runMutation("account-payment:" + accountId, async () => {
       const row = unlinkedAccounts.find((candidate) => candidate.accountId === accountId);
       const amountCents = validateDraft(accountPaymentDrafts[accountId], row?.remainingCents);
       const context = await getAccountContext(accountId, accountsPort, ordersPort, paymentsPort);
@@ -138,7 +141,7 @@ export function PendingDebtsContainer(): JSX.Element {
   };
 
   const linkToCustomer = (accountId: string): void => {
-    void runMutation(async () => {
+    void runMutation("link:" + accountId, async () => {
       const customerId = linkCustomerDrafts[accountId];
       if (!customerId) throw new Error("Selecciona un cliente antes de vincular la cuenta");
       const context = await getAccountContext(accountId, accountsPort, ordersPort, paymentsPort);
@@ -159,7 +162,7 @@ export function PendingDebtsContainer(): JSX.Element {
   };
 
   const createCustomerFromAccount = (accountId: string): void => {
-    void runMutation(async () => {
+    void runMutation("create:" + accountId, async () => {
       const context = await getAccountContext(accountId, accountsPort, ordersPort, paymentsPort);
       if (context.account.owner.kind !== "free_name") throw new Error("La cuenta ya está vinculada");
       const customer = await customersPort.save(createCustomer({ displayName: context.account.owner.freeName }));
@@ -187,6 +190,7 @@ export function PendingDebtsContainer(): JSX.Element {
       accountPaymentDrafts={accountPaymentDrafts}
       linkCustomerDrafts={linkCustomerDrafts}
       disabled={busy}
+      activeAction={activeAction}
       message={message}
       customerPaymentErrors={customerPaymentErrors}
       accountPaymentErrors={accountPaymentErrors}

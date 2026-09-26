@@ -6,6 +6,7 @@
 .button {
   display: inline-flex;
   align-items: center;
+  gap: 0.5rem;
   justify-content: center;
   min-height: 3rem;
   padding: 0.625rem 1rem;
@@ -42,6 +43,24 @@
 .button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+.spinner {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2s; }
 }
 
 .primary {

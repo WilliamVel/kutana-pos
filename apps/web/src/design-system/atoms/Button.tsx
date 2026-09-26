@@ -11,6 +11,7 @@ export interface ButtonProps {
   readonly type?: "button" | "submit";
   readonly ariaLabel?: string;
   readonly ariaBusy?: boolean;
+  readonly loading?: boolean;
 }
 
 /**
@@ -26,6 +27,7 @@ export function Button({
   type = "button",
   ariaLabel,
   ariaBusy = false,
+  loading = false,
 }: ButtonProps): JSX.Element {
   const variantClass = variant === "primary" ? styles.primary : styles.secondary;
 
@@ -34,11 +36,12 @@ export function Button({
       type={type}
       className={`${styles.button} ${variantClass}`}
       data-variant={variant}
-      disabled={disabled}
+      disabled={disabled || loading}
       aria-label={ariaLabel}
-      aria-busy={ariaBusy || undefined}
+      aria-busy={loading || ariaBusy || undefined}
       onClick={onClick}
     >
+      {loading ? <span className={styles.spinner} aria-hidden="true" /> : null}
       {children}
     </button>
   );

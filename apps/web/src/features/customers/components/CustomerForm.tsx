@@ -186,7 +186,7 @@ export function CustomerForm({
               type="submit"
               onClick={() => undefined}
               disabled={Boolean(validation) || Boolean(duplicate) || disabled}
-              ariaBusy={disabled}
+              loading={disabled}
             >
               {disabled ? "Guardando…" : submitLabel}
             </Button>
