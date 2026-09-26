@@ -522,30 +522,43 @@ export function SplitBillView({
       ) : null}
       {method === "person" ? (
         <section className={styles.personWorkspace} aria-label="División por persona">
-          <div className={styles.peopleNavigation}>
-            <div className={styles.accountTabs} role="tablist" aria-label="Persona activa">
-              {accounts.map((account) => {
-                const isSelected = activePersonId === account.id;
-                const statusPrefix = account.status === "paid" ? "✓ " : account.status === "pending" ? "• " : "";
-                return (
-                  <button key={account.id} type="button" role="tab" aria-selected={isSelected}
-                    className={`${isSelected ? styles.tabActive : styles.tab} ${account.status === "paid" ? styles.tabPaid : account.status === "pending" ? styles.tabPending : ""}`}
-                    onClick={() => selectAccount(account.id)} aria-label={`Seleccionar cuenta ${account.ownerLabel}`}>
-                    {statusPrefix}{account.ownerLabel} <PriceTag cents={account.remainingCents} />
-                  </button>
-                );
-              })}
-              <button type="button" className={styles.addTab} onClick={() => setCreateOpen(true)} aria-label="Agregar persona">
-                <span aria-hidden="true">+</span><span className={styles.addTabLabel}>Nueva persona</span>
-              </button>
+          <section className={styles.peopleSection} aria-labelledby="people-section-title">
+            <div className={styles.zoneHeading}>
+              <h2 id="people-section-title">Personas de la cuenta</h2>
+              <p>El importe de cada persona es el pendiente de cobro.</p>
+            </div>
+            <div className={styles.peopleNavigation}>
+              <div className={styles.accountTabs} role="tablist" aria-label="Persona activa">
+                {accounts.map((account) => {
+                  const isSelected = activePersonId === account.id;
+                  const statusPrefix = account.status === "paid" ? "✓ " : account.status === "pending" ? "• " : "";
+                  return (
+                    <button key={account.id} type="button" role="tab" aria-selected={isSelected}
+                      className={`${isSelected ? styles.tabActive : styles.tab} ${account.status === "paid" ? styles.tabPaid : account.status === "pending" ? styles.tabPending : ""}`}
+                      onClick={() => selectAccount(account.id)} aria-label={`Seleccionar cuenta ${account.ownerLabel}`}>
+                      {statusPrefix}{account.ownerLabel} <span className={styles.personBalance}><PriceTag cents={account.remainingCents} /></span>
+                    </button>
+                  );
+                })}
+                <button type="button" className={styles.addTab} onClick={() => setCreateOpen(true)} aria-label="Agregar persona">
+                  <span aria-hidden="true">+</span><span className={styles.addTabLabel}>Nueva persona</span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.detailSection} aria-labelledby="detail-section-title">
+            <div className={styles.zoneHeading}>
+              <h2 id="detail-section-title">Detalle de la cuenta</h2>
             </div>
             {selectedAccount ? (
-              <div className={styles.viewSelector} role="tablist" aria-label={`Vista de productos de ${selectedAccount.ownerLabel}`}>
+              <div className={styles.viewSelector} role="tablist" aria-label={`Productos de ${selectedAccount.ownerLabel}`}>
                 <button type="button" role="tab" aria-selected={productView === "assigned"} className={productView === "assigned" ? styles.viewActive : styles.viewTab} onClick={selectAssigned}>Productos de {selectedAccount.ownerLabel}</button>
-                <button type="button" role="tab" aria-selected={productView === "unassigned"} className={productView === "unassigned" ? styles.viewActive : styles.viewTab} onClick={selectUnassigned}>Sin asignar <span aria-label={`${unassignedUnits} unidades`}>· {unassignedUnits}</span></button>
+                <button type="button" role="tab" aria-selected={productView === "unassigned"} className={productView === "unassigned" ? styles.viewActive : styles.viewTab} onClick={selectUnassigned} aria-label={`Sin asignar ${unassignedUnits} productos pendientes`}>
+                  <span>Productos sin asignar</span><span className={styles.viewTabMeta}>· {unassignedUnits}{unassignedUnits > 0 ? " · " : ""}{unassignedUnits > 0 ? <PriceTag cents={unassignedCents} /> : null}</span>
+                </button>
               </div>
             ) : <div className={styles.viewSelector} role="status">Crea o selecciona una persona para asignar productos.</div>}
-          </div>
 
           {showAssignmentWorkspace ? (
             <section aria-label="Productos pendientes" className={styles.productPanel}>
@@ -694,7 +707,7 @@ export function SplitBillView({
                   <h3 title={selectedAccount.ownerLabel}>{selectedAccount.ownerLabel}</h3>
                 </div>
                 <div className={styles.accountHeaderActions}>
-                  <PriceTag cents={selectedAccount.totalCents} />
+                  <span className={styles.accountHeaderTotal}><small>Total asignado</small><PriceTag cents={selectedAccount.totalCents} /></span>
                   <div className={styles.actionMenu}>
                     <button
                       ref={actionMenuTriggerRef}
@@ -730,7 +743,11 @@ export function SplitBillView({
                   onAllocationDraftChange({ ...allocationDraft, accountId: selectedAccount.id });
                 }}
                 disabled={disabled || selectedAccount.status === "paid" || selectedAccount.status === "pending"}
+                title={selectedAccount.status === "paid" || selectedAccount.status === "pending" ? "No se pueden cambiar productos después de cobrar o dejar pendiente la cuenta" : undefined}
               >+ Agregar productos a {selectedAccount.ownerLabel}</button>
+              {selectedAccount.status === "paid" || selectedAccount.status === "pending" ? (
+                <p className={styles.actionHint}>No disponible: esta cuenta ya está {selectedAccount.status === "paid" ? "pagada" : "marcada como pendiente"}.</p>
+              ) : null}
               <section
                 aria-label={`Productos asignados a ${selectedAccount.ownerLabel}`}
                 className={styles.assignedProducts}
@@ -755,13 +772,21 @@ export function SplitBillView({
                     </button>
                   </div>
                 ) : (
-                  <ul>
+                  <>
+                    <div className={styles.assignedProductsHeader} aria-hidden="true">
+                      <span />
+                      <span>Producto</span>
+                      <span>Precio unitario</span>
+                      <span>Total (incl. impuestos)</span>
+                      <span />
+                    </div>
+                    <ul>
                     {selectedAccount.assignedLines?.map((line) => (
                       <li key={line.allocationIds.join("-")} className={styles.assignedProductRow}>
                         <span className={styles.assignedProductQuantity}>×{line.quantity}</span>
                         <span className={styles.assignedProductInfo}><strong>{displayProductName(line.name, line.presentation)}</strong><small>{line.presentation ?? "Unidad"}</small></span>
-                        <span className={styles.assignedProductPrice}><small>Precio unitario</small><PriceTag cents={line.unitPriceCents ?? Math.round((line.totalCents ?? 0) / line.quantity)} /></span>
-                        <span className={styles.assignedProductSubtotal}><small>{line.taxRateBp ? "Total (incl. impuestos)" : "Importe total"}</small><PriceTag cents={line.totalCents ?? 0} /></span>
+                        <span className={styles.assignedProductPrice}><small className={styles.columnLabel}>Precio unitario</small><PriceTag cents={line.unitPriceCents ?? Math.round((line.totalCents ?? 0) / line.quantity)} /></span>
+                        <span className={styles.assignedProductSubtotal}><small className={styles.columnLabel}>{line.taxRateBp ? "Total (incl. impuestos)" : "Importe total"}</small><PriceTag cents={line.totalCents ?? 0} /></span>
                         <button type="button" onClick={(event) => {
                           returnTriggerRef.current = event.currentTarget;
                           if (line.quantity === 1) void returnUnits(line, 1);
@@ -769,7 +794,7 @@ export function SplitBillView({
                             setReturnQuantity(1);
                             setReturnLine(line);
                           }
-                        }} disabled={disabled || selectedAccount.paidCents > 0 || selectedAccount.status === "pending" || selectedAccount.status === "paid"} aria-label={`Devolver ${line.name} de la cuenta de ${selectedAccount.ownerLabel}`}>Devolver</button>
+                        }} disabled={disabled || selectedAccount.paidCents > 0 || selectedAccount.status === "pending" || selectedAccount.status === "paid"} aria-label={`Devolver ${line.name} de la cuenta de ${selectedAccount.ownerLabel}`}>Volver a Sin asignar</button>
                         {returnLine === line ? (
                           <div ref={returnChoiceRef} className={styles.returnChoice} role="dialog" aria-label={`Cantidad a devolver de ${line.name}`} tabIndex={-1} style={{ top: returnPopoverPosition.top, left: returnPopoverPosition.left }}>
                             <strong>{displayProductName(line.name, line.presentation)}</strong>
@@ -780,7 +805,7 @@ export function SplitBillView({
                               <button type="button" onClick={() => setReturnQuantity((current) => Math.min(line.quantity, current + 1))} disabled={returnQuantity === line.quantity} aria-label="Aumentar cantidad a devolver">+</button>
                             </div>
                             <div className={styles.returnChoiceActions}>
-                              <Button onClick={() => void returnUnits(line, returnQuantity)}>Devolver {returnQuantity} {returnQuantity === 1 ? "unidad" : "unidades"}</Button>
+                              <Button ariaLabel={`Devolver ${returnQuantity} ${returnQuantity === 1 ? "unidad" : "unidades"}`} onClick={() => void returnUnits(line, returnQuantity)}>Volver a Sin asignar ({returnQuantity})</Button>
                               <Button variant="secondary" onClick={() => setReturnQuantity(line.quantity)}>Todas</Button>
                               <button type="button" className={styles.returnCancel} onClick={closeReturnChoice}>Cancelar</button>
                             </div>
@@ -788,7 +813,8 @@ export function SplitBillView({
                         ) : null}
                       </li>
                     ))}
-                  </ul>
+                    </ul>
+                  </>
                 )}
               </section>
               <dl className={styles.accountBalances}>
@@ -812,6 +838,7 @@ export function SplitBillView({
                 </div>
               </dl>
               <div className={styles.accountActions}>
+                <span className={styles.accountActionsNote}>El total incluye los productos asignados a {selectedAccount.ownerLabel}. Los pagos registrados se reflejan en “Pagado”.</span>
                 <Button
                   ariaBusy={processing}
                   onClick={() => onPayAccount(selectedAccount.id)}
@@ -858,6 +885,7 @@ export function SplitBillView({
               </div>
             </article>
           ) : null}
+          </section>
         </section>
       ) : null}
 
