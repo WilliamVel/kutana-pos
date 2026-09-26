@@ -632,6 +632,60 @@
   cursor: not-allowed;
   opacity: 0.5;
 }
+.actionMenu {
+  position: relative;
+}
+.actionMenuTrigger {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 1.35rem;
+  font-weight: 800;
+  list-style: none;
+}
+.actionMenuTrigger:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.actionMenuList {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  min-width: 13rem;
+  padding: var(--space-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+.actionMenuList button {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.actionMenuList button:hover,
+.actionMenuList button:focus-visible {
+  background: var(--surface-sunken);
+  outline: none;
+}
+.actionMenuList button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
 
 .assignedProducts ul,
 .paymentList {

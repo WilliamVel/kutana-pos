@@ -160,8 +160,8 @@ describe("SplitBillContainer", () => {
     const order = await ports.orders.findByTable("table-1");
     const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
     fireEvent.click(screen.getByRole("button", { name: "Volver a la cuenta" }));
-    fireEvent.click(screen.getByRole("button", { name: "Quitar persona de la división" }));
-    fireEvent.click(screen.getByRole("button", { name: "Quitar persona" }));
+    fireEvent.click(screen.getByRole("button", { name: "Acciones para Ada Lovelace" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Eliminar persona" }));
 
     await waitFor(async () => expect(await ports.personalAccounts.findById(account.id)).toBeNull());
     await expect(ports.customers.findById("customer-ada")).resolves.toMatchObject({
@@ -203,10 +203,14 @@ describe("SplitBillContainer", () => {
 
     const deleteButton = within(
       screen.getByRole("article", { name: "Saldo de cuenta de Wrong name" }),
-    ).getByRole("button", { name: "Quitar persona de la división" });
+    ).getByRole("button", { name: "Acciones para Wrong name" });
     await waitFor(() => expect(deleteButton).toBeEnabled());
     fireEvent.click(deleteButton);
-    fireEvent.click(screen.getByRole("button", { name: "Quitar y devolver productos" }));
+    await waitFor(() =>
+      expect(screen.getByRole("menuitem", { name: "Eliminar persona" })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Eliminar persona" }));
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar y devolver productos" }));
 
     await waitFor(async () => expect(await ports.personalAccounts.findById(account.id)).toBeNull());
     await expect(ports.personalAccounts.listAllocationsByOrder(order!.id)).resolves.toEqual([]);

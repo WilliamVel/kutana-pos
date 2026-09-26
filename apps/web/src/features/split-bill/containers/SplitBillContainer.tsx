@@ -184,12 +184,13 @@ export function SplitBillContainer({
   }, [load]);
 
   const runMutation = useCallback(
-    async (mutation: () => Promise<void>): Promise<void> => {
+    async (mutation: () => Promise<void>): Promise<boolean> => {
       setBusy(true);
       try {
         await mutation();
         setConflictMessage(null);
         await load();
+        return true;
       } catch (error) {
         if (error instanceof ConflictError) {
           await load();
@@ -201,6 +202,7 @@ export function SplitBillContainer({
             "No se pudo completar la operación. Revisa el estado de la cuenta e inténtalo de nuevo.",
           );
         }
+        return false;
       } finally {
         setBusy(false);
       }
@@ -419,8 +421,8 @@ export function SplitBillContainer({
     });
   };
 
-  const deleteAccount = (accountId: string): void => {
-    void runMutation(async () => {
+  const deleteAccount = (accountId: string): Promise<boolean> =>
+    runMutation(async () => {
       const account = accounts.find((candidate) => candidate.id === accountId);
       const row = accountRows.find((candidate) => candidate.id === accountId);
       if (
@@ -436,7 +438,6 @@ export function SplitBillContainer({
         setAllocationDraft({ ...allocationDraft, accountId: "" });
       }
     });
-  };
 
   const attemptClose = (): void => {
     void runMutation(async () => {

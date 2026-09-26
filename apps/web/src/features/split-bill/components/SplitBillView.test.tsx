@@ -184,27 +184,47 @@ describe("SplitBillView", () => {
       onDeleteAccount,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Quitar persona de la división" }));
-    expect(screen.getByRole("dialog", { name: "¿Quitar a esta persona?" })).toHaveTextContent(
-      "Se eliminará de la división de la cuenta.",
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-    expect(onDeleteAccount).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Quitar persona de la división" }));
-    fireEvent.click(screen.getByRole("button", { name: "Quitar persona" }));
+    fireEvent.click(screen.getByRole("button", { name: "Acciones para Juan P." }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Eliminar persona" }));
     expect(onDeleteAccount).toHaveBeenCalledWith("account-a");
+    expect(screen.getByRole("status")).toHaveTextContent("fue eliminada");
   });
 
   it("confirms removing assigned products with units and value", () => {
     const onDeleteAccount = vi.fn();
     renderView({ accounts: [ACCOUNT], onDeleteAccount });
 
-    fireEvent.click(screen.getByRole("button", { name: "Quitar persona de la división" }));
+    fireEvent.click(screen.getByRole("button", { name: "Acciones para Juan P." }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Eliminar persona" }));
     expect(
-      screen.getByRole("dialog", { name: "Esta persona tiene productos asignados" }),
+      screen.getByRole("dialog", { name: "Juan P.: tiene productos asignados" }),
     ).toHaveTextContent("1 unidad(es)");
-    fireEvent.click(screen.getByRole("button", { name: "Quitar y devolver productos" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(onDeleteAccount).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Acciones para Juan P." }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Eliminar persona" }));
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar y devolver productos" }));
     expect(onDeleteAccount).toHaveBeenCalledWith("account-a");
+  });
+
+  it("does not delete an account with payment history", () => {
+    const onDeleteAccount = vi.fn();
+    renderView({
+      accounts: [
+        {
+          ...ACCOUNT,
+          payments: [{ id: "payment-a", amountCents: 392, methodLabel: "Efectivo", recordedAt: "now" }],
+          paidCents: 392,
+          remainingCents: 0,
+          status: "paid",
+        },
+      ],
+      onDeleteAccount,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Acciones para Juan P." }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Eliminar persona" }));
+    expect(onDeleteAccount).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("pagos registrados");
   });
 
   it("offers assignment from an empty account and disables charging at zero", () => {

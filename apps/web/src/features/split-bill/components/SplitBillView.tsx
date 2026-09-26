@@ -78,7 +78,7 @@ export interface SplitBillViewProps {
   readonly onAssignQuantities?: (drafts: readonly AccountAllocationDraft[]) => void;
   readonly onPayAccount: (accountId: string) => void;
   readonly onMarkPending: (accountId: string) => void;
-  readonly onDeleteAccount: (accountId: string) => void;
+  readonly onDeleteAccount: (accountId: string) => Promise<boolean> | void;
   readonly onRemoveAllocation?: (accountId: string, allocationIds: readonly string[]) => void;
   readonly onAttemptClose: () => void;
   readonly onPayOrder?: () => void;
@@ -133,8 +133,9 @@ export function SplitBillView({
   const [assignmentFeedback, setAssignmentFeedback] = useState<string | null>(null);
   const [reviewAccountId, setReviewAccountId] = useState<string | null>(null);
   const [removeAccountId, setRemoveAccountId] = useState<string | null>(null);
-  const removeTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const removeConfirmRef = useRef<HTMLButtonElement | null>(null);
+  const actionMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (accounts.length > 0 && method === null) setMethod("person");
@@ -197,6 +198,7 @@ export function SplitBillView({
     const account = accounts.find((candidate) => candidate.id === accountId);
     setActiveTab(accountId);
     setReviewAccountId(null);
+    setActionMenuOpen(false);
     setSelectedLineIds(new Set());
     if (account && account.status !== "paid" && account.status !== "pending") {
       onAllocationDraftChange({ ...allocationDraft, accountId });
@@ -206,6 +208,7 @@ export function SplitBillView({
   const selectUnassigned = (): void => {
     setActiveTab("unassigned");
     setReviewAccountId(null);
+    setActionMenuOpen(false);
     setSelectedLineIds(new Set());
     onAllocationDraftChange({ ...allocationDraft, accountId: "" });
   };
@@ -297,16 +300,55 @@ export function SplitBillView({
 
   const closeRemoveDialog = (): void => {
     setRemoveAccountId(null);
-    window.setTimeout(() => removeTriggerRef.current?.focus(), 0);
+    window.setTimeout(() => actionMenuTriggerRef.current?.focus(), 0);
+  };
+
+  const finishDeletion = (accountId: string, message: string): void => {
+    setAssignmentFeedback(message);
+    setActiveTab("unassigned");
+    setReviewAccountId(null);
+    if (allocationDraft.accountId === accountId) {
+      onAllocationDraftChange({ ...allocationDraft, accountId: "" });
+    }
+  };
+
+  const deleteAccountWithFeedback = (accountId: string, message: string): void => {
+    const result = onDeleteAccount(accountId);
+    if (result && typeof result.then === "function") {
+      void result.then((success) => {
+        if (success !== false) finishDeletion(accountId, message);
+      });
+      return;
+    }
+    finishDeletion(accountId, message);
+  };
+
+  const requestDeleteAccount = (): void => {
+    setActionMenuOpen(false);
+    if (!selectedAccount) return;
+    if ((selectedAccount.payments?.length ?? 0) > 0 || selectedAccount.paidCents > 0) {
+      setAssignmentFeedback(
+        `No se puede eliminar a ${selectedAccount.ownerLabel} porque tiene pagos registrados. Conserva el historial de cobros.`,
+      );
+      return;
+    }
+    if ((selectedAccount.assignedLines?.length ?? 0) > 0) {
+      setRemoveAccountId(selectedAccount.id);
+      return;
+    }
+    deleteAccountWithFeedback(
+      selectedAccount.id,
+      `${selectedAccount.ownerLabel} fue eliminada de la división.`,
+    );
   };
 
   const confirmRemoveAccount = (): void => {
     if (!removeAccount) return;
-    onDeleteAccount(removeAccount.id);
-    setAssignmentFeedback(
+    deleteAccountWithFeedback(
+      removeAccount.id,
       removeUnits > 0
-        ? `${removeAccount.ownerLabel} fue quitada y ${removeUnits} unidad(es) volvieron a Sin asignar.`
-        : `${removeAccount.ownerLabel} fue quitada de la división.`,
+        ? `${removeAccount.ownerLabel} fue eliminada y ${removeUnits} unidad(es) volvieron a Sin asignar.`
+        : `${removeAccount.ownerLabel} fue eliminada de la división.`,
     );
     closeRemoveDialog();
   };
@@ -636,22 +678,32 @@ export function SplitBillView({
                 </div>
                 <div className={styles.accountHeaderActions}>
                   <PriceTag cents={selectedAccount.totalCents} />
-                  <button
-                    ref={removeTriggerRef}
-                    type="button"
-                    className={styles.removeAccountButton}
-                    title="Quitar persona de la división"
-                    aria-label="Quitar persona de la división"
-                    onClick={() => setRemoveAccountId(selectedAccount.id)}
-                    disabled={
-                      disabled ||
-                      selectedAccount.paidCents > 0 ||
-                      selectedAccount.status === "pending" ||
-                      selectedAccount.status === "paid"
-                    }
-                  >
-                    <Icon name="close" size={20} />
-                  </button>
+                  <div className={styles.actionMenu}>
+                    <button
+                      ref={actionMenuTriggerRef}
+                      type="button"
+                      className={styles.actionMenuTrigger}
+                      aria-label={`Acciones para ${selectedAccount.ownerLabel}`}
+                      aria-haspopup="menu"
+                      aria-expanded={actionMenuOpen}
+                      title="Acciones"
+                      onClick={() => setActionMenuOpen((open) => !open)}
+                    >
+                      ⋯
+                    </button>
+                    {actionMenuOpen ? (
+                      <div className={styles.actionMenuList} role="menu">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={requestDeleteAccount}
+                          disabled={disabled}
+                        >
+                          Eliminar persona
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
               <section
@@ -922,8 +974,8 @@ export function SplitBillView({
                 <p className={styles.eyebrow}>Quitar de la división</p>
                 <h3 id="remove-person-title">
                   {removeUnits > 0
-                    ? "Esta persona tiene productos asignados"
-                    : "¿Quitar a esta persona?"}
+                    ? `${removeAccount.ownerLabel}: tiene productos asignados`
+                    : "¿Eliminar a esta persona?"}
                 </h3>
               </div>
               <button type="button" onClick={closeRemoveDialog} aria-label="Cerrar confirmación">
@@ -951,7 +1003,7 @@ export function SplitBillView({
                 className={styles.destructiveButton}
                 onClick={confirmRemoveAccount}
               >
-                {removeUnits > 0 ? "Quitar y devolver productos" : "Quitar persona"}
+                {removeUnits > 0 ? "Eliminar y devolver productos" : "Eliminar persona"}
               </button>
             </div>
           </section>
