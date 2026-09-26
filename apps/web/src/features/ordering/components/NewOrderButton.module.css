@@ -19,19 +19,30 @@
 }
 
 .trigger {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  min-height: 3rem;
-  padding: 0.625rem 1rem;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: var(--action-secondary-bg);
-  color: var(--action-secondary-fg);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--action-primary-bg);
+  border-radius: 0.7rem;
+  background: var(--action-primary-bg);
+  color: var(--action-primary-fg);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease;
+}
+.trigger:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+.trigger:active {
+  transform: translateY(1px);
+  filter: brightness(0.94);
 }
 
 .panel {
@@ -151,21 +162,15 @@
   }
 
   .wrap > .trigger {
-    width: 128px;
-    min-width: 120px;
-    max-width: 135px;
-    min-height: 50px;
-    height: 50px;
-    padding: 0.35rem 0.7rem;
+    width: 100%;
+    min-width: 0;
+    min-height: 2.75rem;
+    height: 2.75rem;
+    padding: 0 0.65rem;
     flex-direction: row;
     gap: 0.35rem;
-    justify-content: center;
-    border-radius: 0.8rem;
     line-height: 1.05;
     text-align: center;
-    white-space: nowrap;
-    background: var(--action-secondary-bg);
-    color: var(--action-secondary-fg);
     white-space: nowrap;
   }
 
@@ -368,10 +373,10 @@
   }
 
   .trigger {
-    width: auto;
+    width: 100%;
     min-width: 0;
-    min-height: 2.875rem;
-    height: 2.875rem;
+    min-height: 2.75rem;
+    height: 2.75rem;
     padding: 0 var(--space-4);
     white-space: nowrap;
   }

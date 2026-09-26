@@ -114,9 +114,12 @@ export function OrdersOverview({
     <section className={styles.ordersSection} aria-label="Órdenes activas">
       <header className={styles.ordersHeader}>
         <h2>Órdenes activas</h2>
-        <button type="button" className={styles.allButton} onClick={() => setSheetOpen(true)}>
-          Ver todas ({rows.length}) <span aria-hidden="true">›</span>
-        </button>
+        <div className={styles.headerActions}>
+          <button type="button" className={styles.allButton} onClick={() => setSheetOpen(true)}>
+            Ver todas ({rows.length}) <span aria-hidden="true">›</span>
+          </button>
+          {newOrder ? <div className={styles.newOrderSlot}>{newOrder}</div> : null}
+        </div>
       </header>
       {loadState === "refreshing" ? (
         <p className={styles.refreshing} role="status">
@@ -129,7 +132,6 @@ export function OrdersOverview({
         </p>
       ) : null}
       <div className={styles.carousel}>
-        {newOrder ? <div className={styles.newOrderSlot}>{newOrder}</div> : null}
         <div className={styles.list} aria-label="Mesas activas">
           {rows.map((row) => (
             <OrderCard
