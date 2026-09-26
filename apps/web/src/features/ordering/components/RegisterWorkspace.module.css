@@ -179,8 +179,8 @@
   .mobileTabs strong {
     padding: 0.1rem 0.45rem;
     border-radius: 999px;
-    background: var(--action-primary-bg);
-    color: var(--action-primary-fg);
+    background: var(--action-secondary-bg);
+    color: var(--action-secondary-fg);
     font-size: 0.75rem;
   }
 
