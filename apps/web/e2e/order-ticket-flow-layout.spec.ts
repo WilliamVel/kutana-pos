@@ -186,8 +186,39 @@ for (const viewport of [
     expect(measurements.summary.left).toBeGreaterThanOrEqual(measurements.panel.left);
     expect(measurements.summary.right).toBeLessThanOrEqual(measurements.panel.right);
     expect(measurements.actions.top).toBeGreaterThanOrEqual(measurements.summary.bottom);
+    expect(measurements.actions.left).toBeGreaterThanOrEqual(measurements.panel.left);
+    expect(measurements.actions.right).toBeLessThanOrEqual(measurements.panel.right);
   });
 }
+
+test("keeps the mobile order-count badge readable", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await stubLoadedOrder(page);
+  await page.goto("/");
+  await page.locator(`[data-table-id="${table.id}"]`).click();
+  await page.evaluate((tableId) => {
+    window.dispatchEvent(new CustomEvent("kutana.order.updated", {
+      detail: { tableId, orderCount: 2 },
+    }));
+  }, table.id);
+  const badge = page.getByRole("tab", { name: /Pedido 2/ }).locator("strong");
+  await expect(badge).toBeVisible();
+  const contrast = await badge.evaluate((element) => {
+    const rgb = (value: string) => (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+    const luminance = (value: string) => {
+      const channels = rgb(value).map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return (channels[0] ?? 0) * 0.2126 + (channels[1] ?? 0) * 0.7152 + (channels[2] ?? 0) * 0.0722;
+    };
+    const style = getComputedStyle(element);
+    const front = luminance(style.color);
+    const back = luminance(style.backgroundColor);
+    return (Math.max(front, back) + 0.05) / (Math.min(front, back) + 0.05);
+  });
+  expect(contrast).toBeGreaterThanOrEqual(4.5);
+});
 
 test("keeps desktop dividers continuous with and without a variant", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });

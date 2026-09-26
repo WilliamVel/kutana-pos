@@ -420,7 +420,7 @@ export function InventoryList({
                       <strong>{row.name}</strong>
                       {row.presentation ? <small>{row.presentation}</small> : null}
                     </div>
-                    <PriceTag cents={row.priceCents} />
+                    <span className={styles.cardPrice}><PriceTag cents={row.priceCents} /></span>
                     <ProductActions
                       row={row}
                       onEdit={onEditProduct}

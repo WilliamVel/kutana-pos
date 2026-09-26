@@ -35,7 +35,7 @@
 }
 
 /* Sonner is viewport-level UI: above navigation/content, without depending on the scroll area. */
-:global([data-sonner-toaster]) {
+.toaster:global([data-sonner-toaster]) {
   z-index: 50 !important;
 }
 
@@ -68,7 +68,7 @@
   /* Sonner's mobile defaults use the mobile offsets as insets. Keep one
      centered, viewport-sized layer instead of combining 100% width with
      left/right insets (which caused the toast to start off-screen). */
-  :global([data-sonner-toaster]) {
+  .toaster:global([data-sonner-toaster]) {
     top: calc(env(safe-area-inset-top) + 4.75rem) !important;
     right: auto !important;
     left: 50% !important;
@@ -77,7 +77,7 @@
     transform: translateX(-50%) !important;
   }
 
-  :global([data-sonner-toaster] [data-sonner-toast]) {
+  .toaster :global([data-sonner-toast]) {
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;

@@ -21,6 +21,7 @@ export function AppShell({ topBar, actionBar, children }: AppShellProps): JSX.El
   return (
     <div className={styles.shell}>
       <Toaster
+        className={styles.toaster}
         position="top-right"
         offset={{
           top: "calc(env(safe-area-inset-top) + 4.75rem)",
