@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { ConflictException, Inject, Injectable } from "@nestjs/common";
 import type { Pool } from "pg";
 import { ConflictError } from "@kutana/shared/errors/conflict-error.js";
 import type { Table } from "@kutana/shared/ordering/model/table.js";
@@ -14,34 +14,68 @@ interface TableRow {
 }
 
 const mapTable = (row: TableRow): Table => ({
-  id: row.id, label: row.label, status: row.status, currentOrderId: row.current_order_id, version: row.version,
+  id: row.id,
+  label: row.label,
+  status: row.status,
+  currentOrderId: row.current_order_id,
+  version: row.version,
 });
 const columns = "id, label, status, current_order_id, version";
+
+function isUniqueTableLabelViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const postgresError = error as { code?: string; constraint?: string };
+  return (
+    postgresError.code === "23505" &&
+    (postgresError.constraint === "restaurant_tables_label_key" ||
+      postgresError.constraint === "restaurant_tables_label_ci_unique")
+  );
+}
 
 @Injectable()
 export class PostgresTableRepository implements TableRepository {
   constructor(@Inject(PostgresPool) private readonly pool: Pool) {}
 
   async listAll(): Promise<Table[]> {
-    const result = await this.pool.query<TableRow>(`SELECT ${columns} FROM restaurant_tables ORDER BY label, id`);
+    const result = await this.pool.query<TableRow>(
+      `SELECT ${columns} FROM restaurant_tables ORDER BY label, id`,
+    );
     return result.rows.map(mapTable);
   }
 
   async findById(id: string): Promise<Table | null> {
-    const result = await this.pool.query<TableRow>(`SELECT ${columns} FROM restaurant_tables WHERE id = $1`, [id]);
+    const result = await this.pool.query<TableRow>(
+      `SELECT ${columns} FROM restaurant_tables WHERE id = $1`,
+      [id],
+    );
     return result.rows[0] ? mapTable(result.rows[0]) : null;
   }
 
   async save(table: Table, expectedVersion: number): Promise<Table> {
-    const result = await this.pool.query<TableRow>(
-      `INSERT INTO restaurant_tables (id, label, status, current_order_id, version)
+    let result;
+    try {
+      result = await this.pool.query<TableRow>(
+        `INSERT INTO restaurant_tables (id, label, status, current_order_id, version)
        VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (id) DO UPDATE SET label = EXCLUDED.label, status = EXCLUDED.status,
          current_order_id = EXCLUDED.current_order_id, version = restaurant_tables.version + 1
        WHERE restaurant_tables.version = $6
        RETURNING ${columns}`,
-      [table.id, table.label, table.status, table.currentOrderId, expectedVersion + 1, expectedVersion],
-    );
+        [
+          table.id,
+          table.label,
+          table.status,
+          table.currentOrderId,
+          expectedVersion + 1,
+          expectedVersion,
+        ],
+      );
+    } catch (error) {
+      if (isUniqueTableLabelViolation(error)) {
+        throw new ConflictException("A table with this name or number already exists");
+      }
+      throw error;
+    }
     if (result.rows[0]) return mapTable(result.rows[0]);
     const current = await this.findById(table.id);
     if (!current) throw new Error(`Table ${table.id} could not be saved`);

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { NewOrderButton } from "./NewOrderButton.js";
 
@@ -38,9 +38,23 @@ describe("NewOrderButton", () => {
     render(<NewOrderButton freeTables={FREE} onSelectTable={vi.fn()} onCreateTable={onCreateTable} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Nueva orden" }));
-    fireEvent.change(screen.getByLabelText("Nombre de mesa"), { target: { value: "Barra" } });
-    fireEvent.click(screen.getByRole("button", { name: "Crear mesa" }));
+    fireEvent.change(screen.getByLabelText("Nombre o número"), { target: { value: "Barra" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear orden" }));
 
     expect(onCreateTable).toHaveBeenCalledWith("Barra");
+  });
+
+  it("explains when the table name already exists", async () => {
+    const onCreateTable = vi.fn().mockRejectedValue({ status: 409 });
+    render(<NewOrderButton freeTables={[]} onSelectTable={vi.fn()} onCreateTable={onCreateTable} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Nueva orden" }));
+    fireEvent.change(screen.getByLabelText("Nombre o número"), { target: { value: "Mesa 7" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear orden" }));
+
+    const dialog = await screen.findByRole("alertdialog", { name: "Mesa duplicada" });
+    expect(
+      within(dialog).getByText("Ya existe una mesa con ese nombre o número. Prueba con otro."),
+    ).toBeInTheDocument();
   });
 });
