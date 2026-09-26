@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { AnalyticsReadPort } from "@kutana/shared/analytics/ports/analytics-service.js";
-import { MockAnalyticsService } from "../../adapters/mock/analytics-service.js";
 import { PortsProvider } from "../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../composition/mock.js";
 import { AnalyticsScreen } from "./AnalyticsScreen.js";
@@ -16,7 +15,9 @@ function renderScreen(analytics: AnalyticsReadPort): void {
 
 describe("AnalyticsScreen", () => {
   it("renders the analytics fixture and reapplies the date filter", async () => {
-    renderScreen(new MockAnalyticsService());
+    const analytics = buildMockPorts().analytics;
+    if (!analytics) throw new Error("Mock analytics port is required");
+    renderScreen(analytics);
 
     expect(await screen.findByText("2025-01-20")).toBeInTheDocument();
     expect(screen.getByText("Blonde Ale 330ml")).toBeInTheDocument();

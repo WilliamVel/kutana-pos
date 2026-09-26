@@ -1,7 +1,6 @@
 import { createUuid } from "@kutana/shared/platform/uuid.js";
 import { isPaymentMethodDisplayable } from "@kutana/shared/payments/model/payment-method-registry.js";
 import { useEffect, useRef, useState } from "react";
-import { HttpError } from "../../../adapters/http/http-client.js";
 import { createAllocation, type Allocation } from "@kutana/shared/billing/model/allocation.js";
 import {
   accountBalance,
@@ -141,8 +140,13 @@ function accountLinesForDisplay(
   }));
 }
 
+function isHttpResponseError(error: unknown): error is Error & { status: number; responseBody: string | null } {
+  return error instanceof Error && "status" in error && typeof error.status === "number"
+    && "responseBody" in error && (typeof error.responseBody === "string" || error.responseBody === null);
+}
+
 function paymentReviewInfo(error: unknown): PaymentReviewInfo | null {
-  if (!(error instanceof HttpError) || error.status !== 409 || !error.responseBody) return null;
+  if (!isHttpResponseError(error) || error.status !== 409 || !error.responseBody) return null;
   try {
     const body = JSON.parse(error.responseBody) as {
       code?: string;
@@ -163,7 +167,7 @@ function paymentErrorMessage(error: unknown): string {
   if (paymentReviewInfo(error)) {
     return "El pago se registró. La mesa permanece abierta para completar una revisión.";
   }
-  if (error instanceof HttpError) {
+  if (isHttpResponseError(error)) {
     if (error.status === 409) return "La orden cambió mientras se registraba el pago. Actualizá la pantalla e intentá nuevamente.";
     if (error.status >= 500) return "El servidor no pudo completar la operación. Intentá nuevamente en unos segundos.";
     return "No se pudo completar el pago. Verificá los datos e intentá nuevamente.";

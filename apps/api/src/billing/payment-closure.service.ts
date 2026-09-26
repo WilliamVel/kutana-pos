@@ -1,5 +1,5 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { Pool, PoolClient } from "pg";
+import type { Pool } from "pg";
 import { closeOrderWithPersonalAccounts } from "@kutana/shared/billing/model/order-closure.js";
 import { createSale, type Sale } from "@kutana/shared/billing/model/sale.js";
 import { accountBalance, derivePersonalAccountStatus, type PersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
@@ -14,6 +14,8 @@ interface AllocationRow { id: string; account_id: string; line_item_id: string; 
 interface TicketAllocationRow { id: string; ticket_id: string; line_item_id: string; share_bp: number; }
 interface PaymentRow { id: string; account_id: string | null; customer_id: string | null; ticket_id: string | null; method_code: string; amount_cents: number; tendered_cents: number | null; change_cents: number | null; recorded_at: Date | string; }
 interface SaleRow { id: string; public_uuid: string; order_id: string; completed_at: Date | string; currency_code: "USD"; subtotal_cents: number; tax_total_cents: number; discount_total_cents: number; total_cents: number; paid_cents: number; pending_cents: number; status: "paid" | "pending"; table_id: string | null; opened_at: Date | string | null; closed_at: Date | string; closed_by_user_id: string | null; customer_id: string | null; }
+interface SaleItemRow { id: string; sale_id: string; order_line_item_id: string | null; product_id: string; name: string; quantity: number; unit_price_cents: number; subtotal_cents: number; tax_cents: number; discount_cents: number; total_cents: number; account_id: string | null; customer_id: string | null; }
+interface SaleSettlementRow { id: string; sale_id: string; method_code: string; amount_cents: number; tendered_cents: number | null; change_cents: number | null; settled_at: Date | string; account_id: string | null; customer_id: string | null; }
 const iso = (value: Date | string): string => value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 
 @Injectable()
@@ -118,8 +120,8 @@ export class PaymentClosureService {
 
   private async loadSale(executor: Pool, row: SaleRow): Promise<Sale> {
     const [items, settlements] = await Promise.all([
-      executor.query<any>("SELECT id, sale_id, order_line_item_id, product_id, name, quantity::float8 AS quantity, unit_price_cents, subtotal_cents, tax_cents, discount_cents, total_cents, account_id, customer_id FROM sale_items WHERE sale_id = $1 ORDER BY id", [row.id]),
-      executor.query<any>("SELECT id, sale_id, method_code, amount_cents, tendered_cents, change_cents, settled_at, account_id, customer_id FROM sale_settlements WHERE sale_id = $1 ORDER BY settled_at, id", [row.id]),
+      executor.query<SaleItemRow>("SELECT id, sale_id, order_line_item_id, product_id, name, quantity::float8 AS quantity, unit_price_cents, subtotal_cents, tax_cents, discount_cents, total_cents, account_id, customer_id FROM sale_items WHERE sale_id = $1 ORDER BY id", [row.id]),
+      executor.query<SaleSettlementRow>("SELECT id, sale_id, method_code, amount_cents, tendered_cents, change_cents, settled_at, account_id, customer_id FROM sale_settlements WHERE sale_id = $1 ORDER BY settled_at, id", [row.id]),
     ]);
     return { id: row.id, publicUuid: row.public_uuid, orderId: row.order_id, completedAt: iso(row.completed_at), currencyCode: row.currency_code, subtotalCents: row.subtotal_cents, taxTotalCents: row.tax_total_cents, discountTotalCents: row.discount_total_cents, totalCents: row.total_cents, paidCents: row.paid_cents, pendingCents: row.pending_cents, status: row.status, tableId: row.table_id, openedAt: row.opened_at ? iso(row.opened_at) : null, closedAt: iso(row.closed_at!), closedByUserId: row.closed_by_user_id, customerId: row.customer_id, items: items.rows.map((item) => ({ id: item.id, saleId: item.sale_id, orderLineItemId: item.order_line_item_id ?? undefined, productId: item.product_id, name: item.name, quantity: item.quantity, unitPriceCents: item.unit_price_cents, subtotalCents: item.subtotal_cents, taxCents: item.tax_cents, discountCents: item.discount_cents, totalCents: item.total_cents, ...(item.account_id ? { accountId: item.account_id } : {}), ...(item.customer_id ? { customerId: item.customer_id } : {}) })), settlements: settlements.rows.map((item) => ({ id: item.id, saleId: item.sale_id, methodCode: item.method_code, amountCents: item.amount_cents, tenderedCents: item.tendered_cents, changeCents: item.change_cents, settledAt: iso(item.settled_at), ...(item.account_id ? { accountId: item.account_id } : {}), ...(item.customer_id ? { customerId: item.customer_id } : {}) })) };
   }

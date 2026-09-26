@@ -55,13 +55,13 @@ export class MockAnalyticsService implements AnalyticsReadPort {
   dailySales(range?: AnalyticsDateRange): Promise<DailySalesTotal[]> {
     return Promise.resolve(filter(FIXTURES.dailySales, range, (row) => row.date));
   }
-  productMix(range?: AnalyticsDateRange): Promise<ProductMixRow[]> {
+  productMix(): Promise<ProductMixRow[]> {
     return Promise.resolve([...FIXTURES.productMix]);
   }
-  paymentMix(range?: AnalyticsDateRange): Promise<PaymentMixRow[]> {
+  paymentMix(): Promise<PaymentMixRow[]> {
     return Promise.resolve([...FIXTURES.paymentMix]);
   }
-  pendingExposure(range?: AnalyticsDateRange): Promise<PendingExposureRow[]> {
+  pendingExposure(): Promise<PendingExposureRow[]> {
     return Promise.resolve([...FIXTURES.pendingExposure]);
   }
 }
