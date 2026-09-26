@@ -231,6 +231,10 @@
   min-width: 0;
 }
 
+.peopleNavigation {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
 .accountTabs {
   display: flex;
   flex-wrap: wrap;
@@ -238,7 +242,40 @@
   align-items: center;
   padding: var(--space-3);
   overflow: visible;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 0;
+}
+
+.viewSelector {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.viewTab,
+.viewActive {
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.viewTab:hover,
+.viewTab:focus-visible {
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+}
+
+.viewActive {
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--border-strong), var(--shadow-sm);
 }
 
 .tab,
@@ -275,6 +312,8 @@
 .tabActive:focus-visible,
 .addTab:focus-visible,
 .modeBar button:focus-visible,
+.viewTab:focus-visible,
+.viewActive:focus-visible,
 .productRow button:focus-visible,
 .quantityControl button:focus-visible,
 .quantityControl input:focus-visible,
@@ -358,13 +397,6 @@
 
 .assignmentTarget button:hover {
   color: var(--accent-strong);
-}
-
-.assignmentFeedback {
-  margin: 0;
-  color: var(--order-paid-fg);
-  font-size: 0.875rem;
-  font-weight: 700;
 }
 
 .panelHeading {
@@ -697,9 +729,34 @@
   list-style: none;
 }
 
+.addProductsButton {
+  align-self: flex-start;
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.addProductsButton:hover,
+.addProductsButton:focus-visible {
+  border-color: var(--accent-strong);
+  background: var(--surface-sunken);
+}
+
+.addProductsButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .assignedProducts li {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) max-content max-content;
+  grid-template-columns: max-content minmax(0, 1fr) max-content max-content max-content;
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-2) 0;
@@ -712,16 +769,130 @@
   gap: var(--space-2);
 }
 
+.assignedProductQuantity {
+  align-self: center;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.assignedProductInfo,
+.assignedProductPrice,
+.assignedProductSubtotal {
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.assignedProductInfo strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assignedProductPrice,
+.assignedProductSubtotal {
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.assignedProductPrice small,
+.assignedProductSubtotal small {
+  font-size: 0.7rem;
+}
+
 .assignedProducts small {
   color: var(--text-secondary);
 }
 
-.assignedProducts li button,
+.assignedProducts li > button,
 .removeAccountLink {
   padding: var(--space-1) var(--space-2);
   border: 0;
   background: transparent;
   color: var(--text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.returnChoice {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  width: min(17rem, calc(100vw - 1rem));
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+  font-size: 0.8125rem;
+}
+
+.returnChoice > span {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.returnChoice:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.returnQuantityControl {
+  display: inline-flex;
+  width: max-content;
+  overflow: hidden;
+  align-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+}
+
+.returnQuantityControl button,
+.returnQuantityControl output {
+  display: grid;
+  width: 2.1rem;
+  height: 2.1rem;
+  place-items: center;
+  border: 0;
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
+}
+
+.returnQuantityControl button {
+  cursor: pointer;
+}
+
+.returnQuantityControl button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.returnChoiceActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.returnChoiceActions > button {
+  min-height: 2.25rem;
+  padding-inline: var(--space-2);
+  font-size: 0.8125rem;
+}
+
+.returnCancel {
+  min-height: 2.25rem;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
   text-decoration: underline;
   cursor: pointer;
 }
@@ -1100,6 +1271,15 @@
     width: 100%;
     min-width: 6.5rem;
   }
+  .viewSelector {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .viewTab,
+  .viewActive {
+    width: 100%;
+    text-align: left;
+  }
   .addTabLabel {
     display: none;
   }
@@ -1119,6 +1299,17 @@
   .accountBalances {
     grid-template-columns: 1fr;
   }
+  .returnChoice {
+    width: calc(100vw - 1rem);
+    max-width: 19rem;
+    padding: var(--space-2);
+  }
+  .returnChoiceActions {
+    flex-direction: column;
+  }
+  .returnChoiceActions > * {
+    width: 100%;
+  }
   .accountDetail {
     padding: var(--space-4);
   }
@@ -1130,6 +1321,19 @@
   }
   .accountHeading h3 {
     max-width: 56vw;
+  }
+  .assignedProducts li {
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
+    gap: var(--space-2);
+  }
+  .assignedProductPrice,
+  .assignedProductSubtotal {
+    align-items: flex-start;
+  }
+  .assignedProducts li > button {
+    grid-column: 2 / -1;
+    justify-self: start;
+    padding-left: 0;
   }
   .emptyState {
     align-items: flex-start;

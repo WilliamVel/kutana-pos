@@ -76,7 +76,7 @@ describe("SplitBillContainer", () => {
     const order = await ports.orders.findByTable("table-1");
     const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
     fireEvent.click(screen.getAllByRole("button", { name: "Asignar" })[0]!);
-    fireEvent.click(screen.getByRole("button", { name: "Volver a la cuenta" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Productos de Juan P." }));
     await waitFor(() => {
       expect(
         within(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).getAllByText(
@@ -123,7 +123,7 @@ describe("SplitBillContainer", () => {
     const order = await ports.orders.findByTable("table-1");
     const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
     fireEvent.click(screen.getAllByRole("button", { name: "Asignar" })[0]!);
-    fireEvent.click(screen.getByRole("button", { name: "Volver a la cuenta" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Productos de Juan P." }));
     await waitFor(() =>
       expect(
         within(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).getAllByText(
@@ -159,7 +159,7 @@ describe("SplitBillContainer", () => {
 
     const order = await ports.orders.findByTable("table-1");
     const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
-    fireEvent.click(screen.getByRole("button", { name: "Volver a la cuenta" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Productos de Ada Lovelace" }));
     fireEvent.click(screen.getByRole("button", { name: "Acciones para Ada Lovelace" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Eliminar persona" }));
 
@@ -192,7 +192,7 @@ describe("SplitBillContainer", () => {
     const order = await ports.orders.findByTable("table-1");
     const account = (await ports.personalAccounts.listByOrder(order!.id))[0]!;
     fireEvent.click(screen.getAllByRole("button", { name: "Asignar" })[0]!);
-    fireEvent.click(screen.getByRole("button", { name: "Volver a la cuenta" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Productos de Wrong name" }));
     await waitFor(() =>
       expect(
         within(screen.getByRole("article", { name: "Saldo de cuenta de Wrong name" })).getAllByText(
@@ -219,7 +219,7 @@ describe("SplitBillContainer", () => {
         screen.queryByRole("article", { name: "Saldo de cuenta de Wrong name" }),
       ).not.toBeInTheDocument(),
     );
-    expect(screen.getByRole("tab", { name: /Sin asignar 3/ })).toBeInTheDocument();
+    expect(screen.getByText("Crea o selecciona una persona para asignar productos.")).toBeInTheDocument();
   });
 
   it("delegates a valid closure to the payment-closure port", async () => {
@@ -253,6 +253,7 @@ describe("SplitBillContainer", () => {
     await waitFor(() =>
       expect(screen.getByRole("tab", { name: /Sin asignar 0/ })).toBeInTheDocument(),
     );
+    fireEvent.click(screen.getByRole("tab", { name: "Productos de Juan P." }));
     await waitFor(() =>
       expect(
         within(screen.getByRole("article", { name: "Saldo de cuenta de Juan P." })).getByRole(

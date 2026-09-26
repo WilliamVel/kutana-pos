@@ -81,6 +81,7 @@ function toLines(
       grouped.set(key, {
         ...existing,
         lineItemIds: [...existing.lineItemIds, line.id],
+        presentation: line.pourSizeMl ? `${line.pourSizeMl} ml` : "Unidad",
         quantity: existing.quantity + line.quantity,
         totalCents: existing.totalCents + line.totalCents,
         unassignedQuantity: existing.unassignedQuantity + line.quantity - assigned,
@@ -90,6 +91,7 @@ function toLines(
         id: line.id,
         lineItemIds: [line.id],
         name: line.nameSnapshot,
+        presentation: line.pourSizeMl ? `${line.pourSizeMl} ml` : "Unidad",
         quantity: line.quantity,
         unitPriceCents: line.unitPriceCents,
         totalCents: line.totalCents,
@@ -240,7 +242,10 @@ export function SplitBillContainer({
           : {
               allocationIds: [allocation.id],
               name,
+              presentation: line?.pourSizeMl ? `${line.pourSizeMl} ml` : "Unidad",
               quantity: allocation.quantity,
+              unitPriceCents: line?.unitPriceCents ?? 0,
+              taxRateBp: line?.taxRateBp ?? 0,
               totalCents: Math.round(
                 ((line?.totalCents ?? 0) / (line?.quantity ?? 1)) * allocation.quantity,
               ),
@@ -297,8 +302,8 @@ export function SplitBillContainer({
     });
   };
 
-  const assignQuantities = (drafts: readonly AccountAllocationDraft[]): void => {
-    void runMutation(async () => {
+  const assignQuantities = (drafts: readonly AccountAllocationDraft[]): Promise<boolean> =>
+    runMutation(async () => {
       const accountId = drafts[0]?.accountId;
       if (!accountId) return;
       const account = accounts.find((candidate) => candidate.id === accountId);
@@ -346,11 +351,11 @@ export function SplitBillContainer({
         throw error;
       }
     });
-  };
 
-  const assignQuantity = (draft = allocationDraft): void => {
-    assignQuantities([draft]);
+  const assignQuantity = (draft = allocationDraft): Promise<boolean> => {
+    const result = assignQuantities([draft]);
     setAllocationDraft({ ...draft, quantity: "1" });
+    return result;
   };
 
   const payAccount = (accountId: string): void => {
@@ -406,20 +411,42 @@ export function SplitBillContainer({
     });
   };
 
-  const removeAllocation = (accountId: string, allocationIds: readonly string[]): void => {
-    void runMutation(async () => {
+  const removeAllocation = (
+    accountId: string,
+    allocationIds: readonly string[],
+    quantity?: number,
+  ): Promise<boolean> =>
+    runMutation(async () => {
       const account = accounts.find((candidate) => candidate.id === accountId);
       if (!account || account.status === "pending" || account.status === "paid") return;
+      if (quantity === 1) {
+        const target = [...allocations]
+          .reverse()
+          .find((allocation) => allocationIds.includes(allocation.id));
+        if (!target) return;
+        if (target.quantity > 1) {
+          const nextAllocations = allocations.map((allocation) =>
+            allocation.id === target.id
+              ? { ...allocation, quantity: allocation.quantity - 1 }
+              : allocation,
+          );
+          await accountsPort.save(account, nextAllocations, account.version);
+          return;
+        }
+      }
       let version = account.version;
-      for (const allocationId of allocationIds) {
+      const idsToRemove = quantity === 1
+        ? [
+            [...allocations]
+              .reverse()
+              .find((allocation) => allocationIds.includes(allocation.id))?.id,
+          ].filter((id): id is string => Boolean(id))
+        : allocationIds;
+      for (const allocationId of idsToRemove) {
         await accountsPort.removeAllocation(accountId, allocationId, version);
         version += 1;
       }
-      if (allocationDraft.accountId === accountId) {
-        setAllocationDraft({ ...allocationDraft, accountId: "" });
-      }
     });
-  };
 
   const deleteAccount = (accountId: string): Promise<boolean> =>
     runMutation(async () => {

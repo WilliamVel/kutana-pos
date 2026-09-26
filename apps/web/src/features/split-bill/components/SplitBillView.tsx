@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import type {
   Customer,
   PersonalAccountOwner,
@@ -15,6 +16,7 @@ export interface AccountAssignmentLine {
   readonly id: string;
   readonly lineItemIds: readonly string[];
   readonly name: string;
+  readonly presentation?: string | null;
   readonly quantity: number;
   readonly unitPriceCents: number;
   readonly totalCents: number;
@@ -24,7 +26,10 @@ export interface AccountAssignmentLine {
 export interface AssignedAccountLine {
   readonly allocationIds: readonly string[];
   readonly name: string;
+  readonly presentation?: string | null;
   readonly quantity: number;
+  readonly unitPriceCents?: number;
+  readonly taxRateBp?: number;
   readonly totalCents?: number;
 }
 
@@ -74,14 +79,20 @@ export interface SplitBillViewProps {
   readonly onCreateCustomerAccount: () => void;
   readonly onCreateFreeNameAccount: () => void;
   readonly onAllocationDraftChange: (draft: AccountAllocationDraft) => void;
-  readonly onAssignQuantity: (draft?: AccountAllocationDraft) => void;
-  readonly onAssignQuantities?: (drafts: readonly AccountAllocationDraft[]) => void;
+  readonly onAssignQuantity: (draft?: AccountAllocationDraft) => boolean | Promise<boolean> | void;
+  readonly onAssignQuantities?: (drafts: readonly AccountAllocationDraft[]) => boolean | Promise<boolean> | void;
   readonly onPayAccount: (accountId: string) => void;
   readonly onMarkPending: (accountId: string) => void;
   readonly onDeleteAccount: (accountId: string) => Promise<boolean> | void;
-  readonly onRemoveAllocation?: (accountId: string, allocationIds: readonly string[]) => void;
+  readonly onRemoveAllocation?: (accountId: string, allocationIds: readonly string[], quantity?: number) => boolean | Promise<boolean> | void;
   readonly onAttemptClose: () => void;
   readonly onPayOrder?: () => void;
+}
+
+function displayProductName(name: string, presentation?: string | null): string {
+  if (!presentation) return name;
+  const size = presentation.match(/\d+(?:\.\d+)?/)?.[0];
+  return size ? name.replace(new RegExp(`\\s*${size}\\s*ml\\b`, "i"), "").trim() : name;
 }
 
 function formatStatus(status: PersonalAccountStatus): string {
@@ -123,14 +134,23 @@ export function SplitBillView({
   onPayOrder,
 }: SplitBillViewProps): JSX.Element {
   const [method, setMethod] = useState<SplitMethod | null>(accounts.length > 0 ? "person" : null);
-  const [activeTab, setActiveTab] = useState<string>(
-    accounts.length > 0 ? accounts[0]!.id : "unassigned",
+  // Recipient and product list are separate navigation concepts.
+  const [activePersonId, setActivePersonId] = useState<string>(accounts[0]?.id ?? "");
+  const [productView, setProductView] = useState<"assigned" | "unassigned">(
+    accounts.length > 0 ? "assigned" : "unassigned",
   );
   const [createOpen, setCreateOpen] = useState(false);
   const [detailsAccountId, setDetailsAccountId] = useState<string | null>(null);
   const [equalPeople, setEqualPeople] = useState(2);
   const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(() => new Set());
-  const [assignmentFeedback, setAssignmentFeedback] = useState<string | null>(null);
+  const [selectedQuantities, setSelectedQuantities] = useState<Map<string, number>>(
+    () => new Map(),
+  );
+  const [returnLine, setReturnLine] = useState<AssignedAccountLine | null>(null);
+  const [returnQuantity, setReturnQuantity] = useState(1);
+  const [returnPopoverPosition, setReturnPopoverPosition] = useState({ top: 0, left: 0 });
+  const returnTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const returnChoiceRef = useRef<HTMLDivElement | null>(null);
   const [reviewAccountId, setReviewAccountId] = useState<string | null>(null);
   const [removeAccountId, setRemoveAccountId] = useState<string | null>(null);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
@@ -139,22 +159,20 @@ export function SplitBillView({
 
   useEffect(() => {
     if (accounts.length > 0 && method === null) setMethod("person");
-    if (activeTab !== "unassigned" && !accounts.some((account) => account.id === activeTab)) {
-      setActiveTab("unassigned");
+    if (activePersonId && !accounts.some((account) => account.id === activePersonId)) {
+      setActivePersonId(accounts[0]?.id ?? "");
     }
     if (reviewAccountId && !accounts.some((account) => account.id === reviewAccountId)) {
       setReviewAccountId(null);
     }
-  }, [accounts, activeTab, method, reviewAccountId]);
+  }, [accounts, activePersonId, method, reviewAccountId]);
 
   useEffect(() => {
     if (
       allocationDraft.accountId &&
       accounts.some((account) => account.id === allocationDraft.accountId)
     ) {
-      setActiveTab((current) =>
-        current === "unassigned" && accounts.length === 1 ? allocationDraft.accountId : current,
-      );
+      setActivePersonId((current) => (current ? current : allocationDraft.accountId));
     }
   }, [accounts.length, allocationDraft.accountId]);
 
@@ -167,15 +185,25 @@ export function SplitBillView({
           ),
         ),
     );
+    setSelectedQuantities((current) => {
+      const next = new Map(current);
+      for (const [id, quantity] of current) {
+        const available = lines.find((line) => line.id === id)?.unassignedQuantity;
+        if (!available) next.delete(id);
+        else next.set(id, Math.min(quantity, available));
+      }
+      return next;
+    });
   }, [lines]);
 
   const unassignedUnits = lines.reduce((sum, line) => sum + line.unassignedQuantity, 0);
   const assignedCents = accounts.reduce((sum, account) => sum + account.totalCents, 0);
   const unassignedCents = Math.max(0, tableTotalCents - assignedCents - (tablePaidCents - assignedCents));
-  const selectedAccount =
-    accounts.find((account) => account.id === (reviewAccountId ?? activeTab)) ?? null;
+  const selectedAccount = accounts.find((account) => account.id === activePersonId) ?? null;
   const destinationAccount =
-    accounts.find((account) => account.id === allocationDraft.accountId) ?? null;
+    productView === "unassigned"
+      ? selectedAccount
+      : accounts.find((account) => account.id === allocationDraft.accountId) ?? null;
   const detailsAccount = accounts.find((account) => account.id === detailsAccountId) ?? null;
   const removeAccount = accounts.find((account) => account.id === removeAccountId) ?? null;
   const removeUnits =
@@ -196,7 +224,8 @@ export function SplitBillView({
 
   const selectAccount = (accountId: string): void => {
     const account = accounts.find((candidate) => candidate.id === accountId);
-    setActiveTab(accountId);
+    setActivePersonId(accountId);
+    setProductView("assigned");
     setReviewAccountId(null);
     setActionMenuOpen(false);
     setSelectedLineIds(new Set());
@@ -206,11 +235,20 @@ export function SplitBillView({
   };
 
   const selectUnassigned = (): void => {
-    setActiveTab("unassigned");
+    setProductView("unassigned");
     setReviewAccountId(null);
     setActionMenuOpen(false);
     setSelectedLineIds(new Set());
-    onAllocationDraftChange({ ...allocationDraft, accountId: "" });
+    onAllocationDraftChange({ ...allocationDraft, accountId: activePersonId });
+  };
+
+  const selectAssigned = (): void => {
+    if (!activePersonId) return;
+    setProductView("assigned");
+    setReviewAccountId(null);
+    setActionMenuOpen(false);
+    setSelectedLineIds(new Set());
+    onAllocationDraftChange({ ...allocationDraft, accountId: activePersonId });
   };
 
   const requestMethod = (nextMethod: SplitMethod): void => {
@@ -232,18 +270,29 @@ export function SplitBillView({
   };
 
   const updateQuantity = (lineId: string, next: number, maximum: number): void => {
+    const quantity = Math.max(1, Math.min(maximum, next));
+    setSelectedQuantities((current) => new Map(current).set(lineId, quantity));
     onAllocationDraftChange({
       ...allocationDraft,
       lineItemId: lineId,
-      quantity: String(Math.max(1, Math.min(maximum, next))),
+      quantity: String(quantity),
     });
   };
 
   const toggleLine = (lineId: string): void => {
     setSelectedLineIds((current) => {
       const next = new Set(current);
-      if (next.has(lineId)) next.delete(lineId);
-      else next.add(lineId);
+      if (next.has(lineId)) {
+        next.delete(lineId);
+        setSelectedQuantities((quantities) => {
+          const nextQuantities = new Map(quantities);
+          nextQuantities.delete(lineId);
+          return nextQuantities;
+        });
+      } else {
+        next.add(lineId);
+        setSelectedQuantities((quantities) => new Map(quantities).set(lineId, 1));
+      }
       return next;
     });
   };
@@ -251,8 +300,13 @@ export function SplitBillView({
   const selectedLines = lines.filter(
     (line) => selectedLineIds.has(line.id) && line.unassignedQuantity > 0,
   );
+  const selectedUnits = selectedLines.reduce(
+    (sum, line) => sum + (selectedQuantities.get(line.id) ?? 1),
+    0,
+  );
   const selectedTotalCents = selectedLines.reduce(
-    (sum, line) => sum + Math.round(line.totalCents / line.quantity),
+    (sum, line) =>
+      sum + Math.round((line.totalCents / line.quantity) * (selectedQuantities.get(line.id) ?? 1)),
     0,
   );
   const canAssignToDestination =
@@ -261,8 +315,9 @@ export function SplitBillView({
     destinationAccount.status !== "pending";
   const showAssignmentWorkspace =
     reviewAccountId === null &&
+    productView === "unassigned" &&
     unassignedUnits > 0 &&
-    (activeTab === "unassigned" || Boolean(canAssignToDestination));
+    Boolean(canAssignToDestination);
 
   useEffect(() => {
     if (!removeAccountId) return;
@@ -304,8 +359,8 @@ export function SplitBillView({
   };
 
   const finishDeletion = (accountId: string, message: string): void => {
-    setAssignmentFeedback(message);
-    setActiveTab("unassigned");
+    toast.success(message, { duration: 2600 });
+    setProductView("unassigned");
     setReviewAccountId(null);
     if (allocationDraft.accountId === accountId) {
       onAllocationDraftChange({ ...allocationDraft, accountId: "" });
@@ -327,8 +382,9 @@ export function SplitBillView({
     setActionMenuOpen(false);
     if (!selectedAccount) return;
     if ((selectedAccount.payments?.length ?? 0) > 0 || selectedAccount.paidCents > 0) {
-      setAssignmentFeedback(
+      toast.error(
         `No se puede eliminar a ${selectedAccount.ownerLabel} porque tiene pagos registrados. Conserva el historial de cobros.`,
+        { duration: 2600 },
       );
       return;
     }
@@ -353,18 +409,96 @@ export function SplitBillView({
     closeRemoveDialog();
   };
 
-  const assignSelected = (): void => {
+  useLayoutEffect(() => {
+    if (!returnLine || !returnTriggerRef.current || !returnChoiceRef.current) return;
+    const trigger = returnTriggerRef.current.getBoundingClientRect();
+    const popover = returnChoiceRef.current.getBoundingClientRect();
+    const gap = 8;
+    const top =
+      trigger.bottom + gap + popover.height <= window.innerHeight
+        ? trigger.bottom + gap
+        : Math.max(gap, trigger.top - popover.height - gap);
+    const left = Math.min(
+      Math.max(gap, trigger.right - popover.width),
+      window.innerWidth - popover.width - gap,
+    );
+    setReturnPopoverPosition({ top, left });
+    returnChoiceRef.current.focus();
+    const reposition = (): void => {
+      const currentTrigger = returnTriggerRef.current;
+      const currentPopover = returnChoiceRef.current;
+      if (!currentTrigger || !currentPopover) return;
+      const nextTrigger = currentTrigger.getBoundingClientRect();
+      const nextPopover = currentPopover.getBoundingClientRect();
+      const nextTop =
+        nextTrigger.bottom + gap + nextPopover.height <= window.innerHeight
+          ? nextTrigger.bottom + gap
+          : Math.max(gap, nextTrigger.top - nextPopover.height - gap);
+      const nextLeft = Math.min(
+        Math.max(gap, nextTrigger.right - nextPopover.width),
+        window.innerWidth - nextPopover.width - gap,
+      );
+      setReturnPopoverPosition({ top: nextTop, left: nextLeft });
+    };
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
+    return () => {
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
+    };
+  }, [returnLine, returnQuantity]);
+
+  useEffect(() => {
+    if (!returnLine) return;
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") closeReturnChoice();
+    };
+    const onPointerDown = (event: PointerEvent): void => {
+      const target = event.target as Node;
+      if (!returnChoiceRef.current?.contains(target) && !returnTriggerRef.current?.contains(target)) {
+        closeReturnChoice();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [returnLine]);
+
+  const closeReturnChoice = (): void => {
+    setReturnLine(null);
+    window.setTimeout(() => returnTriggerRef.current?.focus(), 0);
+  };
+
+  const returnUnits = async (line: AssignedAccountLine, quantity: number): Promise<void> => {
+    if (!selectedAccount || !onRemoveAllocation) return;
+    const success = await onRemoveAllocation(selectedAccount.id, line.allocationIds, quantity);
+    if (success === false) return;
+    const units = quantity === 1 ? "1 unidad" : `${quantity} unidades`;
+    toast.success(`${units} devuelta(s) a Sin asignar`, { duration: 2600 });
+    closeReturnChoice();
+  };
+
+  const assignSelected = async (): Promise<void> => {
     if (!destinationAccount || selectedLines.length === 0) return;
     const drafts = selectedLines.map((line) => ({
       accountId: destinationAccount.id,
       lineItemId: line.id,
-      quantity: "1",
+      quantity: String(selectedQuantities.get(line.id) ?? 1),
     }));
-    if (onAssignQuantities) onAssignQuantities(drafts);
-    else drafts.forEach((draft) => onAssignQuantity(draft));
+    const result = onAssignQuantities
+      ? await onAssignQuantities(drafts)
+      : await Promise.all(drafts.map((draft) => onAssignQuantity(draft))).then((results) =>
+          results.every((success) => success !== false),
+        );
+    if (result === false) return;
     setSelectedLineIds(new Set());
-    setAssignmentFeedback(
+    setProductView("unassigned");
+    toast.success(
       `${drafts.length} producto(s) asignado(s) a ${destinationAccount.ownerLabel}`,
+      { duration: 2600 },
     );
   };
 
@@ -474,55 +608,31 @@ export function SplitBillView({
           {reviewMessage}
         </div>
       ) : null}
-      {assignmentFeedback ? (
-        <p className={styles.assignmentFeedback} role="status" aria-live="polite">
-          ✓ {assignmentFeedback}
-        </p>
-      ) : null}
-
       {method === "person" ? (
         <section className={styles.personWorkspace} aria-label="División por persona">
-          <div className={styles.accountTabs} role="tablist" aria-label="Cuentas de la mesa">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "unassigned" && !destinationAccount}
-              className={
-                activeTab === "unassigned" && !destinationAccount ? styles.tabActive : styles.tab
-              }
-              onClick={selectUnassigned}
-            >
-              Sin asignar{" "}
-              <span aria-label={`${unassignedUnits} unidades`}>· {unassignedUnits}</span>
-            </button>
-            {accounts.map((account) => {
-              const isSelected = (reviewAccountId ?? activeTab) === account.id;
-              const statusPrefix =
-                account.status === "paid" ? "✓ " : account.status === "pending" ? "• " : "";
-              return (
-                <button
-                  key={account.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={isSelected}
-                  className={`${isSelected ? styles.tabActive : styles.tab} ${account.status === "paid" ? styles.tabPaid : account.status === "pending" ? styles.tabPending : ""}`}
-                  onClick={() => selectAccount(account.id)}
-                  aria-label={`Seleccionar cuenta ${account.ownerLabel}`}
-                >
-                  {statusPrefix}
-                  {account.ownerLabel} <PriceTag cents={account.remainingCents} />
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              className={styles.addTab}
-              onClick={() => setCreateOpen(true)}
-              aria-label="Agregar persona"
-            >
-              <span aria-hidden="true">+</span>
-              <span className={styles.addTabLabel}>Nueva persona</span>
-            </button>
+          <div className={styles.peopleNavigation}>
+            <div className={styles.accountTabs} role="tablist" aria-label="Persona activa">
+              {accounts.map((account) => {
+                const isSelected = activePersonId === account.id;
+                const statusPrefix = account.status === "paid" ? "✓ " : account.status === "pending" ? "• " : "";
+                return (
+                  <button key={account.id} type="button" role="tab" aria-selected={isSelected}
+                    className={`${isSelected ? styles.tabActive : styles.tab} ${account.status === "paid" ? styles.tabPaid : account.status === "pending" ? styles.tabPending : ""}`}
+                    onClick={() => selectAccount(account.id)} aria-label={`Seleccionar cuenta ${account.ownerLabel}`}>
+                    {statusPrefix}{account.ownerLabel} <PriceTag cents={account.remainingCents} />
+                  </button>
+                );
+              })}
+              <button type="button" className={styles.addTab} onClick={() => setCreateOpen(true)} aria-label="Agregar persona">
+                <span aria-hidden="true">+</span><span className={styles.addTabLabel}>Nueva persona</span>
+              </button>
+            </div>
+            {selectedAccount ? (
+              <div className={styles.viewSelector} role="tablist" aria-label={`Vista de productos de ${selectedAccount.ownerLabel}`}>
+                <button type="button" role="tab" aria-selected={productView === "assigned"} className={productView === "assigned" ? styles.viewActive : styles.viewTab} onClick={selectAssigned}>Productos de {selectedAccount.ownerLabel}</button>
+                <button type="button" role="tab" aria-selected={productView === "unassigned"} className={productView === "unassigned" ? styles.viewActive : styles.viewTab} onClick={selectUnassigned}>Sin asignar <span aria-label={`${unassignedUnits} unidades`}>· {unassignedUnits}</span></button>
+              </div>
+            ) : <div className={styles.viewSelector} role="status">Crea o selecciona una persona para asignar productos.</div>}
           </div>
 
           {showAssignmentWorkspace ? (
@@ -533,16 +643,7 @@ export function SplitBillView({
                   <p>{unassignedUnits} unidad(es) disponibles</p>
                 </div>
                 <div className={styles.assignmentTarget}>
-                  <span>
-                    Asignando a:{" "}
-                    <strong>{destinationAccount?.ownerLabel ?? "selecciona una persona"}</strong>
-                  </span>
-                  {destinationAccount ? (
-                    <button type="button" onClick={() => setReviewAccountId(destinationAccount.id)}>
-                      <Icon name="arrow-left" size={16} />
-                      Volver a la cuenta
-                    </button>
-                  ) : null}
+                  Asignando a: <strong>{destinationAccount?.ownerLabel ?? "selecciona una persona"}</strong>
                 </div>
               </div>
               {lines.length === 0 ? (
@@ -554,10 +655,10 @@ export function SplitBillView({
                 {lines
                   .filter((line) => line.unassignedQuantity > 0)
                   .map((line) => {
-                    const quantity =
-                      allocationDraft.lineItemId === line.id
+                    const quantity = selectedQuantities.get(line.id) ??
+                      (allocationDraft.lineItemId === line.id
                         ? Number(allocationDraft.quantity) || 1
-                        : 1;
+                        : 1);
                     const isSelected = selectedLineIds.has(line.id);
                     return (
                       <article
@@ -621,16 +722,20 @@ export function SplitBillView({
                         )}
                         <Button
                           ariaLabel="Asignar"
-                          onClick={() => {
+                          onClick={async () => {
                             if (!destinationAccount) return;
-                            onAssignQuantity({
+                            const success = await onAssignQuantity({
                               ...allocationDraft,
                               accountId: destinationAccount.id,
                               lineItemId: line.id,
                               quantity: String(quantity),
                             });
-                            setAssignmentFeedback(
-                              `${line.name} asignado a ${destinationAccount.ownerLabel}`,
+                            if (success === false) return;
+                            toast.success(
+                              `${quantity} ${displayProductName(line.name, line.presentation)} ${line.presentation ?? ""} asignada a ${destinationAccount.ownerLabel}`
+                                .replace(/\s+/g, " ")
+                                .trim(),
+                              { duration: 2600 },
                             );
                           }}
                           disabled={disabled || !canAssignToDestination}
@@ -643,11 +748,10 @@ export function SplitBillView({
               </div>
               {selectedLines.length > 0 && destinationAccount ? (
                 <div className={styles.batchAction} role="region" aria-label="Asignación múltiple">
-                  <span>
-                    <strong>
-                      {selectedLines.length} seleccionado{selectedLines.length === 1 ? "" : "s"}
-                    </strong>{" "}
-                    · <PriceTag cents={selectedTotalCents} />
+                              <span>
+                    <strong>{selectedUnits} unidad{selectedUnits === 1 ? "" : "es"}</strong>{" "}
+                    · {selectedLines.length} producto{selectedLines.length === 1 ? "" : "s"} ·{" "}
+                    <PriceTag cents={selectedTotalCents} />
                   </span>
                   <Button onClick={assignSelected} disabled={disabled}>
                     Asignar a {destinationAccount.ownerLabel}
@@ -655,7 +759,8 @@ export function SplitBillView({
                 </div>
               ) : null}
             </section>
-          ) : unassignedUnits === 0 && activeTab === "unassigned" ? (
+          ) : unassignedUnits === 0 && productView === "unassigned" &&
+            (!selectedAccount || (selectedAccount.assignedLines?.length ?? 0) > 0) ? (
             <section className={styles.allAssigned} aria-label="Todos los productos asignados">
               <div>
                 <p className={styles.doneState}>✓ Todos los productos están asignados.</p>
@@ -706,6 +811,14 @@ export function SplitBillView({
                   </div>
                 </div>
               </div>
+              <button type="button" className={styles.addProductsButton}
+                onClick={() => {
+                  setProductView("unassigned");
+                  setSelectedLineIds(new Set());
+                  onAllocationDraftChange({ ...allocationDraft, accountId: selectedAccount.id });
+                }}
+                disabled={disabled || selectedAccount.status === "paid" || selectedAccount.status === "pending"}
+              >+ Agregar productos a {selectedAccount.ownerLabel}</button>
               <section
                 aria-label={`Productos asignados a ${selectedAccount.ownerLabel}`}
                 className={styles.assignedProducts}
@@ -717,7 +830,8 @@ export function SplitBillView({
                     <button
                       type="button"
                       onClick={() => {
-                        setActiveTab(selectedAccount.id);
+                        setActivePersonId(selectedAccount.id);
+                        setProductView("unassigned");
                         setReviewAccountId(null);
                         onAllocationDraftChange({
                           ...allocationDraft,
@@ -731,29 +845,35 @@ export function SplitBillView({
                 ) : (
                   <ul>
                     {selectedAccount.assignedLines?.map((line) => (
-                      <li key={line.allocationIds.join("-")}>
-                        <span>
-                          <strong>{line.name}</strong>
-                          <small>×{line.quantity}</small>
-                        </span>
-                        {line.totalCents !== undefined ? (
-                          <PriceTag cents={line.totalCents} />
+                      <li key={line.allocationIds.join("-")} className={styles.assignedProductRow}>
+                        <span className={styles.assignedProductQuantity}>×{line.quantity}</span>
+                        <span className={styles.assignedProductInfo}><strong>{displayProductName(line.name, line.presentation)}</strong><small>{line.presentation ?? "Unidad"}</small></span>
+                        <span className={styles.assignedProductPrice}><small>Precio unitario</small><PriceTag cents={line.unitPriceCents ?? Math.round((line.totalCents ?? 0) / line.quantity)} /></span>
+                        <span className={styles.assignedProductSubtotal}><small>{line.taxRateBp ? "Total (incl. impuestos)" : "Importe total"}</small><PriceTag cents={line.totalCents ?? 0} /></span>
+                        <button type="button" onClick={(event) => {
+                          returnTriggerRef.current = event.currentTarget;
+                          if (line.quantity === 1) void returnUnits(line, 1);
+                          else {
+                            setReturnQuantity(1);
+                            setReturnLine(line);
+                          }
+                        }} disabled={disabled || selectedAccount.paidCents > 0 || selectedAccount.status === "pending" || selectedAccount.status === "paid"} aria-label={`Devolver ${line.name} de la cuenta de ${selectedAccount.ownerLabel}`}>Devolver</button>
+                        {returnLine === line ? (
+                          <div ref={returnChoiceRef} className={styles.returnChoice} role="dialog" aria-label={`Cantidad a devolver de ${line.name}`} tabIndex={-1} style={{ top: returnPopoverPosition.top, left: returnPopoverPosition.left }}>
+                            <strong>{displayProductName(line.name, line.presentation)}</strong>
+                            <span>{line.quantity} {line.quantity === 1 ? "unidad asignada" : "unidades asignadas"}</span>
+                            <div className={styles.returnQuantityControl}>
+                              <button type="button" onClick={() => setReturnQuantity((current) => Math.max(1, current - 1))} disabled={returnQuantity === 1} aria-label="Reducir cantidad a devolver">−</button>
+                              <output aria-live="polite">{returnQuantity}</output>
+                              <button type="button" onClick={() => setReturnQuantity((current) => Math.min(line.quantity, current + 1))} disabled={returnQuantity === line.quantity} aria-label="Aumentar cantidad a devolver">+</button>
+                            </div>
+                            <div className={styles.returnChoiceActions}>
+                              <Button onClick={() => void returnUnits(line, returnQuantity)}>Devolver {returnQuantity} {returnQuantity === 1 ? "unidad" : "unidades"}</Button>
+                              <Button variant="secondary" onClick={() => setReturnQuantity(line.quantity)}>Todas</Button>
+                              <button type="button" className={styles.returnCancel} onClick={closeReturnChoice}>Cancelar</button>
+                            </div>
+                          </div>
                         ) : null}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onRemoveAllocation?.(selectedAccount.id, line.allocationIds)
-                          }
-                          disabled={
-                            disabled ||
-                            selectedAccount.paidCents > 0 ||
-                            selectedAccount.status === "pending" ||
-                            selectedAccount.status === "paid"
-                          }
-                          aria-label={`Devolver ${line.name} de la cuenta de ${selectedAccount.ownerLabel}`}
-                        >
-                          Devolver
-                        </button>
                       </li>
                     ))}
                   </ul>
