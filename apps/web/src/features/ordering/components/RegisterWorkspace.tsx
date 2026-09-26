@@ -10,6 +10,9 @@ export interface RegisterWorkspaceProps {
   readonly emptyCenter: ReactNode;
   /** Right column: the "Quick add items" rail. */
   readonly rail: ReactNode;
+  /** Empty-state copy used to keep the products panel complete before selection. */
+  readonly emptyRailTitle?: string;
+  readonly emptyRailMessage?: ReactNode;
   /**
    * When true, the right rail track is dropped entirely so the center
    * column is not starved by an idle column (payment / split sub-states).
@@ -32,6 +35,8 @@ export function RegisterWorkspace({
   center,
   emptyCenter,
   rail,
+  emptyRailTitle,
+  emptyRailMessage,
   railHidden = false,
   centerOverflowVisible = false,
   selectedTableId = null,
@@ -75,9 +80,20 @@ export function RegisterWorkspace({
       {center ? (
         <div className={centerOverflowVisible ? `${styles.center} ${styles.centerOverflowVisible}` : styles.center}>{center}</div>
       ) : (
-        <div className={styles.empty}>{emptyCenter}</div>
+        <div className={styles.center}>
+          <div className={styles.empty}>{emptyCenter}</div>
+        </div>
       )}
-      {railHidden ? null : <div className={styles.rail}>{rail}</div>}
+      {railHidden ? null : (
+        <div className={styles.rail}>
+          {!selectedTableId && emptyRailTitle ? (
+            <section className={styles.emptyPanel} aria-label={emptyRailTitle}>
+              <h2>{emptyRailTitle}</h2>
+              {emptyRailMessage ? <p className={styles.emptyMessage}>{emptyRailMessage}</p> : null}
+            </section>
+          ) : rail}
+        </div>
+      )}
     </div>
   );
 }

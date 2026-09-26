@@ -314,9 +314,16 @@ export function App(): JSX.Element {
             </>
           }
           center={center}
-          emptyCenter="Selecciona un pedido para ver sus cuentas a cobrar."
+          emptyCenter={
+            <>
+              <h2>Cuentas</h2>
+              <p>Selecciona una orden para ver sus cuentas</p>
+            </>
+          }
+          emptyRailTitle="Productos"
+          emptyRailMessage="Selecciona una orden para agregar productos"
           centerOverflowVisible={centerView === "assignment"}
-          railHidden={centerView !== "account"}
+          railHidden={Boolean(selectedTableId) && centerView !== "account"}
           selectedTableId={selectedTableId}
           rail={
             selectedTableId && centerView === "account" ? (
