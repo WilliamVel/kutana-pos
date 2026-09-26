@@ -79,7 +79,7 @@ export function RegisterWorkspace({
           </button>
         ) : null}
       </div>
-      <div className={styles.list}>{list}</div>
+      <div className={styles.list}><div className={styles.listContent}>{list}</div></div>
       {center ? (
         <div className={centerOverflowVisible ? `${styles.center} ${styles.centerOverflowVisible}` : styles.center}>
           {center}

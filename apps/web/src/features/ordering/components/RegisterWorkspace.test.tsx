@@ -13,7 +13,8 @@ describe("RegisterWorkspace", () => {
         rail={<p>quick add</p>}
       />,
     );
-    expect(screen.getByText("order list")).toBeInTheDocument();
+    expect(styles.listContent).toBeDefined();
+    expect(screen.getByText("order list").parentElement).toHaveClass(styles.listContent!);
     expect(screen.getByText("quick add")).toBeInTheDocument();
   });
 
