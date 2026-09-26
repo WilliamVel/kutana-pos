@@ -104,6 +104,16 @@ describe("SplitBillView", () => {
     });
   });
 
+  it("reports only unassigned product value in the account summary", () => {
+    renderView({
+      accounts: [ACCOUNT],
+      allocationDraft: { accountId: "account-a", lineItemId: "", quantity: "1" },
+    });
+
+    const summary = screen.getByLabelText("Resumen de la mesa");
+    expect(within(summary).getByText("Sin asignar").parentElement).toHaveTextContent("$3.92");
+  });
+
   it("assigns multiple selected products to the active person", () => {
     const onAssignQuantities = vi.fn();
     const secondLine = { ...LINE, id: "line-b", lineItemIds: ["line-b"], name: "Loaded Nachos" };
