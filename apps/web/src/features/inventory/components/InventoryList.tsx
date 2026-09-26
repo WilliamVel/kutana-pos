@@ -178,9 +178,14 @@ export function InventoryList({
             <button
               type="button"
               className={styles.clearButton}
-              aria-label="Limpiar búsqueda"
-              title="Limpiar búsqueda"
-              onClick={() => onSearchQueryChange("")}
+              aria-label="Borrar búsqueda"
+              title="Borrar búsqueda"
+              onClick={(event) => {
+                onSearchQueryChange("");
+                event.currentTarget.parentElement
+                  ?.querySelector<HTMLInputElement>("input")
+                  ?.focus();
+              }}
             >
               <Icon name="close" size={16} />
             </button>

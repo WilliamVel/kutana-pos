@@ -75,8 +75,11 @@ export function CustomerList({
           <button
             type="button"
             className={styles.clearButton}
-            aria-label="Limpiar búsqueda"
-            onClick={() => onSearchQueryChange("")}
+            aria-label="Borrar búsqueda"
+            onClick={(event) => {
+              onSearchQueryChange("");
+              event.currentTarget.parentElement?.querySelector<HTMLInputElement>("input")?.focus();
+            }}
           >
             <Icon name="close" size={16} />
           </button>

@@ -454,7 +454,7 @@ export function SplitBillView({
               <span aria-label={`${unassignedUnits} unidades`}>· {unassignedUnits}</span>
             </button>
             {accounts.map((account) => {
-              const isDestination = destinationAccount?.id === account.id;
+              const isSelected = (reviewAccountId ?? activeTab) === account.id;
               const statusPrefix =
                 account.status === "paid" ? "✓ " : account.status === "pending" ? "• " : "";
               return (
@@ -462,8 +462,8 @@ export function SplitBillView({
                   key={account.id}
                   type="button"
                   role="tab"
-                  aria-selected={isDestination || activeTab === account.id}
-                  className={`${isDestination || activeTab === account.id ? styles.tabActive : styles.tab} ${account.status === "paid" ? styles.tabPaid : account.status === "pending" ? styles.tabPending : ""}`}
+                  aria-selected={isSelected}
+                  className={`${isSelected ? styles.tabActive : styles.tab} ${account.status === "paid" ? styles.tabPaid : account.status === "pending" ? styles.tabPending : ""}`}
                   onClick={() => selectAccount(account.id)}
                   aria-label={`Seleccionar cuenta ${account.ownerLabel}`}
                 >

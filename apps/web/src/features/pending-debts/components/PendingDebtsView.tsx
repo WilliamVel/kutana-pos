@@ -175,7 +175,7 @@ export function PendingDebtsView({
                 <span>Buscar cliente</span>
                 <div className={styles.searchInputWrap}>
                   <input value={query} onChange={(event) => updateQuery(event.target.value)} placeholder="Nombre del cliente" type="search" />
-                  {query ? <button type="button" className={styles.clearSearch} onClick={() => updateQuery("")} aria-label="Limpiar búsqueda">Limpiar</button> : null}
+                  {query ? <button type="button" className={styles.clearSearch} onClick={(event) => { updateQuery(""); event.currentTarget.parentElement?.querySelector<HTMLInputElement>("input")?.focus(); }} aria-label="Borrar búsqueda" title="Borrar búsqueda">×</button> : null}
                 </div>
               </label>
               <label className={styles.sortField}>

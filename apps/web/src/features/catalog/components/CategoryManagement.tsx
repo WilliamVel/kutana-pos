@@ -116,8 +116,13 @@ export function CategoryManagement({
             <button
               type="button"
               className={styles.clearButton}
-              aria-label="Limpiar búsqueda"
-              onClick={() => setQuery("")}
+              aria-label="Borrar búsqueda"
+              onClick={(event) => {
+                setQuery("");
+                event.currentTarget.parentElement
+                  ?.querySelector<HTMLInputElement>("input")
+                  ?.focus();
+              }}
             >
               <Icon name="close" size={16} />
             </button>

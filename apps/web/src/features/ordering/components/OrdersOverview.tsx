@@ -167,13 +167,18 @@ export function OrdersOverview({
                 ×
               </button>
             </div>
-            <input
-              className={styles.search}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar mesa u orden"
-              aria-label="Buscar mesa u orden"
-            />
+            <div className={styles.searchWrap}>
+              <input
+                className={styles.search}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar mesa u orden"
+                aria-label="Buscar mesa u orden"
+              />
+              {query ? (
+                <button type="button" className={styles.clearSearch} aria-label="Borrar búsqueda" title="Borrar búsqueda" onClick={(event) => { setQuery(""); event.currentTarget.parentElement?.querySelector<HTMLInputElement>("input")?.focus(); }}>×</button>
+              ) : null}
+            </div>
             <div className={styles.filters} role="tablist" aria-label="Filtros de órdenes">
               {(
                 [

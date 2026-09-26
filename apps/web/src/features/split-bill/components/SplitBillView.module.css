@@ -1,11 +1,27 @@
 .screen {
   display: flex;
+  flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
   min-height: 0;
   flex-direction: column;
   gap: var(--space-4);
-  overflow-y: auto;
-  scrollbar-width: thin;
+}
+/* Assignment uses the workspace/content scroll, not a second scroll inside
+   the card. This keeps the people row and every product in one reading flow. */
+.personWorkspace,
+.personWorkspace > .productPanel,
+.personWorkspace > .accountDetail,
+.productList {
+  min-height: 0;
+  overflow: visible;
+}
+.productPanel,
+.accountDetail {
+  flex: none;
+}
+.productList {
+  padding-bottom: var(--space-2);
 }
 
 .header,
@@ -213,16 +229,16 @@
 
 .personWorkspace {
   min-width: 0;
-  overflow: hidden;
 }
 
 .accountTabs {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
+  align-items: center;
   padding: var(--space-3);
-  overflow-x: auto;
+  overflow: visible;
   border-bottom: 1px solid var(--border-subtle);
-  scrollbar-width: thin;
 }
 
 .tab,
@@ -248,10 +264,11 @@
 
 .tab,
 .tabActive {
-  max-width: 15rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: min(15rem, 100%);
+  overflow: visible;
+  line-height: 1.2;
+  text-align: left;
+  white-space: normal;
 }
 
 .tab:focus-visible,
@@ -866,7 +883,12 @@
 }
 
 .footerAction {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
   align-self: flex-end;
+  padding: var(--space-2) 0;
+  background: linear-gradient(transparent, var(--surface-page) 35%);
 }
 
 .modalBackdrop {
@@ -942,6 +964,18 @@
 
 @media (max-width: 64rem) {
   .screen {
+    overflow: visible;
+  }
+  .personWorkspace {
+    display: block;
+    overflow: visible;
+  }
+  .productPanel,
+  .accountDetail {
+    min-height: 0;
+    overflow: visible;
+  }
+  .productList {
     overflow: visible;
   }
   .tableSummary {

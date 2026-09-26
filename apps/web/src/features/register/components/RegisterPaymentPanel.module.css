@@ -3,8 +3,10 @@
   flex: 1 1 auto;
   flex-direction: column;
   gap: var(--space-4);
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
+  min-height: 0;
   padding: var(--space-4);
   background: var(--surface-raised);
   border: 1px solid var(--border-subtle);
@@ -59,12 +61,17 @@
 }
 .paymentGrid {
   display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
   grid-template-columns: minmax(0, 0.9fr) minmax(22rem, 1.1fr);
   gap: var(--space-5);
-  align-items: start;
+  align-items: stretch;
 }
 .productsPane {
+  display: flex;
   min-width: 0;
+  min-height: 0;
+  flex-direction: column;
   border-right: 1px solid var(--border-subtle);
   padding-right: var(--space-5);
 }
@@ -87,6 +94,7 @@
 }
 .lines {
   display: flex;
+  flex: 1 1 auto;
   min-height: 0;
   flex-direction: column;
   overflow-y: auto;
@@ -97,16 +105,36 @@
   position: sticky;
   top: 1rem;
   display: flex;
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
   flex-direction: column;
   gap: var(--space-3);
-  min-width: 0;
+  overflow: hidden;
+  padding-right: var(--space-1);
+}
+.checkoutBody {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-y: auto;
+  padding: 0 var(--space-1) var(--space-2) 0;
+  scrollbar-width: thin;
+}
+.checkoutActions {
+  flex: 0 0 auto;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-raised);
 }
 .balanceHero {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-3);
-  padding: var(--space-4);
+  padding: var(--space-3);
   color: var(--text-primary);
   background: color-mix(in srgb, var(--accent) 10%, var(--surface-raised));
   border: 1px solid color-mix(in srgb, var(--accent-strong) 35%, var(--border-subtle));
@@ -119,12 +147,25 @@
   font-size: 1.65rem;
   font-variant-numeric: tabular-nums;
 }
+.totalsDetails {
+  border-bottom: 1px solid var(--border-subtle);
+}
+.totalsDetails summary {
+  padding: var(--space-2) 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.totalsDetails summary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
 .totals {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 0 var(--space-2);
 }
 .totalRow {
   display: flex;
@@ -352,28 +393,48 @@
   height: 2.75rem;
   place-items: center;
   color: var(--accent-strong, var(--text-primary));
-  background: color-mix(in srgb, var(--accent-strong, var(--text-primary)) 12%, var(--surface-raised));
+  background: color-mix(
+    in srgb,
+    var(--accent-strong, var(--text-primary)) 12%,
+    var(--surface-raised)
+  );
   border-radius: 50%;
   font-size: 1.35rem;
   font-weight: 800;
 }
 .errorIcon {
   color: var(--danger-strong, var(--text-primary));
-  background: color-mix(in srgb, var(--danger-strong, var(--text-primary)) 12%, var(--surface-raised));
+  background: color-mix(
+    in srgb,
+    var(--danger-strong, var(--text-primary)) 12%,
+    var(--surface-raised)
+  );
 }
 .blockingMessage {
   margin: 0;
   color: var(--text-secondary);
   font-size: 0.875rem;
 }
-.checkoutPane > button {
+.checkoutActions > button {
   width: 100%;
   min-height: 3rem;
   white-space: nowrap;
 }
 @media (max-width: 64rem) {
   .paymentGrid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .checkoutPane {
+    max-height: none;
+    overflow: visible;
+  }
+  .checkoutBody {
+    overflow: visible;
+  }
+  .lines {
+    overflow: visible;
   }
   .productsPane {
     order: 2;
@@ -407,10 +468,11 @@
   .balanceHero strong {
     font-size: 1.4rem;
   }
-  .checkoutPane > button {
+  .checkoutActions {
     position: sticky;
     bottom: max(0.5rem, env(safe-area-inset-bottom));
     z-index: 2;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 @media (prefers-reduced-motion: reduce) {

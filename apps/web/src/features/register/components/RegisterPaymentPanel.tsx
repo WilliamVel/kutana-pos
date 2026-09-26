@@ -215,12 +215,15 @@ export function RegisterPaymentPanel({
         </section>
 
         <section className={styles.checkoutPane} aria-label="Resumen y método de pago">
+          <div className={styles.checkoutBody}>
           <div className={styles.balanceHero} aria-live="polite">
             <span>Saldo pendiente</span>
             <strong data-numeric="true">
               <PriceTag cents={remainingBalanceCents} />
             </strong>
           </div>
+          <details className={styles.totalsDetails}>
+            <summary>Ver desglose de la orden</summary>
           <div className={styles.totals}>
             <div className={styles.totalRow}>
               <span>Subtotal</span>
@@ -241,6 +244,7 @@ export function RegisterPaymentPanel({
               </div>
             ) : null}
           </div>
+          </details>
 
           <div className={styles.amountBlock}>
             <div className={styles.currencyInput}>
@@ -255,7 +259,7 @@ export function RegisterPaymentPanel({
                 error={amountError ?? undefined}
               />
             </div>
-            {amountToPayCents < remainingBalanceCents ? (
+            {amountToPayCents > 0 && amountToPayCents < remainingBalanceCents ? (
               <p className={styles.afterPayment}>
                 Después de este pago quedarán{" "}
                 <strong data-numeric="true">${(postPaymentBalance / 100).toFixed(2)}</strong>{" "}
@@ -390,6 +394,8 @@ export function RegisterPaymentPanel({
               {blockingMessage}
             </p>
           ) : null}
+          </div>
+          <div className={styles.checkoutActions}>
           <Button
             onClick={onConfirmPayment}
             disabled={
@@ -400,6 +406,7 @@ export function RegisterPaymentPanel({
               ? "Procesando pago…"
               : `${amountToPayCents < remainingBalanceCents || requiresManualConfirmation ? "Registrar pago" : "Cobrar"} · $${(amountToPayCents / 100).toFixed(2)}`}
           </Button>
+          </div>
         </section>
       </div>
     </section>

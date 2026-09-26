@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Icon } from "../../../design-system/atoms/Icon.js";
+import { ActionErrorDialog } from "../../../design-system/molecules/ActionErrorDialog.js";
 import styles from "./NewOrderButton.module.css";
 
 export interface NewOrderButtonTable {
@@ -36,6 +37,7 @@ export function NewOrderButton({
   const [tableLabel, setTableLabel] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const sheetRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -45,6 +47,7 @@ export function NewOrderButton({
     if (loading && !force) return;
     setOpen(false);
     setError(null);
+    setErrorDialogOpen(false);
     setTableLabel("");
     window.setTimeout(() => triggerRef.current?.focus(), 0);
   };
@@ -99,9 +102,20 @@ export function NewOrderButton({
       else if (onCreateTable) await onCreateTable(label);
       close(true);
     } catch (submissionError) {
+      // Never expose transport details (HTTP status, URL or response body) in the
+      // ordering flow. The form stays open so the operator can correct the value.
+      const status =
+        typeof submissionError === "object" &&
+        submissionError !== null &&
+        "status" in submissionError
+          ? Number((submissionError as { status?: unknown }).status)
+          : null;
       setError(
-        submissionError instanceof Error ? submissionError.message : "No se pudo crear la orden.",
+        status === 409
+          ? "Ya existe una mesa con ese nombre o número. Prueba con otro."
+          : "No se pudo crear la mesa. Comprueba el nombre e inténtalo de nuevo.",
       );
+      setErrorDialogOpen(true);
     } finally {
       setLoading(false);
     }
@@ -213,9 +227,12 @@ export function NewOrderButton({
                 autoComplete="off"
               />
               {error || message ? (
-                <p className={styles.message} role="alert">
-                  {error ?? message}
-                </p>
+                <div className={styles.message} role="alert" aria-live="assertive">
+                  <strong>
+                    {error ? "No se pudo crear la mesa" : "No se pudo completar la orden"}
+                  </strong>
+                  <span>{error ?? message}</span>
+                </div>
               ) : null}
               {mode === "table" && freeTables.length === 0 ? (
                 <p className={styles.empty}>No hay mesas libres ahora.</p>
@@ -247,6 +264,16 @@ export function NewOrderButton({
             </form>
           </section>
         </div>
+      ) : null}
+      {errorDialogOpen && error ? (
+        <ActionErrorDialog
+          title={error.startsWith("Ya existe") ? "Mesa duplicada" : "No se pudo crear la mesa"}
+          message={error}
+          onClose={() => {
+            setErrorDialogOpen(false);
+            window.setTimeout(() => inputRef.current?.focus(), 0);
+          }}
+        />
       ) : null}
     </div>
   );

@@ -66,14 +66,30 @@ export function AddItemPanel({
     <section className={styles.panel} aria-label="Catálogo de productos">
       <h2>Catálogo</h2>
 
-      <input
-        type="search"
-        className={styles.search}
-        aria-label="Buscar productos"
-        placeholder="Buscar productos"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-      />
+      <div className={styles.searchWrap}>
+        <input
+          type="search"
+          className={styles.search}
+          aria-label="Buscar productos"
+          placeholder="Buscar productos"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        {query ? (
+          <button
+            type="button"
+            className={styles.clearSearch}
+            aria-label="Borrar búsqueda"
+            title="Borrar búsqueda"
+            onClick={(event) => {
+              setQuery("");
+              event.currentTarget.parentElement?.querySelector<HTMLInputElement>("input")?.focus();
+            }}
+          >
+            ×
+          </button>
+        ) : null}
+      </div>
 
       <div className={styles.tabs} role="tablist" aria-label="Categorías de productos">
         {tabs.map((tab) => (

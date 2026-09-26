@@ -315,7 +315,7 @@ export function App(): JSX.Element {
           }
           center={center}
           emptyCenter="Selecciona un pedido para ver sus cuentas a cobrar."
-          centerOverflowVisible={false}
+          centerOverflowVisible={centerView === "assignment"}
           railHidden={centerView !== "account"}
           selectedTableId={selectedTableId}
           rail={
