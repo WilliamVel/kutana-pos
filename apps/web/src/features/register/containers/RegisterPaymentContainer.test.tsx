@@ -14,7 +14,7 @@ describe("RegisterPaymentContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByRole("radio", { name: "Efectivo" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Efectivo" })).toBeChecked());
     expect(screen.getByRole("radio", { name: "Transferencia" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Pago QR" })).toBeInTheDocument();
     expect(screen.queryByText(/card/i)).not.toBeInTheDocument();

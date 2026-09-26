@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { createCategory } from "@kutana/shared/catalog/model/category.js";
 import { CategoryManagement } from "./CategoryManagement.js";
@@ -45,6 +45,27 @@ describe("CategoryManagement", () => {
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Crear categoría" }));
     expect(actions.onCreate).toHaveBeenCalledWith({ name: "Postres", sortOrder: 2 });
+  });
+
+  it("reports a reorder failure instead of leaving an unhandled rejection", async () => {
+    const actions = props();
+    actions.onReorder.mockRejectedValueOnce(new Error("network"));
+    render(
+      <CategoryManagement
+        categories={[
+          createCategory({ id: "cat-1", name: "Entradas", sortOrder: 1 }),
+          createCategory({ id: "cat-2", name: "Postres", sortOrder: 2 }),
+        ]}
+        {...actions}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Acciones para Entradas" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Mover abajo" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("No se pudo guardar el orden de las categorías.")).toBeInTheDocument(),
+    );
   });
 
   it("edits only after explicit action and does not enable save without changes", () => {

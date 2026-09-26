@@ -36,6 +36,7 @@ export interface InventoryListProps {
   readonly searchQuery: string;
   readonly onSearchQueryChange: (value: string) => void;
   readonly page: number;
+  readonly pageSize?: number;
   readonly pageCount: number;
   readonly onPageChange: (page: number) => void;
   readonly onEditProduct?: (id: string) => void;
@@ -68,6 +69,7 @@ export function InventoryList({
   searchQuery,
   onSearchQueryChange,
   page,
+  pageSize = 10,
   pageCount,
   onPageChange,
   onEditProduct,
@@ -98,8 +100,8 @@ export function InventoryList({
   const hasFilters = Boolean(searchQuery || selectedCategoryId || stockStatusFilter);
   const activeFilterCount =
     Number(Boolean(selectedCategoryId)) + Number(Boolean(stockStatusFilter));
-  const from = resultCount === 0 ? 0 : (page - 1) * 10 + 1;
-  const to = resultCount === 0 ? 0 : Math.min(page * 10, resultCount);
+  const from = resultCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = resultCount === 0 ? 0 : Math.min(page * pageSize, resultCount);
   const categoryName = categories.find((category) => category.id === selectedCategoryId)?.name;
   const clearFilters = (): void => {
     onSearchQueryChange("");

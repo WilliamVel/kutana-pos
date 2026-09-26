@@ -225,9 +225,7 @@ export function RegisterPaymentContainer({
   );
   const [payments, setPayments] = useState<Payment[]>([]);
   const [accountPayments, setAccountPayments] = useState<AccountPaymentCache[]>([]);
-  const [selectedMethodCode, setSelectedMethodCode] = useState<string>(
-    methodRegistry[0]?.code ?? "",
-  );
+  const [selectedMethodCode, setSelectedMethodCode] = useState("");
   const [tenderedCents, setTenderedCents] = useState<number | null>(null);
   const [amountToPayCents, setAmountToPayCents] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -238,8 +236,8 @@ export function RegisterPaymentContainer({
   const availableMethods = methodRegistry.filter(isPaymentMethodDisplayable);
 
   useEffect(() => {
-    if (!selectedMethodCode && availableMethods[0]) {
-      setSelectedMethodCode(availableMethods[0].code);
+    if (!availableMethods.some((method) => method.code === selectedMethodCode)) {
+      setSelectedMethodCode(availableMethods[0]?.code ?? "");
     }
   }, [availableMethods, selectedMethodCode]);
 

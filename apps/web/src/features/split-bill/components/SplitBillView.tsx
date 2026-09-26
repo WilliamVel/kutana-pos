@@ -197,7 +197,7 @@ export function SplitBillView({
 
   const unassignedUnits = lines.reduce((sum, line) => sum + line.unassignedQuantity, 0);
   const assignedCents = accounts.reduce((sum, account) => sum + account.totalCents, 0);
-  const unassignedCents = Math.max(0, tableTotalCents - assignedCents - (tablePaidCents - assignedCents));
+  const unassignedCents = Math.max(0, tableTotalCents - assignedCents);
   const selectedAccount = accounts.find((account) => account.id === activePersonId) ?? null;
   const destinationAccount =
     productView === "unassigned"

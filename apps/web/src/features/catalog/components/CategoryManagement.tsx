@@ -40,6 +40,7 @@ export function CategoryManagement({
   const [notice, setNotice] = useState(message ?? "");
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [reordering, setReordering] = useState(false);
   const liveId = useId();
   const sorted = [...categories].sort(
     (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name),
@@ -55,6 +56,14 @@ export function CategoryManagement({
     if (message) setNotice(message);
   }, [message]);
 
+  const persistOrder = (next: readonly Category[]): void => {
+    if (!onReorder) return;
+    setReordering(true);
+    void onReorder(next)
+      .catch(() => setNotice("No se pudo guardar el orden de las categorías."))
+      .finally(() => setReordering(false));
+  };
+
   const move = (categoryId: string, direction: -1 | 1): void => {
     if (query || disabled) return;
     const index = sorted.findIndex((category) => category.id === categoryId);
@@ -66,7 +75,7 @@ export function CategoryManagement({
     if (!current || !replacement) return;
     next[index] = replacement;
     next[target] = current;
-    void onReorder?.(next.map((category, position) => ({ ...category, sortOrder: position + 1 })));
+    persistOrder(next.map((category, position) => ({ ...category, sortOrder: position + 1 })));
   };
 
   const reorderByDrop = (event: DragEvent<HTMLLIElement>, targetId: string): void => {
@@ -80,7 +89,7 @@ export function CategoryManagement({
     if (item) next.splice(to, 0, item);
     setDraggedId(null);
     setDragOverId(null);
-    void onReorder?.(next.map((category, position) => ({ ...category, sortOrder: position + 1 })));
+    persistOrder(next.map((category, position) => ({ ...category, sortOrder: position + 1 })));
   };
 
   return (
@@ -171,8 +180,8 @@ export function CategoryManagement({
                 index={sorted.indexOf(category)}
                 total={sorted.length}
                 productCount={productCounts[category.id] ?? 0}
-                disabled={disabled}
-                canReorder={!query}
+                disabled={disabled || reordering}
+                canReorder={!query && !reordering}
                 isDragOver={dragOverId === category.id}
                 onEdit={() => setModal({ mode: "edit", category })}
                 onDelete={() => setDeleteTarget(category)}
