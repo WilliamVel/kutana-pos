@@ -186,6 +186,8 @@ for (const viewport of [
     expect(measurements.summary.left).toBeGreaterThanOrEqual(measurements.panel.left);
     expect(measurements.summary.right).toBeLessThanOrEqual(measurements.panel.right);
     expect(measurements.actions.top).toBeGreaterThanOrEqual(measurements.summary.bottom);
+    expect(measurements.actions.left).toBeGreaterThanOrEqual(measurements.panel.left);
+    expect(measurements.actions.right).toBeLessThanOrEqual(measurements.panel.right);
   });
 }
 

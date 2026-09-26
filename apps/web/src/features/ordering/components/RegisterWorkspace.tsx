@@ -6,6 +6,8 @@ export interface RegisterWorkspaceProps {
   readonly list: ReactNode;
   /** Center column when a table is selected: the ticket / payment / split view. */
   readonly center: ReactNode | null;
+  /** Actions below the selected order, laid out by the workspace rather than its caller. */
+  readonly actions?: ReactNode;
   /** Center column when nothing is selected: a quiet empty state. */
   readonly emptyCenter: ReactNode;
   /** Right column: the "Quick add items" rail. */
@@ -33,6 +35,7 @@ export interface RegisterWorkspaceProps {
 export function RegisterWorkspace({
   list,
   center,
+  actions,
   emptyCenter,
   rail,
   emptyRailTitle,
@@ -78,7 +81,10 @@ export function RegisterWorkspace({
       </div>
       <div className={styles.list}>{list}</div>
       {center ? (
-        <div className={centerOverflowVisible ? `${styles.center} ${styles.centerOverflowVisible}` : styles.center}>{center}</div>
+        <div className={centerOverflowVisible ? `${styles.center} ${styles.centerOverflowVisible}` : styles.center}>
+          {center}
+          {actions ? <div className={styles.centerActions}>{actions}</div> : null}
+        </div>
       ) : (
         <div className={styles.center}>
           <div className={styles.empty}>{emptyCenter}</div>

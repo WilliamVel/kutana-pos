@@ -100,6 +100,7 @@ export function App(): JSX.Element {
   };
 
   let center: JSX.Element | null = null;
+  let centerActions: JSX.Element | null = null;
   if (selectedTableId) {
     if (centerView === "payment") {
       center = (
@@ -150,38 +151,38 @@ export function App(): JSX.Element {
       );
     } else {
       center = (
-        <>
-          <OrderTicketPanelContainer
-            key={`${selectedTableId}:${selectedOrderId ?? ""}`}
-            tableId={selectedTableId}
-            onLoadStateChange={(state) => setSelectedOrderReady(state === "ready")}
-          />
-          <ButtonRow className="orderActions">
-            {selectedOrderReady && selectedOrderListReady ? (
-              <Button
-                variant="secondary"
-                ariaLabel="Dividir cuenta"
-                onClick={() => setCenterView("assignment")}
-              >
-                <Icon name="split" size={22} />
-                Dividir
-              </Button>
-            ) : null}
-            {selectedOrderReady && selectedOrderListReady ? (
-              <Button
-                ariaLabel="Pagar mesa completa"
-                onClick={() => {
-                  setSelectedTicketId(null);
-                  setSelectedAccountId(null);
-                  setCenterView("payment");
-                }}
-              >
-                <Icon name="cash" size={22} />
-                Pagar
-              </Button>
-            ) : null}
-          </ButtonRow>
-        </>
+        <OrderTicketPanelContainer
+          key={`${selectedTableId}:${selectedOrderId ?? ""}`}
+          tableId={selectedTableId}
+          onLoadStateChange={(state) => setSelectedOrderReady(state === "ready")}
+        />
+      );
+      centerActions = (
+        <ButtonRow>
+          {selectedOrderReady && selectedOrderListReady ? (
+            <Button
+              variant="secondary"
+              ariaLabel="Dividir cuenta"
+              onClick={() => setCenterView("assignment")}
+            >
+              <Icon name="split" size={22} />
+              Dividir
+            </Button>
+          ) : null}
+          {selectedOrderReady && selectedOrderListReady ? (
+            <Button
+              ariaLabel="Pagar mesa completa"
+              onClick={() => {
+                setSelectedTicketId(null);
+                setSelectedAccountId(null);
+                setCenterView("payment");
+              }}
+            >
+              <Icon name="cash" size={22} />
+              Pagar
+            </Button>
+          ) : null}
+        </ButtonRow>
       );
     }
   }
@@ -314,6 +315,7 @@ export function App(): JSX.Element {
             </>
           }
           center={center}
+          actions={centerActions}
           emptyCenter={
             <>
               <h2>Cuentas</h2>

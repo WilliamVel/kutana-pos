@@ -53,7 +53,7 @@
   overflow: visible;
 }
 
-.center > :global(.orderActions) {
+.centerActions {
   position: static;
   width: 100%;
   flex: 0 0 auto;
@@ -224,7 +224,7 @@
     box-shadow: none;
   }
 
-  .center > :global(.orderActions) {
+  .centerActions {
     position: static;
     width: 100%;
     box-sizing: border-box;
@@ -234,7 +234,7 @@
     box-shadow: none;
   }
 
-  .center > :global(.orderActions) button {
+  .centerActions button {
     min-width: 0;
     min-height: 3.25rem;
     height: 3.25rem;
