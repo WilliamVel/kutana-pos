@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { AddItemPanel, type AddItemPanelProduct } from "./AddItemPanel.js";
+import { AddItemPanel, type AddItemPanelProduct, type AdditionReceipt } from "./AddItemPanel.js";
 
 const PRODUCTS: AddItemPanelProduct[] = [
   {
@@ -20,9 +20,17 @@ const PRODUCTS: AddItemPanelProduct[] = [
   },
 ];
 
+const receipt: AdditionReceipt = { orderId: "order-1", lineItemId: "line-1" };
+const onUndo = vi.fn(async () => undefined);
+const defaultAdd = vi.fn(async () => receipt);
+
+function renderPanel(props: Partial<React.ComponentProps<typeof AddItemPanel>> = {}) {
+  return render(<AddItemPanel products={PRODUCTS} onAdd={defaultAdd} onUndo={onUndo} {...props} />);
+}
+
 describe("AddItemPanel", () => {
   it("renders a category tab strip and a tile per product", () => {
-    render(<AddItemPanel products={PRODUCTS} onAdd={vi.fn()} />);
+    renderPanel();
 
     expect(screen.getByRole("tab", { name: "Todos" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Draft Beer" })).toBeInTheDocument();
@@ -32,13 +40,13 @@ describe("AddItemPanel", () => {
   });
 
   it("renders a placeholder tile (no <img>) when a product has no imageUrl", () => {
-    render(<AddItemPanel products={PRODUCTS} onAdd={vi.fn()} />);
+    renderPanel();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
   it("calls onAdd with the product id and a quantity of one", () => {
-    const onAdd = vi.fn();
-    render(<AddItemPanel products={PRODUCTS} onAdd={onAdd} />);
+    const onAdd = vi.fn(async () => receipt);
+    renderPanel({ onAdd });
 
     fireEvent.click(screen.getByRole("button", { name: "Agregar Loaded Nachos" }));
 
@@ -46,7 +54,7 @@ describe("AddItemPanel", () => {
   });
 
   it("filters the grid to the selected category tab", () => {
-    render(<AddItemPanel products={PRODUCTS} onAdd={vi.fn()} />);
+    renderPanel();
 
     fireEvent.click(screen.getByRole("tab", { name: "Food" }));
 
@@ -55,7 +63,7 @@ describe("AddItemPanel", () => {
   });
 
   it("narrows the visible product tiles as the search input is typed", () => {
-    render(<AddItemPanel products={PRODUCTS} onAdd={vi.fn()} />);
+    renderPanel();
 
     fireEvent.change(screen.getByLabelText("Buscar productos"), {
       target: { value: "nach" },
@@ -71,7 +79,7 @@ describe("AddItemPanel", () => {
   });
 
   it("disables the add buttons when disabled", () => {
-    render(<AddItemPanel products={PRODUCTS} onAdd={vi.fn()} disabled />);
+    renderPanel({ disabled: true });
 
     const addButtons = screen
       .getAllByRole("button")

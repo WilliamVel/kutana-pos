@@ -8,6 +8,7 @@ export type IconName =
   | "receipt"
   | "arrow-right"
   | "arrow-left"
+  | "undo"
   | "inventory"
   | "orders"
   | "customers"
@@ -84,6 +85,8 @@ function IconGlyph({ name }: { name: IconName }): JSX.Element {
       return <path d="M5 12h14m-6-6 6 6-6 6" strokeWidth={2} />;
     case "arrow-left":
       return <path d="M19 12H5m6 6-6-6 6-6" strokeWidth={2} />;
+    case "undo":
+      return <path d="M9 4 4 9l5 5M4 9h9a7 7 0 1 1-7 7" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />;
     case "inventory":
       return (
         <path

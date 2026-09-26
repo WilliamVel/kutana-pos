@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../../../design-system/atoms/Button.js";
+import { Icon } from "../../../design-system/atoms/Icon.js";
 import { PriceTag } from "../../../design-system/molecules/PriceTag.js";
 import styles from "./AddItemPanel.module.css";
 
@@ -16,9 +17,15 @@ export interface AddItemPanelProduct {
   readonly imageUrl?: string | null;
 }
 
+export interface AdditionReceipt {
+  readonly orderId: string;
+  readonly lineItemId: string;
+}
+
 export interface AddItemPanelProps {
   readonly products: readonly AddItemPanelProduct[];
-  readonly onAdd: (productId: string, quantity: number) => Promise<void>;
+  readonly onAdd: (productId: string, quantity: number) => Promise<AdditionReceipt>;
+  readonly onUndo: (receipt: AdditionReceipt) => Promise<void>;
   /** Ordered category names for the tab strip; derived from products when omitted. */
   readonly categories?: readonly string[];
   /** True when the order is paid / can no longer be modified. */
@@ -39,6 +46,7 @@ const ALL_TAB = "Todos";
 export function AddItemPanel({
   products,
   onAdd,
+  onUndo,
   categories,
   disabled = false,
   conflictMessage,
@@ -47,7 +55,6 @@ export function AddItemPanel({
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>(ALL_TAB);
   const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(() => new Set());
-  const [addRequestNumber, setAddRequestNumber] = useState(0);
 
   const categoryNames = categories ?? [...new Set(products.map((product) => product.categoryName))];
   const tabs = [ALL_TAB, ...categoryNames];
@@ -132,12 +139,32 @@ export function AddItemPanel({
                   if (pendingProductIds.has(product.id)) return;
                   setPendingProductIds((current) => new Set(current).add(product.id));
                   try {
-                    await onAdd(product.id, 1);
-                    const requestNumber = addRequestNumber + 1;
-                    setAddRequestNumber(requestNumber);
+                    const receipt = await onAdd(product.id, 1);
+                    let undoRequested = false;
+                    const toastId = `product-added-${receipt.lineItemId}`;
                     toast.success(`${product.name} agregado`, {
-                      id: `product-added-${product.id}-${requestNumber}`,
-                      duration: 2600,
+                      id: toastId,
+                      duration: 5000,
+                      closeButton: false,
+                      action: (
+                        <button
+                          type="button"
+                          className={styles.undoAction}
+                          aria-label="Deshacer última adición"
+                          onClick={(event) => {
+                            if (undoRequested) return;
+                            undoRequested = true;
+                            event.currentTarget.disabled = true;
+                            void onUndo(receipt).then(() => {
+                              toast.dismiss(toastId);
+                            }).catch(() => {
+                              toast.error("No se pudo deshacer esta adición. Revisá el pedido.");
+                            });
+                          }}
+                        >
+                          <Icon name="undo" size={22} />
+                        </button>
+                      ),
                     });
                   } catch {
                     // The container exposes the actionable conflict/error message.
