@@ -389,7 +389,7 @@
     display: none;
   }
   .row {
-    flex: 0 0 min(100%, 22rem);
+    flex: 0 0 calc(100% - 2.5rem);
     min-height: 5.25rem;
     scroll-snap-align: start;
     border-radius: 0.75rem;

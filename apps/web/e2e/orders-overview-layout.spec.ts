@@ -104,6 +104,11 @@ test.describe("active order card layout", () => {
 
       const measurements = await section.evaluate((element) => {
         const viewport = element.querySelector<HTMLElement>('[aria-label="Mesas activas"]')!;
+        const firstCard = viewport.querySelector<HTMLElement>('[data-table-id]');
+        if (!firstCard) throw new Error("Expected an active-order card");
+        const secondCard = firstCard.cloneNode(true) as HTMLElement;
+        secondCard.dataset.tableId = "layout-preview-card";
+        viewport.appendChild(secondCard);
         const actions = element.querySelector<HTMLElement>('[class*="headerActions"]')!;
         const viewportRect = viewport.getBoundingClientRect();
         const actionsRect = actions.getBoundingClientRect();
@@ -111,12 +116,18 @@ test.describe("active order card layout", () => {
           viewportRight: viewportRect.right,
           actionsRight: actionsRect.right,
           viewportWidth: viewportRect.width,
+          firstCardWidth: firstCard.getBoundingClientRect().width,
+          secondCardLeft: secondCard.getBoundingClientRect().left,
+          viewportLeft: viewportRect.left,
           documentWidth: document.documentElement.scrollWidth,
           innerWidth: window.innerWidth,
         };
       });
 
       expect(measurements.viewportWidth).toBeGreaterThan(0);
+      expect(measurements.firstCardWidth).toBeLessThan(measurements.viewportWidth);
+      expect(measurements.secondCardLeft).toBeLessThan(measurements.viewportRight);
+      expect(measurements.secondCardLeft).toBeGreaterThan(measurements.viewportLeft);
       expect(Math.abs(measurements.viewportRight - measurements.actionsRight)).toBeLessThanOrEqual(1);
       expect(measurements.documentWidth).toBeLessThanOrEqual(measurements.innerWidth);
     });
