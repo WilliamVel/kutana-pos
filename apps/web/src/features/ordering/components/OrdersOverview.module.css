@@ -10,6 +10,7 @@
 
 .ordersSection {
   display: contents;
+  min-width: 0;
 }
 .loadingState {
   min-height: 5rem;
@@ -350,6 +351,7 @@
     display: flex;
     align-items: center;
     gap: 0.65rem;
+    width: 100%;
     min-width: 0;
   }
   .newOrderSlot {
@@ -372,6 +374,9 @@
   .list {
     flex-direction: row;
     gap: 0.45rem;
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
     max-width: 100%;
     max-height: none;
     padding: 0.1rem 0.1rem 0.3rem;
@@ -384,7 +389,7 @@
     display: none;
   }
   .row {
-    flex: 0 0 180px;
+    flex: 0 0 min(100%, 22rem);
     min-height: 5.25rem;
     scroll-snap-align: start;
     border-radius: 0.75rem;

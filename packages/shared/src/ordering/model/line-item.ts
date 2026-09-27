@@ -27,6 +27,8 @@ export interface LineItem {
   readonly totalCents: number;
   readonly isAdjustment: boolean;
   readonly createdAt: string;
+  /** Stable display order within the owning order. Legacy callers may omit it. */
+  readonly position?: number;
 }
 
 export function createLineItem(input: {
@@ -40,6 +42,7 @@ export function createLineItem(input: {
   isAdjustment?: boolean;
   id?: string;
   createdAt?: string;
+  position?: number;
 }): LineItem {
   const subtotalCents = input.unitPriceCents * input.quantity;
   const taxCents = Math.round((subtotalCents * input.taxRateBp) / 10_000);
@@ -56,5 +59,6 @@ export function createLineItem(input: {
     totalCents: subtotalCents + taxCents,
     isAdjustment: input.isAdjustment ?? false,
     createdAt: input.createdAt ?? new Date().toISOString(),
+    ...(input.position === undefined ? {} : { position: input.position }),
   };
 }

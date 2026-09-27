@@ -92,4 +92,33 @@ test.describe("active order card layout", () => {
       }
     });
   }
+
+  for (const width of [430, 375, 320]) {
+    test(`fills the mobile carousel viewport without page overflow at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await openRegister(page);
+
+      const section = page.locator('section[aria-label="Órdenes activas"]');
+      const list = section.locator('[aria-label="Mesas activas"]');
+      await expect(list).toBeVisible();
+
+      const measurements = await section.evaluate((element) => {
+        const viewport = element.querySelector<HTMLElement>('[aria-label="Mesas activas"]')!;
+        const actions = element.querySelector<HTMLElement>('[class*="headerActions"]')!;
+        const viewportRect = viewport.getBoundingClientRect();
+        const actionsRect = actions.getBoundingClientRect();
+        return {
+          viewportRight: viewportRect.right,
+          actionsRight: actionsRect.right,
+          viewportWidth: viewportRect.width,
+          documentWidth: document.documentElement.scrollWidth,
+          innerWidth: window.innerWidth,
+        };
+      });
+
+      expect(measurements.viewportWidth).toBeGreaterThan(0);
+      expect(Math.abs(measurements.viewportRight - measurements.actionsRight)).toBeLessThanOrEqual(1);
+      expect(measurements.documentWidth).toBeLessThanOrEqual(measurements.innerWidth);
+    });
+  }
 });

@@ -8,7 +8,7 @@ import { createUuid } from "@kutana/shared/platform/uuid.js";
 import { PostgresPool } from "../infrastructure/postgres/postgres-pool.js";
 
 interface OrderRow { id: string; table_id: string; status: "active" | "needs_check" | "in_review" | "paid" | "closed_with_pending"; opened_at: Date | string; closed_at: Date | string | null; customer_id: string | null; version: number; }
-interface LineRow { id: string; order_id: string; product_id: string; name_snapshot: string; unit_price_cents: number; quantity: string | number; tax_cents: number; total_cents: number; created_at: Date | string; }
+interface LineRow { id: string; order_id: string; product_id: string; name_snapshot: string; unit_price_cents: number; quantity: string | number; tax_cents: number; total_cents: number; created_at: Date | string; position: number; }
 interface AccountRow { id: string; order_id: string; customer_id: string | null; free_name: string | null; status: PersonalAccount["status"]; created_at: Date | string; closed_at: Date | string | null; version: number; }
 interface AllocationRow { id: string; account_id: string; line_item_id: string; quantity: string | number; }
 interface TicketAllocationRow { id: string; ticket_id: string; line_item_id: string; share_bp: number; }
@@ -39,7 +39,7 @@ export class PaymentClosureService {
         return this.loadSale(this.pool, result.rows[0]);
       }
 
-      const lines = (await client.query<LineRow>("SELECT id, order_id, product_id, name_snapshot, unit_price_cents, quantity, tax_cents, total_cents, created_at FROM line_items WHERE order_id = $1 ORDER BY created_at, id", [orderId])).rows;
+      const lines = (await client.query<LineRow>("SELECT id, order_id, product_id, name_snapshot, unit_price_cents, quantity, tax_cents, total_cents, created_at, position FROM line_items WHERE order_id = $1 ORDER BY position", [orderId])).rows;
       const accounts = (await client.query<AccountRow>("SELECT id, order_id, customer_id, free_name, status, created_at, closed_at, version FROM personal_accounts WHERE order_id = $1 ORDER BY id FOR UPDATE", [orderId])).rows;
       const allocations = (await client.query<AllocationRow>("SELECT a.id, a.account_id, a.line_item_id, a.quantity FROM account_line_allocations a INNER JOIN personal_accounts p ON p.id = a.account_id WHERE p.order_id = $1 ORDER BY a.line_item_id, a.id FOR UPDATE", [orderId])).rows;
       const accountIds = accounts.map((account) => account.id);
@@ -53,7 +53,7 @@ export class PaymentClosureService {
         [accountIds, orderId],
       )).rows;
 
-      const domainOrder = { id: row.id, tableId: row.table_id, status: row.status, lineItems: lines.map((line) => ({ id: line.id, orderId: line.order_id, productId: line.product_id, nameSnapshot: line.name_snapshot, unitPriceCents: line.unit_price_cents, quantity: Number(line.quantity), pourSizeMl: null, taxRateBp: 0, taxCents: line.tax_cents, totalCents: line.total_cents, isAdjustment: false, createdAt: iso(line.created_at) })), openedAt: iso(row.opened_at), closedAt: row.closed_at ? iso(row.closed_at) : null, customerId: row.customer_id, version: row.version };
+      const domainOrder = { id: row.id, tableId: row.table_id, status: row.status, lineItems: lines.map((line) => ({ id: line.id, orderId: line.order_id, productId: line.product_id, nameSnapshot: line.name_snapshot, unitPriceCents: line.unit_price_cents, quantity: Number(line.quantity), pourSizeMl: null, taxRateBp: 0, taxCents: line.tax_cents, totalCents: line.total_cents, isAdjustment: false, createdAt: iso(line.created_at), position: line.position })), openedAt: iso(row.opened_at), closedAt: row.closed_at ? iso(row.closed_at) : null, customerId: row.customer_id, version: row.version };
       const domainAccounts: PersonalAccount[] = accounts.map((account) => ({ id: account.id, orderId: account.order_id, owner: account.customer_id ? { kind: "customer", customerId: account.customer_id } : { kind: "free_name", freeName: account.free_name ?? "" }, status: account.status, createdAt: iso(account.created_at), closedAt: account.closed_at ? iso(account.closed_at) : null, version: account.version }));
       const accountAllocatedLineItemIds = new Set(allocations.map((allocation) => allocation.line_item_id));
       const closure = closeOrderWithPersonalAccounts({

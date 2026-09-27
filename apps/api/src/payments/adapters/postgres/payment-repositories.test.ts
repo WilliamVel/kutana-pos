@@ -63,8 +63,8 @@ async function seedPaymentFixtures(pool: Pool): Promise<void> {
      VALUES ('order-1', 'table-1', 'active', '2025-01-01T00:00:00.000Z', 1)`,
   );
   await pool.query(
-    `INSERT INTO line_items (id, order_id, product_id, name_snapshot, unit_price_cents, quantity, pour_size_ml, tax_rate_bp, tax_cents, total_cents, is_adjustment, created_at)
-     VALUES ('line-1', 'order-1', $1, 'Payment Fixture', 300, 1, NULL, 1000, 30, 330, false, '2025-01-01T00:01:00.000Z')`,
+    `INSERT INTO line_items (id, order_id, product_id, name_snapshot, unit_price_cents, quantity, pour_size_ml, tax_rate_bp, tax_cents, total_cents, is_adjustment, created_at, position)
+     VALUES ('line-1', 'order-1', $1, 'Payment Fixture', 300, 1, NULL, 1000, 30, 330, false, '2025-01-01T00:01:00.000Z', 0)`,
     [productId],
   );
   await pool.query(

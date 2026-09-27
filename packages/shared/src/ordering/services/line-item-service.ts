@@ -25,7 +25,11 @@ export function addLineItem(
   },
 ): Order {
   assertModifiable(order);
-  const lineItem = createLineItem({ orderId: order.id, ...input });
+  const nextPosition = order.lineItems.reduce(
+    (max, item, index) => Math.max(max, item.position ?? index),
+    -1,
+  ) + 1;
+  const lineItem = createLineItem({ orderId: order.id, ...input, position: nextPosition });
   return { ...order, lineItems: [...order.lineItems, lineItem], version: order.version + 1 };
 }
 
@@ -46,6 +50,39 @@ export function removeLineItem(order: Order, lineItemId: string): Order {
   return {
     ...order,
     lineItems: order.lineItems.filter((item) => item.id !== lineItemId),
+    version: order.version + 1,
+  };
+}
+
+/**
+ * Removes one unit from a line without mutating its immutable persisted record.
+ * A single-unit line keeps the existing whole-line removal semantics.
+ */
+export function removeLineItemUnit(order: Order, lineItemId: string): Order {
+  assertModifiable(order);
+  const target = order.lineItems.find((item) => item.id === lineItemId);
+  if (!target) {
+    throw new ValidationError(`Cannot remove unknown line item ${lineItemId}`);
+  }
+  if (target.quantity <= 1) {
+    return removeLineItem(order, lineItemId);
+  }
+
+  const replacement = createLineItem({
+    orderId: target.orderId,
+    productId: target.productId,
+    nameSnapshot: target.nameSnapshot,
+    unitPriceCents: target.unitPriceCents,
+    quantity: target.quantity - 1,
+    taxRateBp: target.taxRateBp,
+    pourSizeMl: target.pourSizeMl,
+    isAdjustment: target.isAdjustment,
+    createdAt: target.createdAt,
+    position: target.position ?? order.lineItems.indexOf(target),
+  });
+  return {
+    ...order,
+    lineItems: order.lineItems.map((item) => item.id === lineItemId ? replacement : item),
     version: order.version + 1,
   };
 }

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { createLineItem } from "@kutana/shared/ordering/model/line-item.js";
+import { removeLineItemUnit } from "@kutana/shared/ordering/services/line-item-service.js";
 import { createOrder } from "@kutana/shared/ordering/model/order.js";
 import { createTable } from "@kutana/shared/ordering/model/table.js";
 import { runOrderRepositoryContract } from "@kutana/shared/ordering/ports/__contract__/order-repository.contract.js";
@@ -76,7 +77,30 @@ describe.skipIf(!databaseAvailable)("PostgreSQL ordering adapters", () => {
 
     const afterRemoval = await orders.save({ ...saved, lineItems: [second] }, saved.version);
 
-    expect(afterRemoval.lineItems).toEqual([second]);
+    expect(afterRemoval.lineItems).toHaveLength(1);
+    expect(afterRemoval.lineItems[0]).toMatchObject({
+      id: second.id,
+      nameSnapshot: second.nameSnapshot,
+      quantity: second.quantity,
+      position: 1,
+    });
+  });
+
+  it("preserves line order when tied timestamps replace a multi-unit line", async () => {
+    const order = createOrder({ id: "order-tied-lines", tableId: "table-1" });
+    const createdAt = "2025-01-01T00:00:00.000Z";
+    const first = createLineItem({ id: "line-tied-first", orderId: order.id, productId: "00000000-0000-0000-0000-000000000001", nameSnapshot: "First", unitPriceCents: 300, quantity: 2, taxRateBp: 0, createdAt });
+    const second = createLineItem({ id: "line-tied-second", orderId: order.id, productId: "00000000-0000-0000-0000-000000000001", nameSnapshot: "Second", unitPriceCents: 300, quantity: 1, taxRateBp: 0, createdAt });
+    const third = createLineItem({ id: "line-tied-third", orderId: order.id, productId: "00000000-0000-0000-0000-000000000001", nameSnapshot: "Third", unitPriceCents: 300, quantity: 1, taxRateBp: 0, createdAt });
+    const saved = await orders.save({ ...order, lineItems: [first, second, third] }, order.version);
+
+    const decremented = removeLineItemUnit(saved, first.id);
+    const afterSave = await orders.save(decremented, saved.version);
+    const found = await orders.findByTable("table-1");
+
+    expect(afterSave.lineItems.map((item) => item.nameSnapshot)).toEqual(["First", "Second", "Third"]);
+    expect(found?.lineItems.map((item) => item.nameSnapshot)).toEqual(["First", "Second", "Third"]);
+    expect(found?.lineItems[0]).toMatchObject({ quantity: 1, position: 0 });
   });
 
   it("does not mutate existing line items", async () => {

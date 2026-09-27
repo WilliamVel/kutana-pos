@@ -76,10 +76,10 @@ describe.skipIf(!databaseAvailable)("PostgreSQL billing adapters", () => {
       [orderIds],
     );
     await pool.query(
-      `INSERT INTO line_items (id, order_id, product_id, name_snapshot, unit_price_cents, quantity, pour_size_ml, tax_rate_bp, tax_cents, total_cents, is_adjustment, created_at)
+      `INSERT INTO line_items (id, order_id, product_id, name_snapshot, unit_price_cents, quantity, pour_size_ml, tax_rate_bp, tax_cents, total_cents, is_adjustment, created_at, position)
        VALUES
-        ('line-1', 'order-1', $1, 'Coffee', 300, 2, NULL, 1000, 60, 660, false, '2025-01-01T00:01:00.000Z'),
-        ('line-delete', 'order-delete', $1, 'Coffee', 300, 1, NULL, 1000, 30, 330, false, '2025-01-01T00:02:00.000Z')`,
+        ('line-1', 'order-1', $1, 'Coffee', 300, 2, NULL, 1000, 60, 660, false, '2025-01-01T00:01:00.000Z', 0),
+        ('line-delete', 'order-delete', $1, 'Coffee', 300, 1, NULL, 1000, 30, 330, false, '2025-01-01T00:02:00.000Z', 0)`,
       [productId],
     );
     if (seedCustomer) {

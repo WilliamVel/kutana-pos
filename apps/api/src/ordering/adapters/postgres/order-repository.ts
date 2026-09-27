@@ -29,6 +29,7 @@ interface LineItemRow {
   total_cents: number;
   is_adjustment: boolean;
   created_at: Date | string;
+  position: number;
 }
 
 const iso = (value: Date | string): string => value instanceof Date ? value.toISOString() : new Date(value).toISOString();
@@ -36,7 +37,7 @@ const lineItem = (row: LineItemRow): LineItem => ({
   id: row.id, orderId: row.order_id, productId: row.product_id, nameSnapshot: row.name_snapshot,
   unitPriceCents: row.unit_price_cents, quantity: Number(row.quantity), pourSizeMl: row.pour_size_ml,
   taxRateBp: row.tax_rate_bp, taxCents: row.tax_cents, totalCents: row.total_cents,
-  isAdjustment: row.is_adjustment, createdAt: iso(row.created_at),
+  isAdjustment: row.is_adjustment, createdAt: iso(row.created_at), position: row.position,
 });
 
 const sameLineItem = (left: LineItem, right: LineItem): boolean =>
@@ -44,7 +45,8 @@ const sameLineItem = (left: LineItem, right: LineItem): boolean =>
   left.nameSnapshot === right.nameSnapshot && left.unitPriceCents === right.unitPriceCents &&
   left.quantity === right.quantity && left.pourSizeMl === right.pourSizeMl && left.taxRateBp === right.taxRateBp &&
   left.taxCents === right.taxCents && left.totalCents === right.totalCents &&
-  left.isAdjustment === right.isAdjustment && left.createdAt === right.createdAt;
+  left.isAdjustment === right.isAdjustment && left.createdAt === right.createdAt &&
+  (left.position === undefined || left.position === right.position);
 
 const mapOrder = (row: OrderRow, items: LineItem[]): Order => ({
   id: row.id, tableId: row.table_id, status: row.status, lineItems: items,
@@ -54,7 +56,7 @@ const mapOrder = (row: OrderRow, items: LineItem[]): Order => ({
 
 const selectItems = async (client: Pool | PoolClient, orderId: string): Promise<LineItem[]> => {
   const result = await client.query<LineItemRow>(
-    "SELECT id, order_id, product_id, name_snapshot, unit_price_cents, quantity, pour_size_ml, tax_rate_bp, tax_cents, total_cents, is_adjustment, created_at FROM line_items WHERE order_id = $1 ORDER BY created_at, id",
+    "SELECT id, order_id, product_id, name_snapshot, unit_price_cents, quantity, pour_size_ml, tax_rate_bp, tax_cents, total_cents, is_adjustment, created_at, position FROM line_items WHERE order_id = $1 ORDER BY position",
     [orderId],
   );
   return result.rows.map(lineItem);
@@ -108,21 +110,23 @@ export class PostgresOrderRepository implements OrderRepository {
         for (const item of order.lineItems) {
           if (item.orderId !== order.id) throw new Error(`Line item ${item.id} does not belong to order ${order.id}`);
           const stored = storedItemsById.get(item.id);
-          if (stored) {
-            if (!sameLineItem(item, stored)) {
-              throw new Error(`Line items for order ${order.id} are immutable; remove or append instead of mutating`);
-            }
-            continue;
+          if (stored && !sameLineItem(item, stored)) {
+            throw new Error(`Line items for order ${order.id} are immutable; remove or append instead of mutating`);
           }
-          await insertLineItem(client, item);
         }
 
+        // Validate immutable rows before removing anything, then remove replaced rows
+        // before inserting their inherited positions (the ordinal is unique per order).
         for (const stored of storedItems) {
           if (!nextItemIds.has(stored.id)) {
             await client.query("DELETE FROM account_line_allocations WHERE line_item_id = $1", [stored.id]);
             await client.query("DELETE FROM allocations WHERE line_item_id = $1", [stored.id]);
             await client.query("DELETE FROM line_items WHERE id = $1 AND order_id = $2", [stored.id, order.id]);
           }
+        }
+
+        for (const item of order.lineItems) {
+          if (!storedItemsById.has(item.id)) await insertLineItem(client, item);
         }
       } else {
         const result = await client.query<OrderRow>(
@@ -132,9 +136,9 @@ export class PostgresOrderRepository implements OrderRepository {
           [order.id, order.tableId, order.status, order.openedAt, order.closedAt, order.customerId, expectedVersion + 1],
         );
         saved = result.rows[0]!;
-        for (const item of order.lineItems) {
+        for (const [index, item] of order.lineItems.entries()) {
           if (item.orderId !== order.id) throw new Error(`Line item ${item.id} does not belong to order ${order.id}`);
-          await insertLineItem(client, item);
+          await insertLineItem(client, item, index);
         }
       }
       const items = await selectItems(client, order.id);
@@ -191,10 +195,19 @@ export class PostgresOrderRepository implements OrderRepository {
   }
 }
 
-async function insertLineItem(client: PoolClient, item: LineItem): Promise<void> {
+async function insertLineItem(client: PoolClient, item: LineItem, fallbackPosition?: number): Promise<void> {
+  const position = item.position ?? fallbackPosition;
+  if (position === undefined) {
+    const result = await client.query<{ next_position: number }>(
+      "SELECT COALESCE(MAX(position), -1) + 1 AS next_position FROM line_items WHERE order_id = $1",
+      [item.orderId],
+    );
+    await insertLineItem(client, { ...item, position: Number(result.rows[0]!.next_position) });
+    return;
+  }
   await client.query(
-    `INSERT INTO line_items (id, order_id, product_id, name_snapshot, unit_price_cents, quantity, pour_size_ml, tax_rate_bp, tax_cents, total_cents, is_adjustment, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-    [item.id, item.orderId, item.productId, item.nameSnapshot, item.unitPriceCents, item.quantity, item.pourSizeMl, item.taxRateBp, item.taxCents, item.totalCents, item.isAdjustment, item.createdAt],
+    `INSERT INTO line_items (id, order_id, product_id, name_snapshot, unit_price_cents, quantity, pour_size_ml, tax_rate_bp, tax_cents, total_cents, is_adjustment, created_at, position)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+    [item.id, item.orderId, item.productId, item.nameSnapshot, item.unitPriceCents, item.quantity, item.pourSizeMl, item.taxRateBp, item.taxCents, item.totalCents, item.isAdjustment, item.createdAt, position],
   );
 }

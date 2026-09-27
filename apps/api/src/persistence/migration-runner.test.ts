@@ -32,6 +32,7 @@ describe("migration discovery", () => {
       "020_kombucha_unit_catalog.sql",
       "021_sales_analytics_completed_at_index.sql",
       "022_zero_tax_catalog.sql",
+      "023_line_item_position.sql",
     ]);
   });
 
