@@ -67,6 +67,11 @@ pnpm --filter @kutana/api migration:apply
 pnpm --filter @kutana/api migration:rollback # forward-only v1 currently refuses rollback
 ```
 
+## Isolated local schema test
+
+For the already verified `kutana_test` schema on a development Mac, see
+[`docs/local-test-schema.md`](docs/local-test-schema.md).
+
 ## Test and typecheck
 
 ```bash
