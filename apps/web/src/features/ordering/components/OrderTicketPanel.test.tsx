@@ -48,6 +48,22 @@ describe("OrderTicketPanel", () => {
     expect(screen.getAllByText("$15.12").length).toBe(2); // total and balance
   });
 
+  it("omits the tax row for a new zero-tax order while preserving its listed total", () => {
+    render(
+      <OrderTicketPanel
+        tableLabel="Table 2"
+        status="active"
+        lines={[{ ...LINES[0]!, unitPriceCents: 350, totalCents: 700 }]}
+        subtotalCents={700}
+        taxCents={0}
+        totalCents={700}
+      />,
+    );
+
+    expect(screen.queryByText("Impuestos")).not.toBeInTheDocument();
+    expect(screen.getAllByText("$7.00").length).toBeGreaterThanOrEqual(2);
+  });
+
   it("shows paid and remaining balances when the order has partial payments", () => {
     render(
       <OrderTicketPanel

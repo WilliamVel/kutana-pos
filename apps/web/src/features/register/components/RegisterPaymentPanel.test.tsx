@@ -122,6 +122,28 @@ describe("RegisterPaymentPanel", () => {
     expect(onAmountToPayChange).toHaveBeenCalledWith(1000);
   });
 
+  it("omits the tax row for a zero-tax order and charges its listed total", () => {
+    renderPanel({
+      lines: [{
+        id: "line-zero-tax",
+        name: "KUTANA Pilsener 500ml",
+        quantity: 2,
+        unitPriceCents: 350,
+        totalCents: 700,
+        pourSizeMl: 500,
+        isAdjustment: false,
+      }],
+      subtotalCents: 700,
+      taxCents: 0,
+      totalCents: 700,
+      remainingBalanceCents: 700,
+      amountToPayCents: 700,
+    });
+
+    expect(screen.queryByText("Impuestos")).not.toBeInTheDocument();
+    expect(screen.getAllByText("$7.00").length).toBeGreaterThanOrEqual(2);
+  });
+
   it("shows product count, keeps checkout lines read-only, and blocks unresolved products", () => {
     renderPanel({ productsError: "No se pudieron resolver los productos." });
     expect(screen.getByText(/2 unidades · 1 producto/)).toBeInTheDocument();

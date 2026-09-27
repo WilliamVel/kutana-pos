@@ -86,6 +86,26 @@ describe("SplitBillView", () => {
     expect(screen.getByLabelText("Resumen de la mesa")).toHaveTextContent("Saldo pendiente$7.84");
   });
 
+  it("labels zero-tax assigned lines as importe total while preserving historical tax labels", () => {
+    renderView({
+      accounts: [ACCOUNT],
+      allocationDraft: { accountId: "account-a", lineItemId: "line-a", quantity: "1" },
+    });
+
+    expect(screen.getAllByText("Importe total").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText("Total (incl. impuestos)")).not.toBeInTheDocument();
+
+    renderView({
+      accounts: [{
+        ...ACCOUNT,
+        id: "account-taxed",
+        assignedLines: [{ ...ACCOUNT.assignedLines![0]!, taxRateBp: 1200 }],
+      }],
+      allocationDraft: { accountId: "account-taxed", lineItemId: "line-a", quantity: "1" },
+    });
+    expect(screen.getAllByText("Total (incl. impuestos)").length).toBeGreaterThanOrEqual(2);
+  });
+
   it("uses account tabs as navigation and assigns compact row quantities", () => {
     const props = renderView({
       accounts: [ACCOUNT],

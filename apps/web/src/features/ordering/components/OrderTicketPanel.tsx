@@ -119,7 +119,7 @@ export function OrderTicketPanel({
       </>}
       <div className={styles.totals} data-layout-summary>
         <div className={styles.totalRow}><span>Subtotal</span><PriceTag cents={subtotalCents} /></div>
-        <div className={styles.totalRow}><span>Impuestos</span><PriceTag cents={taxCents} /></div>
+        {taxCents > 0 ? <div className={styles.totalRow}><span>Impuestos</span><PriceTag cents={taxCents} /></div> : null}
         <div className={styles.totalRow}><span>Total</span><PriceTag cents={accountTotalCents} /></div>
         {paidCents > 0 ? <div className={styles.totalRow}><span>Pagado</span><PriceTag cents={paidCents} /></div> : null}
         <div className={`${styles.totalRow} ${styles.grandTotal}`}><span>Saldo pendiente</span><PriceTag cents={totalCents} /></div>

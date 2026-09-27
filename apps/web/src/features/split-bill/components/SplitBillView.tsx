@@ -777,7 +777,7 @@ export function SplitBillView({
                       <span />
                       <span>Producto</span>
                       <span>Precio unitario</span>
-                      <span>Total (incl. impuestos)</span>
+                      <span>{selectedAccount.assignedLines?.some((line) => line.taxRateBp) ? "Total (incl. impuestos)" : "Importe total"}</span>
                       <span />
                     </div>
                     <ul>

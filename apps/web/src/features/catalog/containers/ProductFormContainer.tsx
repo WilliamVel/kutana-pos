@@ -180,7 +180,7 @@ export function ProductFormContainer({
         description: values.description || null,
         priceCents: values.retailPriceCents,
         costPriceCents: values.costPriceCents,
-        taxRateBp: 1200,
+        taxRateBp: 0,
         stockKind: values.stockKind,
         pourSizeMl: values.stockKind === "volume" ? values.pourSizeMl : null,
         lowStockLevel: values.trackInventory ? values.lowStockLevel : null,

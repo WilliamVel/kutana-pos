@@ -28,6 +28,7 @@ describe("ProductFormContainer", () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
     const savedProduct = onSaved.mock.calls[0]![0];
     expect(savedProduct.priceCents).toBe(425);
+    expect(savedProduct.taxRateBp).toBe(0);
     expect(Number.isInteger(savedProduct.priceCents)).toBe(true);
 
     const stored = await ports.products.findBySku("SKU-NEW-1");

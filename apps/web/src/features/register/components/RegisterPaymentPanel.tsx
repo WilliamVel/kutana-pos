@@ -229,10 +229,10 @@ export function RegisterPaymentPanel({
               <span>Subtotal</span>
               <PriceTag cents={subtotalCents} />
             </div>
-            <div className={styles.totalRow}>
+            {taxCents > 0 ? <div className={styles.totalRow}>
               <span>Impuestos</span>
               <PriceTag cents={taxCents} />
-            </div>
+            </div> : null}
             <div className={`${styles.totalRow} ${styles.orderTotal}`}>
               <span>Total de la orden</span>
               <PriceTag cents={totalCents} />
