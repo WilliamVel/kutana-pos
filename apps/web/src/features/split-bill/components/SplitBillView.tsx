@@ -145,6 +145,7 @@ export function SplitBillView({
   const [selectedQuantities, setSelectedQuantities] = useState<Map<string, number>>(
     () => new Map(),
   );
+  const [quantityDrafts, setQuantityDrafts] = useState<Map<string, string>>(() => new Map());
   const [returnLine, setReturnLine] = useState<AssignedAccountLine | null>(null);
   const [returnQuantity, setReturnQuantity] = useState(1);
   const [returnPopoverPosition, setReturnPopoverPosition] = useState({ top: 0, left: 0 });
@@ -190,6 +191,13 @@ export function SplitBillView({
         const available = lines.find((line) => line.id === id)?.unassignedQuantity;
         if (!available) next.delete(id);
         else next.set(id, Math.min(quantity, available));
+      }
+      return next;
+    });
+    setQuantityDrafts((current) => {
+      const next = new Map(current);
+      for (const id of current.keys()) {
+        if (!lines.some((line) => line.id === id && line.unassignedQuantity > 0)) next.delete(id);
       }
       return next;
     });
@@ -268,14 +276,33 @@ export function SplitBillView({
     setMethod(nextMethod);
   };
 
+  const commitQuantity = (value: string, maximum: number): number => {
+    const parsed = /^\d+$/.test(value) ? Number(value) : 1;
+    return Number.isFinite(parsed) ? Math.max(1, Math.min(maximum, parsed)) : 1;
+  };
+
   const updateQuantity = (lineId: string, next: number, maximum: number): void => {
     const quantity = Math.max(1, Math.min(maximum, next));
     setSelectedQuantities((current) => new Map(current).set(lineId, quantity));
+    setQuantityDrafts((current) => new Map(current).set(lineId, String(quantity)));
     onAllocationDraftChange({
       ...allocationDraft,
       lineItemId: lineId,
       quantity: String(quantity),
     });
+  };
+
+  const updateQuantityDraft = (lineId: string, value: string, maximum: number): void => {
+    setQuantityDrafts((current) => new Map(current).set(lineId, value));
+    if (!/^\d*$/.test(value) || value === "") {
+      onAllocationDraftChange({ ...allocationDraft, lineItemId: lineId, quantity: value });
+      return;
+    }
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      setSelectedQuantities((current) => new Map(current).set(lineId, Math.max(1, Math.min(maximum, parsed))));
+    }
+    onAllocationDraftChange({ ...allocationDraft, lineItemId: lineId, quantity: value });
   };
 
   const toggleLine = (lineId: string): void => {
@@ -485,7 +512,10 @@ export function SplitBillView({
     const drafts = selectedLines.map((line) => ({
       accountId: destinationAccount.id,
       lineItemId: line.id,
-      quantity: String(selectedQuantities.get(line.id) ?? 1),
+      quantity: String(commitQuantity(
+        quantityDrafts.get(line.id) ?? String(selectedQuantities.get(line.id) ?? 1),
+        line.unassignedQuantity,
+      )),
     }));
     const result = onAssignQuantities
       ? await onAssignQuantities(drafts)
@@ -580,10 +610,9 @@ export function SplitBillView({
                 {lines
                   .filter((line) => line.unassignedQuantity > 0)
                   .map((line) => {
-                    const quantity = selectedQuantities.get(line.id) ??
-                      (allocationDraft.lineItemId === line.id
-                        ? Number(allocationDraft.quantity) || 1
-                        : 1);
+                    const quantityDraft = quantityDrafts.get(line.id) ??
+                      (allocationDraft.lineItemId === line.id ? allocationDraft.quantity : String(selectedQuantities.get(line.id) ?? 1));
+                    const quantity = Number(quantityDraft) || 1;
                     const isSelected = selectedLineIds.has(line.id);
                     return (
                       <article
@@ -622,13 +651,9 @@ export function SplitBillView({
                               type="number"
                               min="1"
                               max={line.unassignedQuantity}
-                              value={quantity}
+                              value={quantityDraft}
                               onChange={(event) =>
-                                updateQuantity(
-                                  line.id,
-                                  Number(event.target.value),
-                                  line.unassignedQuantity,
-                                )
+                                updateQuantityDraft(line.id, event.target.value, line.unassignedQuantity)
                               }
                               aria-label={`Cantidad para ${line.name}`}
                             />
@@ -653,11 +678,11 @@ export function SplitBillView({
                               ...allocationDraft,
                               accountId: destinationAccount.id,
                               lineItemId: line.id,
-                              quantity: String(quantity),
+                              quantity: String(commitQuantity(quantityDraft, line.unassignedQuantity)),
                             });
                             if (success === false) return;
                             toast.success(
-                              `${quantity} ${displayProductName(line.name, line.presentation)} ${line.presentation ?? ""} asignada a ${destinationAccount.ownerLabel}`
+                              `${commitQuantity(quantityDraft, line.unassignedQuantity)} ${displayProductName(line.name, line.presentation)} ${line.presentation ?? ""} asignada a ${destinationAccount.ownerLabel}`
                                 .replace(/\s+/g, " ")
                                 .trim(),
                               { duration: 2600 },

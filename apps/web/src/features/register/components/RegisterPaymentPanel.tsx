@@ -55,8 +55,9 @@ export interface RegisterPaymentPanelProps {
 }
 
 function parseDollarsToCents(input: string): number {
-  if (!/^\d*(\.\d{0,2})?$/.test(input)) return 0;
-  const [whole = "0", fraction = ""] = input.split(".");
+  const normalized = input.replace(",", ".");
+  if (!/^\d*(\.\d{0,2})?$/.test(normalized)) return 0;
+  const [whole = "0", fraction = ""] = normalized.split(".");
   return (
     (Number.parseInt(whole || "0", 10) || 0) * 100 +
     (Number.parseInt(fraction.padEnd(2, "0"), 10) || 0)
@@ -121,11 +122,31 @@ export function RegisterPaymentPanel({
     selectedMethod && !selectedMethod.requiresTendered && /transfer|qr/i.test(selectedMethod.label),
   );
   const [manualConfirmation, setManualConfirmation] = useState(false);
+  const [amountDraft, setAmountDraft] = useState(() => formatCentsToDollarsInput(amountToPayCents));
+  const [tenderedDraft, setTenderedDraft] = useState(() => formatCentsToDollarsInput(tenderedCents));
+  const pendingAmountCentsRef = useRef<number | null>(null);
+  const pendingTenderedCentsRef = useRef<number | null>(null);
   const errorDialogRef = useRef<HTMLDivElement>(null);
   const errorOpenerRef = useRef<HTMLElement | null>(null);
   const dismissErrorRef = useRef(onDismissError);
   dismissErrorRef.current = onDismissError;
   useEffect(() => setManualConfirmation(false), [selectedMethodCode]);
+  useEffect(() => {
+    if (pendingAmountCentsRef.current === amountToPayCents) {
+      pendingAmountCentsRef.current = null;
+      return;
+    }
+    pendingAmountCentsRef.current = null;
+    setAmountDraft(formatCentsToDollarsInput(amountToPayCents));
+  }, [amountToPayCents]);
+  useEffect(() => {
+    if (pendingTenderedCentsRef.current === tenderedCents) {
+      pendingTenderedCentsRef.current = null;
+      return;
+    }
+    pendingTenderedCentsRef.current = null;
+    setTenderedDraft(formatCentsToDollarsInput(tenderedCents));
+  }, [tenderedCents]);
   useEffect(() => {
     if (!errorMessage) {
       const opener = errorOpenerRef.current;
@@ -251,11 +272,11 @@ export function RegisterPaymentPanel({
               <span aria-hidden="true">$</span>
               <Input
                 label="Monto a cobrar"
-                type="number"
+                type="text"
                 inputMode="decimal"
                 min={0.01}
-                value={formatCentsToDollarsInput(amountToPayCents)}
-                onChange={(value) => onAmountToPayChange(parseDollarsToCents(value))}
+                value={amountDraft}
+                onChange={(value) => { const cents = parseDollarsToCents(value); pendingAmountCentsRef.current = cents; setAmountDraft(value); onAmountToPayChange(cents); }}
                 error={amountError ?? undefined}
               />
             </div>
@@ -323,16 +344,16 @@ export function RegisterPaymentPanel({
             <div className={styles.cashFields}>
               <Input
                 label="Efectivo recibido"
-                type="number"
+                type="text"
                 inputMode="decimal"
                 min={0}
-                value={formatCentsToDollarsInput(tenderedCents)}
-                onChange={(value) => onTenderedChange(parseDollarsToCents(value))}
+                value={tenderedDraft}
+                onChange={(value) => { const cents = parseDollarsToCents(value); pendingTenderedCentsRef.current = cents; setTenderedDraft(value); onTenderedChange(cents); }}
                 error={tenderedError ?? undefined}
               />
               <div className={styles.quickCash} aria-label="Atajos de efectivo">
                 {cashShortcuts(amountToPayCents).map((value, index) => (
-                  <button type="button" key={value} onClick={() => onTenderedChange(value)}>
+                  <button type="button" key={value} onClick={() => { pendingTenderedCentsRef.current = value; setTenderedDraft(formatCentsToDollarsInput(value)); onTenderedChange(value); }}>
                     {index === 0 ? "Exacto · " : ""}${(value / 100).toFixed(2)}
                   </button>
                 ))}

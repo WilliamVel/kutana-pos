@@ -39,7 +39,7 @@ const POUR_SIZES: PourSize[] = [330, 500, 750, 1000];
 const PRESENTATIONS = ["Botella", "Lata", "Vaso", "Jarra", "Plato", "Unidad"];
 
 function parseDollarsToCents(input: string): number {
-  const [dollarsPart = "0", centsPart = "0"] = input.split(".");
+  const [dollarsPart = "0", centsPart = "0"] = input.replace(",", ".").split(".");
   const dollars = Number.parseInt(dollarsPart, 10) || 0;
   const cents = Number.parseInt(centsPart.padEnd(2, "0").slice(0, 2), 10) || 0;
   return dollars * 100 + cents;
@@ -48,6 +48,9 @@ function formatCentsToDollarsInput(cents: number): string {
   const dollars = Math.trunc(cents / 100);
   const remainder = Math.abs(cents % 100);
   return `${dollars}.${remainder < 10 ? "0" : ""}${remainder}`;
+}
+function displayQuantityForUnit(quantity: number, unit: "ea" | "ml" | "l", stockKind: StockKind): string {
+  return stockKind === "volume" && unit === "l" ? String(quantity / 1000) : String(quantity);
 }
 function suggestedSku(name: string, presentation: string, contentMl: number | null): string {
   const base = `${name}-${presentation}-${contentMl ?? ""}`
@@ -77,6 +80,12 @@ export function ProductForm({ categories, initialValues, onSubmit, onCancel, sub
   const contentId = useId();
   const activeId = useId();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [numericDrafts, setNumericDrafts] = useState({
+    retailPriceCents: formatCentsToDollarsInput(initial.retailPriceCents),
+    costPriceCents: initial.costPriceCents === null ? "" : formatCentsToDollarsInput(initial.costPriceCents),
+    initialStockQuantity: displayQuantityForUnit(initial.initialStockQuantity, initial.stockUnit, initial.stockKind),
+    lowStockLevel: initial.lowStockLevel === null ? "" : displayQuantityForUnit(initial.lowStockLevel, initial.stockUnit, initial.stockKind),
+  });
 
   function update<K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]): void {
     setValues((current) => ({ ...current, [key]: value }));
@@ -111,9 +120,9 @@ export function ProductForm({ categories, initialValues, onSubmit, onCancel, sub
 
   const shownError = (key: keyof ProductFormValues): string | undefined => visibleErrors[key];
   const stockUnitLabel = values.stockKind === "volume" ? (values.stockUnit === "l" ? "L" : "ml") : "unidades";
-  const displayQuantity = (quantity: number): string => values.stockKind === "volume" && values.stockUnit === "l" ? String(quantity / 1000) : String(quantity);
+  const displayQuantity = (quantity: number): string => displayQuantityForUnit(quantity, values.stockUnit ?? "ea", values.stockKind);
   const toStoredQuantity = (value: string): number => {
-    const parsed = Number(value) || 0;
+    const parsed = Number(value.replace(",", ".")) || 0;
     return values.stockKind === "volume" && values.stockUnit === "l" ? parsed * 1000 : parsed;
   };
 
@@ -142,7 +151,7 @@ export function ProductForm({ categories, initialValues, onSubmit, onCancel, sub
             </div>
             <div className={styles.row}>
               <div className={styles.selectField}><label className={styles.label} htmlFor={contentId}>Contenido o tamaño</label><select id={contentId} className={styles.select} value={values.contentMl ?? ""} onChange={(event) => update("contentMl", event.target.value ? Number(event.target.value) : null)}><option value="">Sin especificar</option>{POUR_SIZES.map((size) => <option key={size} value={size}>{size} ml</option>)}</select></div>
-              <Input label="Precio de venta * (USD)" name="product-retail-price" inputMode="decimal" required value={formatCentsToDollarsInput(values.retailPriceCents)} onBlur={() => touch("retailPriceCents")} onChange={(value) => update("retailPriceCents", parseDollarsToCents(value))} error={shownError("retailPriceCents")} placeholder="6.50" />
+              <Input label="Precio de venta * (USD)" name="product-retail-price" type="text" inputMode="decimal" required value={numericDrafts.retailPriceCents} onBlur={() => touch("retailPriceCents")} onChange={(value) => { setNumericDrafts((current) => ({ ...current, retailPriceCents: value })); update("retailPriceCents", parseDollarsToCents(value)); }} error={shownError("retailPriceCents")} placeholder="6.50" />
             </div>
           </section>
 
@@ -152,13 +161,13 @@ export function ProductForm({ categories, initialValues, onSubmit, onCancel, sub
               <label className={styles.inventoryToggle}><input type="checkbox" checked={values.trackInventory} onChange={(event) => update("trackInventory", event.target.checked)} /><span className={styles.inventoryToggleText}>Controlar inventario para este producto</span></label>
             </div>
             {values.trackInventory ? <div className={styles.stockFields}>
-              <div className={styles.selectField}><label className={styles.label} htmlFor={stockKindId}>Tipo de control</label><select id={stockKindId} className={styles.select} value={values.stockKind} onChange={(event) => update("stockKind", event.target.value as StockKind)}><option value="unit">Por unidades</option><option value="volume">Por volumen</option></select></div>
-              {values.stockKind === "volume" ? <div className={styles.selectField}><label className={styles.label} htmlFor={stockUnitId}>Unidad de medida</label><select id={stockUnitId} className={styles.select} value={values.stockUnit} onChange={(event) => update("stockUnit", event.target.value as "ml" | "l")}><option value="l">Litros (L)</option><option value="ml">Mililitros (ml)</option></select></div> : null}
-              <div className={styles.row}><Input label={`Stock inicial (${stockUnitLabel})`} type="number" inputMode="decimal" min={0} value={displayQuantity(values.initialStockQuantity)} onChange={(value) => update("initialStockQuantity", toStoredQuantity(value))} /><Input label={`Alerta de stock bajo (${stockUnitLabel})`} type="number" inputMode="decimal" min={0} value={values.lowStockLevel === null ? "" : displayQuantity(values.lowStockLevel)} onChange={(value) => update("lowStockLevel", value === "" ? null : toStoredQuantity(value))} /></div>
+              <div className={styles.selectField}><label className={styles.label} htmlFor={stockKindId}>Tipo de control</label><select id={stockKindId} className={styles.select} value={values.stockKind} onChange={(event) => { const stockKind = event.target.value as StockKind; const stockUnit = stockKind === "volume" ? "ml" : "ea"; setNumericDrafts((current) => ({ ...current, initialStockQuantity: displayQuantityForUnit(values.initialStockQuantity, stockUnit, stockKind), lowStockLevel: values.lowStockLevel === null ? "" : displayQuantityForUnit(values.lowStockLevel, stockUnit, stockKind) })); update("stockKind", stockKind); update("stockUnit", stockUnit); }}><option value="unit">Por unidades</option><option value="volume">Por volumen</option></select></div>
+              {values.stockKind === "volume" ? <div className={styles.selectField}><label className={styles.label} htmlFor={stockUnitId}>Unidad de medida</label><select id={stockUnitId} className={styles.select} value={values.stockUnit} onChange={(event) => { const unit = event.target.value as "ml" | "l"; setNumericDrafts((current) => ({ ...current, initialStockQuantity: displayQuantityForUnit(values.initialStockQuantity, unit, values.stockKind), lowStockLevel: values.lowStockLevel === null ? "" : displayQuantityForUnit(values.lowStockLevel, unit, values.stockKind) })); update("stockUnit", unit); }}><option value="l">Litros (L)</option><option value="ml">Mililitros (ml)</option></select></div> : null}
+              <div className={styles.row}><Input label={`Stock inicial (${stockUnitLabel})`} type="text" inputMode="decimal" min={0} value={numericDrafts.initialStockQuantity} onChange={(value) => { setNumericDrafts((current) => ({ ...current, initialStockQuantity: value })); update("initialStockQuantity", toStoredQuantity(value)); }} /><Input label={`Alerta de stock bajo (${stockUnitLabel})`} type="text" inputMode="decimal" min={0} value={numericDrafts.lowStockLevel} onChange={(value) => { setNumericDrafts((current) => ({ ...current, lowStockLevel: value })); update("lowStockLevel", value === "" ? null : toStoredQuantity(value)); }} /></div>
             </div> : <p className={styles.muted}>Sin control de existencias. El producto estará disponible para la venta.</p>}
           </section>
 
-          <details className={styles.moreOptions} open={moreOpen || Boolean(errors.sku || errors.barcode)} onToggle={(event) => setMoreOpen(event.currentTarget.open)}><summary><span>Más opciones</span><span className={styles.chevron} aria-hidden="true">⌄</span></summary><div className={styles.moreGrid}><Input label="Costo (USD)" inputMode="decimal" value={values.costPriceCents === null ? "" : formatCentsToDollarsInput(values.costPriceCents)} onChange={(value) => update("costPriceCents", value === "" ? null : parseDollarsToCents(value))} placeholder="Opcional" /><Input label="SKU" value={values.sku} onChange={(value) => update("sku", value)} placeholder="Se sugiere automáticamente" /><Input label="Código de barras" inputMode="numeric" value={values.barcode} onChange={(value) => update("barcode", value)} error={shownError("barcode")} /><Input label="Descripción" multiline value={values.description} onChange={(value) => update("description", value)} /></div></details>
+          <details className={styles.moreOptions} open={moreOpen || Boolean(errors.sku || errors.barcode)} onToggle={(event) => setMoreOpen(event.currentTarget.open)}><summary><span>Más opciones</span><span className={styles.chevron} aria-hidden="true">⌄</span></summary><div className={styles.moreGrid}><Input label="Costo (USD)" type="text" inputMode="decimal" value={numericDrafts.costPriceCents} onChange={(value) => { setNumericDrafts((current) => ({ ...current, costPriceCents: value })); update("costPriceCents", value === "" ? null : parseDollarsToCents(value)); }} placeholder="Opcional" /><Input label="SKU" value={values.sku} onChange={(value) => update("sku", value)} placeholder="Se sugiere automáticamente" /><Input label="Código de barras" inputMode="numeric" value={values.barcode} onChange={(value) => update("barcode", value)} error={shownError("barcode")} /><Input label="Descripción" multiline value={values.description} onChange={(value) => update("description", value)} /></div></details>
           <div className={styles.actions}><Button type="button" variant="secondary" onClick={() => { if (!dirty || window.confirm("¿Descartar los cambios sin guardar?")) onCancel(); }}>Cancelar</Button><Button type="submit" disabled={isSubmitting} loading={isSubmitting} onClick={() => undefined}>{isSubmitting ? "Guardando…" : submitLabel}</Button></div>
         </div>
 

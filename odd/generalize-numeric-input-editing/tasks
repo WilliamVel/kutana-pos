@@ -1,0 +1,11 @@
+# Generalize numeric input editing — reconciled task mirror
+
+1. [x] Introduce a reusable raw-draft numeric input pattern without breaking existing numeric callbacks.
+2. [x] Apply the pattern to catalog stock/price fields, register payment fields, and split-bill quantities.
+3. [x] Add focused regression tests for clearing, intermediate decimals, multi-digit quantities, bounds, and submission values.
+4. [x] Run focused web tests and review the final diff.
+5. [x] Normalize comma-decimal input from mobile keyboards and use text inputs where native number controls reject localized separators.
+
+Evidence: focused 42 tests passed; web typecheck passed; full web suite 310 tests passed; comma-decimal focused 26 tests passed; diff check passed.
+
+Source of truth: `odd/tasks/generalize-numeric-input-editing.md`.

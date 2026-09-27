@@ -44,6 +44,44 @@ describe("ProductForm", () => {
     expect(label).toHaveTextContent("Controlar inventario para este producto");
   });
 
+  it("keeps numeric drafts editable while updating stored values", () => {
+    renderForm();
+    const price = screen.getByLabelText("Precio de venta * (USD)");
+    fireEvent.change(price, { target: { value: "" } });
+    expect(price).toHaveValue("");
+    fireEvent.change(price, { target: { value: "12" } });
+    expect(price).toHaveValue("12");
+  });
+
+  it("accepts comma decimals for price and volume stock while preserving the raw drafts", () => {
+    const onSubmit = vi.fn();
+    renderForm({
+      onSubmit,
+      initialValues: {
+        ...BLANK_VALUES,
+        stockKind: "volume",
+        trackInventory: true,
+        stockUnit: "l",
+        contentMl: 500,
+      },
+    });
+
+    const price = screen.getByLabelText("Precio de venta * (USD)");
+    fireEvent.change(price, { target: { value: "6,50" } });
+    expect(price).toHaveValue("6,50");
+    const stock = screen.getByLabelText("Stock inicial (L)");
+    fireEvent.change(stock, { target: { value: "1,5" } });
+    expect(stock).toHaveValue("1,5");
+    completeRequiredFields();
+    fireEvent.change(price, { target: { value: "6,50" } });
+    fireEvent.submit(screen.getByRole("form"));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      retailPriceCents: 650,
+      initialStockQuantity: 1500,
+    }));
+  });
+
   it("conditionally reveals inventory controls and submits integer cents", () => {
     const onSubmit = vi.fn();
     renderForm({ onSubmit });
@@ -54,6 +92,31 @@ describe("ProductForm", () => {
     completeRequiredFields();
     fireEvent.submit(screen.getByRole("form"));
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ retailPriceCents: 650, initialStockQuantity: 20, lowStockLevel: 5, trackInventory: true }));
+  });
+
+  it("keeps stock drafts and stored quantity correct when switching volume units", () => {
+    const onSubmit = vi.fn();
+    renderForm({
+      onSubmit,
+      initialValues: {
+        ...BLANK_VALUES,
+        stockKind: "volume",
+        trackInventory: true,
+        stockUnit: "l",
+        initialStockQuantity: 1500,
+        lowStockLevel: 500,
+      },
+    });
+    expect(screen.getByLabelText("Stock inicial (L)")).toHaveValue("1.5");
+    fireEvent.change(screen.getByLabelText("Contenido o tamaño"), { target: { value: "500" } });
+    fireEvent.change(screen.getByLabelText("Unidad de medida"), { target: { value: "ml" } });
+    expect(screen.getByLabelText("Stock inicial (ml)")).toHaveValue("1500");
+    expect(screen.getByLabelText("Alerta de stock bajo (ml)")).toHaveValue("500");
+    completeRequiredFields();
+    fireEvent.submit(screen.getByRole("form"));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      stockUnit: "ml", initialStockQuantity: 1500, lowStockLevel: 500,
+    }));
   });
 
   it("moves the active state into the summary and preserves it on submit", () => {

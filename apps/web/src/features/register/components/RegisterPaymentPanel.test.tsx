@@ -37,8 +37,8 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof RegisterPaym
     canConfirm: false,
     ...overrides,
   };
-  render(<RegisterPaymentPanel {...props} />);
-  return props;
+  const view = render(<RegisterPaymentPanel {...props} />);
+  return { ...props, ...view };
 }
 
 describe("RegisterPaymentPanel", () => {
@@ -92,6 +92,54 @@ describe("RegisterPaymentPanel", () => {
     renderPanel({ onSelectMethod });
     fireEvent.click(screen.getByRole("radio", { name: "Pago QR" }));
     expect(onSelectMethod).toHaveBeenCalledWith("QR_PAYMENT");
+  });
+
+  it("keeps amount and tendered drafts editable without formatting snap-back", () => {
+    renderPanel();
+    const amount = screen.getByLabelText("Monto a cobrar");
+    fireEvent.change(amount, { target: { value: "" } });
+    expect((amount as HTMLInputElement).value).toBe("");
+    fireEvent.change(amount, { target: { value: "12" } });
+    expect((amount as HTMLInputElement).value).toBe("12");
+
+    const tendered = screen.getByLabelText("Efectivo recibido");
+    fireEvent.change(tendered, { target: { value: "" } });
+    expect((tendered as HTMLInputElement).value).toBe("");
+    fireEvent.change(tendered, { target: { value: "123" } });
+    expect((tendered as HTMLInputElement).value).toBe("123");
+  });
+
+  it("resynchronizes drafts when parent payment amounts reset after an action", () => {
+    const props = renderPanel({ amountToPayCents: 1200, tenderedCents: 1500 });
+    fireEvent.change(screen.getByLabelText("Monto a cobrar"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Efectivo recibido"), { target: { value: "12" } });
+
+    props.rerender(
+      <RegisterPaymentPanel
+        {...props}
+        amountToPayCents={784}
+        tenderedCents={null}
+      />,
+    );
+
+    expect(screen.getByLabelText("Monto a cobrar")).toHaveValue("7.84");
+    expect((screen.getByLabelText("Efectivo recibido") as HTMLInputElement).value).toBe("");
+  });
+
+  it("accepts comma decimals for amount and tendered inputs while preserving raw drafts", () => {
+    const onAmountToPayChange = vi.fn();
+    const onTenderedChange = vi.fn();
+    renderPanel({ onAmountToPayChange, onTenderedChange });
+
+    const amount = screen.getByLabelText("Monto a cobrar");
+    fireEvent.change(amount, { target: { value: "7,84" } });
+    expect(amount).toHaveValue("7,84");
+    expect(onAmountToPayChange).toHaveBeenCalledWith(784);
+
+    const tendered = screen.getByLabelText("Efectivo recibido");
+    fireEvent.change(tendered, { target: { value: "10,50" } });
+    expect(tendered).toHaveValue("10,50");
+    expect(onTenderedChange).toHaveBeenCalledWith(1050);
   });
 
   it("calls onTenderedChange as the cashier types the tendered amount", () => {

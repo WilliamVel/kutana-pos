@@ -274,6 +274,45 @@ describe("SplitBillView", () => {
     expect(screen.getByRole("button", { name: "Cuenta pagada" })).toBeDisabled();
   });
 
+  it("keeps quantity drafts editable while retaining the raw callback value", () => {
+    const onAllocationDraftChange = vi.fn();
+    renderView({
+      accounts: [ACCOUNT],
+      lines: [{ ...LINE, quantity: 12, unassignedQuantity: 12 }],
+      allocationDraft: { accountId: "account-a", lineItemId: "line-a", quantity: "1" },
+      onAllocationDraftChange,
+    });
+    fireEvent.click(screen.getByRole("tab", { name: /Sin asignar/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Seleccionar KUTANA Pilsener 500ml" }));
+    const quantity = screen.getByLabelText("Cantidad para KUTANA Pilsener 500ml");
+    fireEvent.change(quantity, { target: { value: "" } });
+    expect((quantity as HTMLInputElement).value).toBe("");
+    fireEvent.change(quantity, { target: { value: "12" } });
+    expect((quantity as HTMLInputElement).value).toBe("12");
+    expect(onAllocationDraftChange).toHaveBeenLastCalledWith({
+      accountId: "account-a", lineItemId: "line-a", quantity: "12",
+    });
+  });
+
+  it("commits a bounded quantity while preserving an empty draft until assignment", () => {
+    const onAssignQuantity = vi.fn();
+    renderView({
+      accounts: [ACCOUNT],
+      lines: [{ ...LINE, quantity: 5, unassignedQuantity: 2 }],
+      allocationDraft: { accountId: "account-a", lineItemId: "line-a", quantity: "1" },
+      onAssignQuantity,
+    });
+    fireEvent.click(screen.getByRole("tab", { name: /Sin asignar/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Seleccionar KUTANA Pilsener 500ml" }));
+    const quantity = screen.getByLabelText("Cantidad para KUTANA Pilsener 500ml");
+    fireEvent.change(quantity, { target: { value: "" } });
+    expect((quantity as HTMLInputElement).value).toBe("");
+    fireEvent.click(screen.getByRole("button", { name: "Asignar" }));
+    expect(onAssignQuantity).toHaveBeenCalledWith({
+      accountId: "account-a", lineItemId: "line-a", quantity: "1",
+    });
+  });
+
   it("counts selected units and includes the line total per selected quantity", () => {
     const line = { ...LINE, quantity: 5, totalCents: 1960, unassignedQuantity: 5 };
     renderView({
