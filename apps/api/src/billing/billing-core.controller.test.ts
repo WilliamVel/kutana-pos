@@ -76,7 +76,7 @@ const debtEntry: CustomerDebtEntry = {
 
 describe("BillingCoreController", () => {
       it("requires admin role on every analytics route", () => {
-        for (const method of ["dailySales", "productMix", "paymentMix", "pendingExposure"] as const) {
+        for (const method of ["summary", "dailySales", "productMix", "paymentMix", "pendingExposure"] as const) {
           expect(Reflect.getMetadata(REQUIRED_ROLES, BillingCoreController.prototype[method])).toEqual(["admin"]);
         }
       });
@@ -107,6 +107,7 @@ describe("BillingCoreController", () => {
       record: vi.fn(),
     };
     const salesAnalytics = {
+      summary: vi.fn(),
       dailySales: vi.fn(),
       productMix: vi.fn(),
       paymentMix: vi.fn(),
@@ -132,16 +133,19 @@ describe("BillingCoreController", () => {
   it("delegates analytics queries with date filters", async () => {
     const { controller, salesAnalytics } = controllerWithMocks();
     const query = { from: "2025-01-01", to: "2025-01-31" };
+    salesAnalytics.summary.mockResolvedValue({});
     salesAnalytics.dailySales.mockResolvedValue([]);
     salesAnalytics.productMix.mockResolvedValue([]);
     salesAnalytics.paymentMix.mockResolvedValue([]);
     salesAnalytics.pendingExposure.mockResolvedValue([]);
 
+    await controller.summary(query);
     await controller.dailySales(query);
     await controller.productMix(query);
     await controller.paymentMix(query);
     await controller.pendingExposure(query);
 
+    expect(salesAnalytics.summary).toHaveBeenCalledWith(query);
     expect(salesAnalytics.dailySales).toHaveBeenCalledWith(query);
     expect(salesAnalytics.productMix).toHaveBeenCalledWith(query);
     expect(salesAnalytics.paymentMix).toHaveBeenCalledWith(query);

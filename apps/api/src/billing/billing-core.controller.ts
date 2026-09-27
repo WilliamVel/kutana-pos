@@ -27,9 +27,12 @@ import { PaymentClosureService } from "./payment-closure.service.js";
 import {
   SalesAnalyticsService,
   type AnalyticsDateQuery,
+  type AnalyticsSummary,
+  type DailySalesPage,
   type DailySalesTotal,
   type PaymentMixRow,
   type PendingExposureRow,
+  type ProductMixPage,
   type ProductMixRow,
 } from "./sales-analytics.service.js";
 import { PostgresCustomerDebtRepository } from "./adapters/postgres/customer-debt-repository.js";
@@ -65,6 +68,13 @@ export class BillingCoreController {
   ) {}
 
   @RequireRole("admin")
+  @Get("analytics/summary")
+  summary(@Query() query: AnalyticsDateQuery): Promise<AnalyticsSummary> {
+    if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
+    return this.salesAnalytics.summary(query);
+  }
+
+  @RequireRole("admin")
   @Get("analytics/daily-sales")
   dailySales(@Query() query: AnalyticsDateQuery): Promise<DailySalesTotal[]> {
     if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
@@ -76,6 +86,20 @@ export class BillingCoreController {
   productMix(@Query() query: AnalyticsDateQuery): Promise<ProductMixRow[]> {
     if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
     return this.salesAnalytics.productMix(query);
+  }
+
+  @RequireRole("admin")
+  @Get("analytics/products")
+  products(@Query() query: AnalyticsDateQuery & { search?: string; sort?: "revenue" | "quantity"; page?: string; pageSize?: string }): Promise<ProductMixPage> {
+    if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
+    return this.salesAnalytics.productDetail({ ...query, page: query.page === undefined ? undefined : Number(query.page), pageSize: query.pageSize === undefined ? undefined : Number(query.pageSize), sort: query.sort });
+  }
+
+  @RequireRole("admin")
+  @Get("analytics/daily-sales-detail")
+  dailySalesDetail(@Query() query: AnalyticsDateQuery & { page?: string; pageSize?: string }): Promise<DailySalesPage> {
+    if (!this.salesAnalytics) throw new Error("Sales analytics service is unavailable");
+    return this.salesAnalytics.dailyDetail({ ...query, page: query.page === undefined ? undefined : Number(query.page), pageSize: query.pageSize === undefined ? undefined : Number(query.pageSize) });
   }
 
   @RequireRole("admin")

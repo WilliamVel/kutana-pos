@@ -7,7 +7,7 @@ export interface InputProps {
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly error?: string;
-  readonly type?: "text" | "number" | "password" | "email" | "tel";
+  readonly type?: "text" | "number" | "password" | "email" | "tel" | "date";
   readonly name?: string;
   readonly autoComplete?: string;
   readonly inputMode?: "decimal" | "numeric" | "search" | "text" | "tel" | "email";
