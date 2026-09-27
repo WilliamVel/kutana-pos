@@ -64,7 +64,7 @@ async function seedPaymentFixtures(pool: Pool): Promise<void> {
   );
   await pool.query(
     `INSERT INTO line_items (id, order_id, product_id, name_snapshot, unit_price_cents, quantity, pour_size_ml, tax_rate_bp, tax_cents, total_cents, is_adjustment, created_at, position)
-     VALUES ('line-1', 'order-1', $1, 'Payment Fixture', 300, 1, NULL, 1000, 30, 330, false, '2025-01-01T00:01:00.000Z', 0)`,
+     VALUES ('line-1', 'order-1', $1, 'Payment Fixture', 300, 4, NULL, 1000, 120, 1320, false, '2025-01-01T00:01:00.000Z', 0)`,
     [productId],
   );
   await pool.query(
@@ -73,6 +73,15 @@ async function seedPaymentFixtures(pool: Pool): Promise<void> {
   await pool.query(
     `INSERT INTO personal_accounts (id, order_id, customer_id, free_name, status, created_at, version)
      VALUES ('account-1', 'order-1', NULL, 'Fixture Account', 'open', '2025-01-01T00:02:00.000Z', 1)`,
+  );
+  await pool.query(
+    `INSERT INTO account_line_allocations (id, account_id, line_item_id, quantity)
+     VALUES ('account-allocation-1', 'account-1', 'line-1', 4)`,
+  );
+  await pool.query(
+    `INSERT INTO customer_debt_ledger
+       (id, customer_id, kind, direction, amount_cents, account_id, payment_id, note, created_at)
+     VALUES ('debt-1', 'customer-1', 'pending_account', 'debit', 1500, NULL, NULL, 'Fixture outstanding balance', '2025-01-01T00:03:00.000Z')`,
   );
 }
 
