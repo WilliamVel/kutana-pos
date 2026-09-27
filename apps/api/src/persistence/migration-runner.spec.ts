@@ -29,6 +29,7 @@ describe("migration discovery", () => {
       "017_retired_tables.sql",
       "018_pending_debt_query_indexes.sql",
       "019_unique_table_labels_case_insensitive.sql",
+      "020_kombucha_unit_catalog.sql",
     ]);
   });
 
