@@ -28,4 +28,4 @@ Keep sales analytics concise as history grows while enabling accessible explorat
 - ✅ Added quick periods with bounded initial 30-day range, explicit all-history choice, compact trend, progressive product/daily detail, accessible states, and responsive layout.
 - ✅ Added multi-page mock fixture including a product outside Top 10 and tests proving server-detail search preserves summary values.
 - ✅ Verification: API analytics/controller 18 tests passed; web analytics 3 tests passed; typecheck and lint passed; Playwright suite passed with analytics checks at 1440px and 390px (14 total e2e tests ran because the package script includes the wider suite).
-- No database reset, migration application, or commit was performed.
+- Database reset/application was not performed from this session; isolated environment coordination was handled separately. Work-unit commits: `7d2f0cb` backend/contracts/migration/docs and `ed7661b` web progressive exploration. Published to `origin/main`.

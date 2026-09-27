@@ -32,4 +32,6 @@ Deliver a reliable first sales analytics experience for web and mobile based onl
 - Browser visual/layout checks were not run in this session; CSS uses responsive grid and horizontal table overflow.
 
 ## Commits
-- None: commit authorization was not provided.
+- `7d2f0cb` feat(analytics): add reconciled sales reporting.
+- `ed7661b` feat(web): add progressive analytics exploration.
+- Published to `origin/main` after explicit user authorization.
