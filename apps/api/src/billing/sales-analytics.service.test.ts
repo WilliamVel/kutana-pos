@@ -25,13 +25,13 @@ describe("SalesAnalyticsService", () => {
     const { service, query } = makeService();
     query
       .mockResolvedValueOnce({ rows: [{ product_id: "p1", name: "Coffee", currency_code: "USD", quantity: "2", revenue_cents: "1000" }] })
-      .mockResolvedValueOnce({ rows: [{ method_code: "cash", currency_code: "USD", amount_cents: "1000" }] });
+      .mockResolvedValueOnce({ rows: [{ method_code: "cash", method_label: "Efectivo", currency_code: "USD", amount_cents: "1000" }] });
 
     await expect(service.productMix()).resolves.toEqual([
-      { productId: "p1", name: "Coffee", currencyCode: "USD", quantity: 2, revenueCents: 1000 },
+      { productId: "p1", name: "Coffee", presentationSize: null, currencyCode: "USD", quantity: 2, revenueCents: 1000 }
     ]);
     await expect(service.paymentMix()).resolves.toEqual([
-      { methodCode: "cash", currencyCode: "USD", amountCents: 1000 },
+      { methodCode: "cash", methodLabel: "Efectivo", currencyCode: "USD", amountCents: 1000 },
     ]);
     expect(query.mock.calls[0]![0]).toContain("FROM sale_items si JOIN sales s");
     expect(query.mock.calls[1]![0]).toContain("FROM sale_settlements ss JOIN sales s");
@@ -42,6 +42,14 @@ describe("SalesAnalyticsService", () => {
     await expect(service.dailySales({ from: "2025-02-30" })).rejects.toThrow(BadRequestException);
     await expect(service.dailySales({ from: "2025-02-02", to: "2025-02-01" })).rejects.toThrow(BadRequestException);
     expect(query).not.toHaveBeenCalled();
+  });
+
+  it("uses the business timezone for midnight boundaries and bounds long ranges", async () => {
+    const { service, query } = makeService();
+    query.mockResolvedValue({ rows: [] });
+    await service.dailySales({ from: "2025-01-01", to: "2025-01-02" });
+    expect(query.mock.calls[0]![0]).toContain("AT TIME ZONE 'America/Guayaquil'");
+    await expect(service.dailySales({ from: "2025-01-01", to: "2026-01-02" })).rejects.toThrow(/366 days/);
   });
 
   it("aggregates pending exposure from sale snapshots without orders status", async () => {
