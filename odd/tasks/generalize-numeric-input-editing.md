@@ -35,4 +35,6 @@ Make quantity and monetary numeric fields intuitive to edit by preserving the us
 - `git diff --check` passed for the authorized feature paths.
 - Comma-decimal fix: focused 26 tests passed and web typecheck passed.
 - Existing React `act(...)` warnings remain; no test failures.
-- No commit created; delivery remains a separate user decision.
+- Work-unit commit: `0605f39 fix(web): support intuitive localized numeric input`.
+- Pushed to `origin/main`.
+
