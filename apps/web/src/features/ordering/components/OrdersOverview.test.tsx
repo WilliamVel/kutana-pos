@@ -80,8 +80,26 @@ describe("OrdersOverview", () => {
     expect(screen.getByText(longLabel)).toHaveAttribute("aria-label", longLabel);
   });
 
-  it("shows an empty state when there are no open orders", () => {
-    render(<OrdersOverview rows={[]} selectedTableId={null} onSelectTable={vi.fn()} />);
+  it("keeps both header actions visible and usable when there are no open orders", () => {
+    const onCreateOrder = vi.fn();
+    render(
+      <OrdersOverview
+        rows={[]}
+        selectedTableId={null}
+        onSelectTable={vi.fn()}
+        newOrder={
+          <button type="button" onClick={onCreateOrder}>
+            Crear orden
+          </button>
+        }
+      />,
+    );
+
     expect(screen.getByText("No hay órdenes abiertas.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Crear orden" }));
+    expect(onCreateOrder).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole("button", { name: /Ver todas \(0\)/ }));
+    expect(screen.getByRole("dialog", { name: "Mesas y órdenes" })).toBeInTheDocument();
   });
 });

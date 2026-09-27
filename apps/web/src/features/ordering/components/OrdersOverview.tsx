@@ -91,14 +91,6 @@ export function OrdersOverview({
     );
   }
 
-  if (rows.length === 0 && loadState === "empty") {
-    return (
-      <div>
-        <p className={styles.empty}>No hay órdenes abiertas.</p>
-      </div>
-    );
-  }
-
   const selectFromSheet = (tableId: string): void => {
     onSelectTable(tableId);
     setSheetOpen(false);
@@ -133,6 +125,9 @@ export function OrdersOverview({
       ) : null}
       <div className={styles.carousel}>
         <div className={styles.list} aria-label="Mesas activas">
+          {rows.length === 0 && loadState === "empty" ? (
+            <p className={styles.empty}>No hay órdenes abiertas.</p>
+          ) : null}
           {rows.map((row) => (
             <OrderCard
               key={row.tableId}
