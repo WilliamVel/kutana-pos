@@ -1,9 +1,11 @@
-# Fresh local schema with zero-tax pricing
+# Local main schema with zero-tax pricing
 
 ## Objective
-Start a clean local KUTANA test environment in a dedicated PostgreSQL schema inside the existing `kutana` database. Newly ordered products charge exactly their listed price (tax 0). Do not create a new database or PostgreSQL instance; do not mutate the existing `public` application data until shared database usage is coordinated.
+
+Consolidate the verified local KUTANA environment into `main` and the existing PostgreSQL database's `public` schema. Newly ordered products charge exactly their listed price (tax 0). Do not create a new database or PostgreSQL instance; Windows production remains unchanged.
 
 ## Constraints and decisions
+
 - User approved isolated worktree `feat/local-schema-zero-tax` because unrelated analytics edits are present in the main worktree. Write only in this worktree, single writer at a time.
 - Migrations 001–020 remain immutable. A new forward migration updates active catalog products to `tax_rate_bp = 0`; new products default to 0. Historical line items and closed sales are not rewritten. Existing 11 open orders stay in the old schema; a fresh schema starts without them.
 - `public` contains `pgcrypto` and `pg_trgm`; its old KUTANA objects were retired after independent backup, successful cutover and explicit user authorization. Never `DROP SCHEMA public CASCADE`. Preserve extensions.
@@ -13,11 +15,13 @@ Start a clean local KUTANA test environment in a dedicated PostgreSQL schema ins
 - Effective SQL/UI TDD mode is not explicitly configured; project documents test-first for domain behavior. Verify with exact `pnpm test`, `pnpm typecheck`, `pnpm lint`; use PostgreSQL runtime harness only in an isolated schema after coordination.
 
 ## Tasks
+
 - [x] TSZT-1: Explicit, safe PostgreSQL schema selection for API/migration CLI, fail-closed guard and configuration tests. Commit `2bac1c2` (`feat(db): bind API and migrations to explicit local schema`). Independent checks: `pnpm test`, `pnpm typecheck`, `pnpm lint`, `git diff --check` PASS; PostgreSQL adapter suites skipped without `DATABASE_URL`. Runtime: `3100/5174` healthy and target schema present.
 - [x] TSZT-2: Forward migration 022 defaults new products to zero tax, updates active catalog, and pricing/split/payment UI tests preserve historical tax. Analytics migration 021 copied byte-identically from main as authorized. Commit `667dbd3` (`feat(catalog): default active products to zero tax`). Same independent checks PASS (105 files/489 tests; five PostgreSQL suites/58 tests skipped); target has zero active taxed products. No authenticated order/payment integration was run to preserve clean schema.
 - [x] TSZT-3: Local source of truth is `kutana_test`. Old app 3000/5173 stopped; fresh complete backup decoded and verified; 21 old app tables and one app function removed from `public` in a single restrictive transaction, while `public` extensions and `kutana_test` remained intact. Failed isolated Compose container/empty volume/network removed. Independent runtime verifier confirmed API/web 3100/5174 healthy, 6 categories/36 products, 0 orders/sales/payments/users/active taxed products, 0 public tables and both extensions. Production Windows pending independent work. Documentation commit `0862bc6` (`docs(local): document isolated catalog cutover and recovery`).
 
-## Progress
+## Historical progress
+
 - User approved isolated worktree and deferring old-schema cleanup. Peer owns uncommitted analytics migration 021. On resume, user explicitly authorized copying ONLY that SQL into isolated worktree with updated discovery expectations, without modifying/committing main, then applying 021→022 when Docker returns. Before their later explicit ordering clarification arrived, we applied 001–020 + 022 in `kutana_test` (021 not applied), after a read-only independence check. Peer then explicitly required new schema to remain inactive with only 001–020 until 021→022 runs in order. This sequence violated that newly clarified coordination constraint. Disclosed discrepancy to peer, immediately stopped only our isolated services, and halted DB mutations. Public, old 3000/5173 services, peer files and peer 021 remain untouched. Do not claim active test URL until reconciled.
 - Read-only inventory: old app data and `pgcrypto`/`pg_trgm` reside in `public`; main worktree contains unrelated uncommitted analytics changes. Verified fresh backup `~/KUTANA-backups/kutana-before-fresh-schema-20260926-232420.dump` (96,225 bytes, SHA-256 122f8051e8a9398a700762b72e92bef5399167add4372f20a171ff51f52d4c44; pg_restore list readable). Initially created `kutana_test` schema in existing database and applied isolated migrations 001–020 and 022 via `POSTGRES_SCHEMA=kutana_test` (later reversed by authorized target-only reset below). Before reset, independent verification found target ledger 21 rows, 6 categories/36 products, zero orders/sales/payments/auth_users; public ledger remained 20 rows with old data/extensions intact. No durable API/web cutover occurred. Public orders increased independently while this work proceeded; no public writes were performed by this feature.
 - TSZT-1 source implementation present but unchecked pending commit: API Pool now uses strict `search_path=kutana_test`, migration CLI uses `kutana_test,public` for extensions, both guard selected current_schema. Offline frozen install succeeded in isolated worktree; lockfile unchanged. Independent API tests PASS (18 files/75 tests; 5 PostgreSQL suites/58 tests skipped), typecheck and diff-check PASS. Read-only PostgreSQL runtime probe confirmed API `to_regclass('products')=NULL` in empty schema (no fallback to populated public); migration path still resolves public for extensions. Native assessment unassessable due to untracked doc; independent verifier ran.
@@ -29,9 +33,11 @@ Start a clean local KUTANA test environment in a dedicated PostgreSQL schema ins
 - Engram mirror unavailable (provider version mismatch).
 
 ## Consolidation tasks
-- [ ] TSZT-4: Merge feature into clean `main` (which already contains analytics), reconcile migration-discovery test conflicts and documentation, and independently verify. Preserve unrelated worktree-local `.atl/skill-registry.md` diff without merging it.
-- [ ] TSZT-5: Back up current database including the two users, move the 21 application tables and application function from `kutana_test` to the original `public` schema in one guarded transaction, preserving extension objects and data. Run database readback before removing the empty temporary schema.
-- [ ] TSZT-6: Restart only these local API/web services from `main` on 3000/5173 with `public` selected, verify catalog and both admin logins, then remove merged local feature/older branches and the now-unused feature worktree. Do not push or touch Windows production.
+
+- [x] TSZT-4: Merge feature into `main` (which already contains analytics), reconcile migration-discovery test conflicts and documentation, and independently verify. Evidence: main merge commit `3389555`; 492 tests passed and 58 skipped; typecheck and lint passed. Unrelated concurrent `OrdersOverview` changes remain uncommitted and preserved.
+- [x] TSZT-5: Back up the current database including the two users, move the 21 application tables and application function from `kutana_test` to `public` in one guarded transaction, preserve extension objects and data, verify the database readback, and remove the temporary schema. Evidence: final verified backup `~/KUTANA-backups/kutana-final-before-public-cutover-20260927-155208.dump` (SHA-256 `7ab898125b25ca682430c8fefa906c1f0e8d6ecfbdd6c14cc072b140e5984003`); guarded transaction and runtime Caro/Juan verification passed; `public` extensions were preserved.
+- [ ] TSZT-6: Restart only the local API/web services from `main` on 3000/5173 with `public` selected, verify catalog and both admin logins, then remove merged local feature/older branches and the now-unused feature worktree. Branch/worktree retirement is still pending; do not mark this task complete. Do not push or touch Windows production.
 
 ## Next step
-Complete the user-authorized consolidation into `main` and original `public` schema. Fresh backup and a live service cutover are required. Full PostgreSQL adapter suites remain skipped; repository-wide format check has pre-existing failures.
+
+Complete TSZT-6 branch/worktree cleanup and final local service verification. Preserve the unrelated uncommitted `OrdersOverview` changes and `odd/tasks/show-empty-order-actions.md`; do not stage or commit them. Full PostgreSQL adapter tests remain skipped.
