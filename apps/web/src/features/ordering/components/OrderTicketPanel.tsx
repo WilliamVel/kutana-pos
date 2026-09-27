@@ -41,6 +41,7 @@ export interface OrderTicketPanelLine {
   readonly paymentStatus?: LinePaymentStatus;
   readonly paidCents?: number;
   readonly payerLabels?: readonly string[];
+  readonly canRemove?: boolean;
 }
 
 export interface OrderTicketPanelProps {
@@ -54,6 +55,7 @@ export interface OrderTicketPanelProps {
   readonly paidLineCount?: number;
   readonly pendingLineCount?: number;
   readonly paymentDetails?: readonly OrderPaymentDetailLine[];
+  readonly removeBlockedMessage?: string | null;
   readonly onRemoveLine?: (lineId: string) => void;
 }
 
@@ -81,6 +83,7 @@ export function OrderTicketPanel({
   paidLineCount = 0,
   pendingLineCount = 0,
   paymentDetails = [],
+  removeBlockedMessage = null,
   onRemoveLine,
 }: OrderTicketPanelProps): JSX.Element {
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
@@ -113,9 +116,10 @@ export function OrderTicketPanel({
         <div><h2>{tableLabel}</h2><p className={styles.orderMeta}>{lines.reduce((count, line) => count + line.quantity, 0)} unidades · {lines.length} ítems</p></div>
         <StatusPill status={status} />
       </div>
+      {removeBlockedMessage ? <p role="alert">{removeBlockedMessage}</p> : null}
       {lines.length === 0 ? <p className={styles.empty}>Todavía no hay productos en esta orden.</p> : <>
-        <div className={styles.desktopLines} data-layout-products><table className={styles.lineTable}><colgroup><col className={styles.quantityColumn} /><col className={styles.productColumn} /><col className={styles.priceColumn} /><col className={styles.totalColumn} /><col className={styles.actionColumn} /></colgroup><thead><tr><th scope="col" /><th scope="col">Producto</th><th scope="col" className={styles.priceHeader}>Precio</th><th scope="col" className={styles.totalHeader}>Total</th><th scope="col" /></tr></thead><tbody>{lines.map((line) => <LineItemRow key={line.id} layout="table" name={line.name} quantity={line.quantity} unitPriceCents={line.unitPriceCents} totalCents={line.totalCents} settlementTotalCents={line.settlementTotalCents} pourSizeMl={line.pourSizeMl} isAdjustment={line.isAdjustment} statusLabel={line.paymentStatus} paidCents={line.paidCents} onRemove={onRemoveLine && !line.isAdjustment ? () => onRemoveLine(line.id) : undefined} />)}</tbody></table></div>
-        <div className={styles.mobileLines}>{lines.map((line) => <LineItemRow key={line.id} layout="mobile" name={line.name} quantity={line.quantity} unitPriceCents={line.unitPriceCents} totalCents={line.totalCents} settlementTotalCents={line.settlementTotalCents} pourSizeMl={line.pourSizeMl} isAdjustment={line.isAdjustment} statusLabel={line.paymentStatus} paidCents={line.paidCents} onRemove={onRemoveLine && !line.isAdjustment ? () => onRemoveLine(line.id) : undefined} />)}</div>
+        <div className={styles.desktopLines} data-layout-products><table className={styles.lineTable}><colgroup><col className={styles.quantityColumn} /><col className={styles.productColumn} /><col className={styles.priceColumn} /><col className={styles.totalColumn} /><col className={styles.actionColumn} /></colgroup><thead><tr><th scope="col" /><th scope="col">Producto</th><th scope="col" className={styles.priceHeader}>Precio</th><th scope="col" className={styles.totalHeader}>Total</th><th scope="col" /></tr></thead><tbody>{lines.map((line) => <LineItemRow key={line.id} layout="table" name={line.name} quantity={line.quantity} unitPriceCents={line.unitPriceCents} totalCents={line.totalCents} settlementTotalCents={line.settlementTotalCents} pourSizeMl={line.pourSizeMl} isAdjustment={line.isAdjustment} statusLabel={line.paymentStatus} paidCents={line.paidCents} onRemove={onRemoveLine && !line.isAdjustment && line.canRemove !== false ? () => onRemoveLine(line.id) : undefined} />)}</tbody></table></div>
+        <div className={styles.mobileLines}>{lines.map((line) => <LineItemRow key={line.id} layout="mobile" name={line.name} quantity={line.quantity} unitPriceCents={line.unitPriceCents} totalCents={line.totalCents} settlementTotalCents={line.settlementTotalCents} pourSizeMl={line.pourSizeMl} isAdjustment={line.isAdjustment} statusLabel={line.paymentStatus} paidCents={line.paidCents} onRemove={onRemoveLine && !line.isAdjustment && line.canRemove !== false ? () => onRemoveLine(line.id) : undefined} />)}</div>
       </>}
       <div className={styles.totals} data-layout-summary>
         <div className={styles.totalRow}><span>Subtotal</span><PriceTag cents={subtotalCents} /></div>

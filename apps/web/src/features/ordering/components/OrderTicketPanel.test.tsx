@@ -48,6 +48,22 @@ describe("OrderTicketPanel", () => {
     expect(screen.getAllByText("$15.12").length).toBe(2); // total and balance
   });
 
+  it("hides the remove affordance for an assigned aggregated row", () => {
+    render(
+      <OrderTicketPanel
+        tableLabel="Table 1"
+        status="active"
+        lines={[{ ...LINES[0]!, canRemove: false }]}
+        subtotalCents={700}
+        taxCents={0}
+        totalCents={700}
+        onRemoveLine={() => undefined}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Eliminar KUTANA Pilsener" })).not.toBeInTheDocument();
+  });
+
   it("omits the tax row for a new zero-tax order while preserving its listed total", () => {
     render(
       <OrderTicketPanel

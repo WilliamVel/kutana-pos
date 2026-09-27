@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { ConflictError } from "@kutana/shared/errors/conflict-error.js";
 import type {
   Order,
@@ -10,7 +11,7 @@ import type {
   Customer,
   PersonalAccount,
 } from "@kutana/shared/billing/model/personal-account.js";
-import { removeLineItem } from "@kutana/shared/ordering/services/line-item-service.js";
+import { removeLineItemUnit } from "@kutana/shared/ordering/services/line-item-service.js";
 import {
   useCustomers,
   useOrderEvents,
@@ -44,6 +45,7 @@ type LineItem = Order["lineItems"][number];
 function aggregateLines(
   lines: readonly LineItem[],
   paidCentsByLineId: ReadonlyMap<string, number>,
+  accountAllocations: readonly AccountLineAllocation[],
 ): OrderTicketPanelLine[] {
   const source = lines.map((line) => ({ ...line, name: line.nameSnapshot }));
   return aggregateOrderLines(source).map((line) => {
@@ -63,6 +65,11 @@ function aggregateLines(
       isAdjustment: line.isAdjustment,
       paymentStatus,
       paidCents,
+      canRemove: !members.some((member) =>
+        accountAllocations.some(
+          (allocation) => allocation.lineItemId === member.id && allocation.quantity > 0,
+        ),
+      ),
     };
   });
 }
@@ -96,6 +103,7 @@ export function OrderTicketPanelContainer({
   const [accountAllocations, setAccountAllocations] = useState<AccountLineAllocation[]>([]);
   const [accountPaidById, setAccountPaidById] = useState<Record<string, number>>({});
   const [loadState, setLoadState] = useState<"loading" | "ready" | "empty" | "error">("loading");
+  const [removeBlockedMessage, setRemoveBlockedMessage] = useState<string | null>(null);
   const mountedRef = useRef(false);
   const requestIdRef = useRef(0);
 
@@ -192,12 +200,32 @@ export function OrderTicketPanelContainer({
   }, [events, loadOrder, loadState, order?.id]);
 
   async function handleRemoveLine(lineId: string): Promise<void> {
+    setRemoveBlockedMessage(null);
     const current = await orders.findByTable(tableId);
     if (!current) {
       return;
     }
 
-    const next = removeLineItem(current, lineId);
+    const freshAllocations = await personalAccounts.listAllocationsByOrder(current.id);
+    const targetLine = current.lineItems.find((line) => line.id === lineId);
+    const targetKey = targetLine
+      ? orderLineGroupingKey({ ...targetLine, name: targetLine.nameSnapshot })
+      : null;
+    const hasPositiveAllocation = targetKey !== null && current.lineItems.some((line) =>
+      orderLineGroupingKey({ ...line, name: line.nameSnapshot }) === targetKey
+      && freshAllocations.some(
+        (allocation) => allocation.lineItemId === line.id && allocation.quantity > 0,
+      ),
+    );
+    if (hasPositiveAllocation) {
+      const message = "No se puede eliminar un producto asignado a una cuenta.";
+      setRemoveBlockedMessage(message);
+      toast.error(message, { duration: 2600 });
+      void loadOrder(current);
+      return;
+    }
+
+    const next = removeLineItemUnit(current, lineId);
     try {
       const shouldCloseEmptyOrder = next.lineItems.length === 0;
       const orderToSave: Order = shouldCloseEmptyOrder
@@ -221,6 +249,7 @@ export function OrderTicketPanelContainer({
         at: new Date().toISOString(),
         payload: saved,
       });
+      toast.success(`${targetLine?.nameSnapshot ?? "Producto"} eliminado`, { duration: 2600 });
       void loadOrder();
     } catch (error) {
       if (error instanceof ConflictError) {
@@ -267,7 +296,7 @@ export function OrderTicketPanelContainer({
       );
     });
   }
-  const lines = aggregateLines(order.lineItems, paidCentsByLineId);
+  const lines = aggregateLines(order.lineItems, paidCentsByLineId, accountAllocations);
   const paymentDetailsByKey = new Map<string, OrderPaymentDetailLine>();
   order.lineItems.forEach((line) => {
     const lineAllocations = accountAllocations.filter((allocation) => allocation.lineItemId === line.id);
@@ -338,6 +367,7 @@ export function OrderTicketPanelContainer({
       paidLineCount={paymentDetails.reduce((sum, line) => sum + line.paidQuantity, 0)}
       pendingLineCount={paymentDetails.reduce((sum, line) => sum + line.pendingQuantity, 0)}
       paymentDetails={paymentDetails}
+      removeBlockedMessage={removeBlockedMessage}
       onRemoveLine={
         order.status === "paid" || order.status === "closed_with_pending"
           ? undefined
