@@ -62,6 +62,22 @@
 .paymentList .empty { padding: 1rem 0; }
 .grandTotal { margin-top: var(--space-1); padding-top: var(--space-2); border-top: 1px solid var(--border-subtle); color: var(--text-primary); font-weight: 700; font-size: 1.0625rem; }
 .empty { padding: 1rem 0; color: var(--text-secondary); }
+.selectionList { display: flex; flex-direction: column; gap: .5rem; overflow-y: auto; }
+.selectionRow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 1rem; padding: .85rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); }
+.selectionCheck { display: flex; align-items: flex-start; gap: .75rem; cursor: pointer; }
+.selectionCheck input { width: 1.25rem; height: 1.25rem; margin-top: .15rem; accent-color: var(--accent-emphasis); }
+.selectionCheck span { display: flex; flex-direction: column; gap: .2rem; }
+.selectionCheck small { color: var(--text-secondary); }
+.quantityPicker { display: flex; align-items: center; gap: .4rem; color: var(--text-secondary); font-size: .8rem; }
+.quantityPicker input { width: 4rem; min-height: 2.25rem; padding: .25rem; border: 1px solid var(--border-subtle); border-radius: .4rem; text-align: center; }
+.selectionSummary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border-radius: var(--radius-md); background: var(--surface-sunken); font-weight: 700; }
+.selectionSummary button, .selectionReviewActions button { min-height: 2.5rem; padding: .5rem .85rem; border: 0; border-radius: .5rem; background: var(--accent-emphasis); color: var(--surface-raised); font: inherit; font-weight: 700; cursor: pointer; }
+.selectionSummary button:disabled { opacity: .5; cursor: not-allowed; }
+.selectionReviewList, .selectionReviewTotals { display: flex; flex-direction: column; gap: .65rem; padding: 0 var(--space-5) var(--space-4); }
+.selectionReviewTotals { padding-top: var(--space-3); border-top: 1px solid var(--border-subtle); }
+.selectionReviewActions { display: flex; justify-content: flex-end; gap: .75rem; padding: var(--space-4) var(--space-5) var(--space-5); }
+.selectionReviewActions button:first-child { background: var(--surface-sunken); color: var(--text-primary); }
+@media (max-width: 42rem) { .selectionRow { grid-template-columns: minmax(0, 1fr) auto; } .selectionRow > strong { grid-column: 2; grid-row: 1; } .quantityPicker { grid-column: 1 / -1; } .selectionSummary { align-items: stretch; flex-direction: column; } .selectionReviewActions { flex-direction: column-reverse; } .selectionReviewActions button { width: 100%; } }
 @media (max-width: 42rem) {
   .modalBackdrop { align-items: end; padding: 0; }
   .paymentModal { width: 100%; max-height: min(90dvh, 42rem); border-radius: var(--radius-md) var(--radius-md) 0 0; }

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { createAllocation, type Allocation } from "@kutana/shared/billing/model/allocation.js";
 import {
   accountBalance,
+  createAccountLineAllocation,
+  createPersonalAccount,
   derivePersonalAccountStatus,
   type AccountLineAllocation,
   type AccountPaymentAmount,
@@ -36,6 +38,7 @@ import {
   type RegisterPaymentPanelLine,
 } from "../components/RegisterPaymentPanel.js";
 import type { PaymentReviewInfo } from "../payment-review.js";
+import type { SelectedProductLine } from "../../ordering/components/OrderTicketPanel.js";
 
 interface AccountPaymentCache {
   readonly accountId: string;
@@ -54,6 +57,7 @@ export interface RegisterPaymentContainerProps {
    * still uses tickets while personal-account settlement uses `personalAccountId`.
    */
   readonly ticketId?: string;
+  readonly selectedProductLines?: readonly SelectedProductLine[];
 }
 
 function ownerLabel(account: PersonalAccount, customers: readonly Customer[]): string {
@@ -140,9 +144,16 @@ function accountLinesForDisplay(
   }));
 }
 
-function isHttpResponseError(error: unknown): error is Error & { status: number; responseBody: string | null } {
-  return error instanceof Error && "status" in error && typeof error.status === "number"
-    && "responseBody" in error && (typeof error.responseBody === "string" || error.responseBody === null);
+function isHttpResponseError(
+  error: unknown,
+): error is Error & { status: number; responseBody: string | null } {
+  return (
+    error instanceof Error &&
+    "status" in error &&
+    typeof error.status === "number" &&
+    "responseBody" in error &&
+    (typeof error.responseBody === "string" || error.responseBody === null)
+  );
 }
 
 function paymentReviewInfo(error: unknown): PaymentReviewInfo | null {
@@ -168,11 +179,14 @@ function paymentErrorMessage(error: unknown): string {
     return "El pago se registró. La mesa permanece abierta para completar una revisión.";
   }
   if (isHttpResponseError(error)) {
-    if (error.status === 409) return "La orden cambió mientras se registraba el pago. Actualizá la pantalla e intentá nuevamente.";
-    if (error.status >= 500) return "El servidor no pudo completar la operación. Intentá nuevamente en unos segundos.";
+    if (error.status === 409)
+      return "La orden cambió mientras se registraba el pago. Actualizá la pantalla e intentá nuevamente.";
+    if (error.status >= 500)
+      return "El servidor no pudo completar la operación. Intentá nuevamente en unos segundos.";
     return "No se pudo completar el pago. Verificá los datos e intentá nuevamente.";
   }
-  if (error instanceof TypeError) return "No se pudo conectar con el servidor. Verificá la conexión e intentá nuevamente.";
+  if (error instanceof TypeError)
+    return "No se pudo conectar con el servidor. Verificá la conexión e intentá nuevamente.";
   return "No se pudo completar el pago. Intentá nuevamente.";
 }
 
@@ -202,6 +216,7 @@ export function RegisterPaymentContainer({
   onReviewPayment,
   onBack,
   ticketId,
+  selectedProductLines,
 }: RegisterPaymentContainerProps): JSX.Element | null {
   const tables = useTables();
   const orders = useOrders();
@@ -247,82 +262,82 @@ export function RegisterPaymentContainer({
     async function load(): Promise<void> {
       try {
         const table = await tables.findById(tableId);
-      if (!table?.currentOrderId) {
-        if (!cancelled) {
-          setLoadState("error");
-          setErrorMessage("No hay una orden activa para cobrar.");
+        if (!table?.currentOrderId) {
+          if (!cancelled) {
+            setLoadState("error");
+            setErrorMessage("No hay una orden activa para cobrar.");
+          }
+          return;
         }
-        return;
-      }
-      setTableLabel(table.label);
+        setTableLabel(table.label);
         const foundOrder = await orders.findByTable(tableId);
         if (cancelled || !foundOrder) return;
         setOrder(foundOrder);
         setCustomers(await customersPort.listAll());
 
-      if (personalAccountId) {
-        const [account, orderAccountAllocations, accountPayments] = await Promise.all([
-          accountsPort.findById(personalAccountId),
+        if (personalAccountId) {
+          const [account, orderAccountAllocations, accountPayments] = await Promise.all([
+            accountsPort.findById(personalAccountId),
+            accountsPort.listAllocationsByOrder(foundOrder.id),
+            paymentsPort.listByTarget({ kind: "personal_account", accountId: personalAccountId }),
+          ]);
+          if (cancelled || !account) return;
+          setPersonalAccount(account);
+          setAccountAllocations(orderAccountAllocations);
+          setPayments(accountPayments);
+          setAccountPayments([]);
+          setTicket(null);
+          setLoadState("ready");
+          return;
+        }
+
+        const existingTickets = await tickets.listByOrder(foundOrder.id);
+        let orderAllocations = await tickets.listAllocationsByOrder(foundOrder.id);
+        const [foundAccounts, foundAccountAllocations] = await Promise.all([
+          accountsPort.listByOrder(foundOrder.id),
           accountsPort.listAllocationsByOrder(foundOrder.id),
-          paymentsPort.listByTarget({ kind: "personal_account", accountId: personalAccountId }),
         ]);
-        if (cancelled || !account) return;
-        setPersonalAccount(account);
-        setAccountAllocations(orderAccountAllocations);
-        setPayments(accountPayments);
-        setAccountPayments([]);
-        setTicket(null);
+        let activeTicket = ticketId
+          ? (existingTickets.find((candidate) => candidate.id === ticketId) ?? null)
+          : (existingTickets.find((candidate) => candidate.status !== "paid") ?? null);
+
+        if (!activeTicket && !ticketId) {
+          const newTicket = createTicket({ orderId: foundOrder.id, label: table.label });
+          const newAllocations = foundOrder.lineItems.map((line) =>
+            createAllocation({ lineItemId: line.id, ticketId: newTicket.id }),
+          );
+          activeTicket = await tickets.save(newTicket, newAllocations, 0);
+          orderAllocations = newAllocations;
+        }
+        if (cancelled || !activeTicket) return;
+        setTicket(activeTicket);
+        setAllocations(orderAllocations);
+        setOrderAccounts(foundAccounts);
+        setOrderAccountAllocations(foundAccountAllocations);
         setLoadState("ready");
-        return;
-      }
 
-      const existingTickets = await tickets.listByOrder(foundOrder.id);
-      let orderAllocations = await tickets.listAllocationsByOrder(foundOrder.id);
-      const [foundAccounts, foundAccountAllocations] = await Promise.all([
-        accountsPort.listByOrder(foundOrder.id),
-        accountsPort.listAllocationsByOrder(foundOrder.id),
-      ]);
-      let activeTicket = ticketId
-        ? (existingTickets.find((candidate) => candidate.id === ticketId) ?? null)
-        : (existingTickets.find((candidate) => candidate.status !== "paid") ?? null);
-
-      if (!activeTicket && !ticketId) {
-        const newTicket = createTicket({ orderId: foundOrder.id, label: table.label });
-        const newAllocations = foundOrder.lineItems.map((line) =>
-          createAllocation({ lineItemId: line.id, ticketId: newTicket.id }),
-        );
-        activeTicket = await tickets.save(newTicket, newAllocations, 0);
-        orderAllocations = newAllocations;
-      }
-      if (cancelled || !activeTicket) return;
-      setTicket(activeTicket);
-      setAllocations(orderAllocations);
-      setOrderAccounts(foundAccounts);
-      setOrderAccountAllocations(foundAccountAllocations);
-      setLoadState("ready");
-
-      const [ticketPayments, accountPaymentEntries] = await Promise.all([
-        paymentsPort.listByTicket(activeTicket.id),
-        Promise.all(
-          foundAccounts.map(async (account) => ({
-            accountId: account.id,
-            payments: await paymentsPort.listByTarget({
-              kind: "personal_account",
+        const [ticketPayments, accountPaymentEntries] = await Promise.all([
+          paymentsPort.listByTicket(activeTicket.id),
+          Promise.all(
+            foundAccounts.map(async (account) => ({
               accountId: account.id,
-            }),
-          })),
-        ),
-      ]);
-      if (!cancelled) {
-        setPayments(ticketPayments);
-        setAccountPayments(accountPaymentEntries);
+              payments: await paymentsPort.listByTarget({
+                kind: "personal_account",
+                accountId: account.id,
+              }),
+            })),
+          ),
+        ]);
+        if (!cancelled) {
+          setPayments(ticketPayments);
+          setAccountPayments(accountPaymentEntries);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLoadState("error");
+          setErrorMessage(paymentErrorMessage(error));
+        }
       }
-    } catch (error) {
-      if (!cancelled) {
-        setLoadState("error");
-        setErrorMessage(paymentErrorMessage(error));
-      }
-    }
     }
 
     void load();
@@ -337,12 +352,14 @@ export function RegisterPaymentContainer({
     personalAccountId,
     tableId,
     ticketId,
+    selectedProductLines,
     tables,
     tickets,
   ]);
 
   if (loadState === "loading" && !order) return <p role="status">Cargando orden…</p>;
-  if (loadState === "error" && !order) return <p role="alert">{errorMessage ?? "No se pudo cargar la orden."}</p>;
+  if (loadState === "error" && !order)
+    return <p role="alert">{errorMessage ?? "No se pudo cargar la orden."}</p>;
   if (!order || (!ticket && !personalAccount)) return null;
 
   const activeAccountAllocations = personalAccount
@@ -352,7 +369,9 @@ export function RegisterPaymentContainer({
     ? accountLinesForDisplay(order, activeAccountAllocations, personalAccount.id)
     : [];
 
-  const isWholeTablePayment = !personalAccount && ticketId === undefined;
+  const isSelectedProductPayment = !personalAccount && (selectedProductLines?.length ?? 0) > 0;
+  const isWholeTablePayment =
+    !personalAccount && ticketId === undefined && !isSelectedProductPayment;
   const allocatedLineItemIds = ticket
     ? new Set(
         allocations
@@ -362,9 +381,23 @@ export function RegisterPaymentContainer({
     : new Set<string>();
   const remainingOrderLineItems = unpaidLineItems(order, orderAccounts, orderAccountAllocations);
   const ticketLineItems = ticket
-    ? isWholeTablePayment
-      ? remainingOrderLineItems
-      : remainingOrderLineItems.filter((line) => allocatedLineItemIds.has(line.id))
+    ? isSelectedProductPayment
+      ? order.lineItems.flatMap((line) => {
+          const selected =
+            selectedProductLines?.find((item) => item.lineId === line.id)?.quantity ?? 0;
+          if (selected <= 0) return [];
+          return [
+            {
+              ...line,
+              quantity: selected,
+              taxCents: Math.round((line.taxCents / line.quantity) * selected),
+              totalCents: Math.round((line.totalCents / line.quantity) * selected),
+            },
+          ];
+        })
+      : isWholeTablePayment
+        ? remainingOrderLineItems
+        : remainingOrderLineItems.filter((line) => allocatedLineItemIds.has(line.id))
     : [];
   const ticketLines: RegisterPaymentPanelLine[] = aggregateOrderLines(
     ticketLineItems.map((line) => ({ ...line, name: line.nameSnapshot })),
@@ -379,11 +412,12 @@ export function RegisterPaymentContainer({
   }));
 
   const lines = personalAccount ? accountLines : ticketLines;
-  const productsError = loadState === "error"
-    ? errorMessage ?? "No se pudieron recuperar los productos de la orden."
-    : order.lineItems.length > 0 && lines.length === 0
-      ? "No se pudieron resolver los productos de esta orden. Regresa al pedido e inténtalo nuevamente."
-      : null;
+  const productsError =
+    loadState === "error"
+      ? (errorMessage ?? "No se pudieron recuperar los productos de la orden.")
+      : order.lineItems.length > 0 && lines.length === 0
+        ? "No se pudieron resolver los productos de esta orden. Regresa al pedido e inténtalo nuevamente."
+        : null;
   const productsReady = loadState === "ready" && lines.length > 0 && productsError === null;
   const subtotalCents = lines.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0);
   const taxCents = Math.max(
@@ -397,9 +431,11 @@ export function RegisterPaymentContainer({
         allocations: accountAllocations,
         payments: toAccountPayments(personalAccount.id, payments),
       }).totalCents
-    : isWholeTablePayment
+    : isSelectedProductPayment
       ? ticketLines.reduce((sum, line) => sum + line.totalCents, 0)
-      : ticketTotals(ticket!.id, order.lineItems, allocations).cents;
+      : isWholeTablePayment
+        ? ticketLines.reduce((sum, line) => sum + line.totalCents, 0)
+        : ticketTotals(ticket!.id, order.lineItems, allocations).cents;
   const accountPaidCents = accountPayments.reduce(
     (sum, entry) => sum + paymentsTotal(entry.payments),
     0,
@@ -521,6 +557,85 @@ export function RegisterPaymentContainer({
 
     if (!ticket || !order) return;
 
+    if (isSelectedProductPayment) {
+      const selected = selectedProductLines ?? [];
+      const currentAllocations = await accountsPort.listAllocationsByOrder(order.id);
+      const allocations = selected.flatMap((item) => {
+        const line = order.lineItems.find((candidate) => candidate.id === item.lineId);
+        if (!line) return [];
+        const alreadyAllocated = currentAllocations
+          .filter((allocation) => allocation.lineItemId === line.id)
+          .reduce((sum, allocation) => sum + allocation.quantity, 0);
+        const paidByAccounts = orderAccounts
+          .filter((account) => account.status === "paid")
+          .reduce(
+            (sum, account) =>
+              sum +
+              currentAllocations
+                .filter(
+                  (allocation) =>
+                    allocation.accountId === account.id && allocation.lineItemId === line.id,
+                )
+                .reduce((inner, allocation) => inner + allocation.quantity, 0),
+            0,
+          );
+        const available = Math.max(0, line.quantity - Math.max(alreadyAllocated, paidByAccounts));
+        if (item.quantity <= 0 || item.quantity > available)
+          throw new Error("Los productos seleccionados ya no están disponibles.");
+        return [
+          createAccountLineAllocation({
+            accountId: "pending",
+            lineItemId: line.id,
+            quantity: item.quantity,
+          }),
+        ];
+      });
+      const account = createPersonalAccount({
+        orderId: order.id,
+        freeName: `Cobro por productos · ${new Date().toLocaleTimeString()}`,
+      });
+      const accountAllocations = allocations.map((allocation) => ({
+        ...allocation,
+        accountId: account.id,
+      }));
+      let savedAccount: PersonalAccount | null = null;
+      try {
+        savedAccount = await accountsPort.save(account, accountAllocations, account.version);
+        const payment: Payment = {
+          id: createUuid(),
+          target: { kind: "personal_account", accountId: account.id },
+          methodCode: selectedMethod.code as PaymentMethodCode,
+          amountCents: effectiveAmountToPayCents,
+          tenderedCents: methodRequiresTendered && tenderedCents !== null ? tenderedCents : null,
+          changeCents:
+            methodRequiresTendered && tenderedCents !== null
+              ? computeChange({ remainingCents: effectiveAmountToPayCents, tenderedCents })
+                  .changeCents
+              : null,
+          recordedAt: new Date().toISOString(),
+        };
+        await paymentsPort.record(payment);
+        await accountsPort.save(
+          { ...savedAccount, status: "paid", closedAt: new Date().toISOString() },
+          accountAllocations,
+          savedAccount.version,
+        );
+        setTenderedCents(null);
+        setAmountToPayCents(null);
+        onPaymentComplete?.();
+      } catch (error) {
+        if (savedAccount) {
+          try {
+            await accountsPort.delete(savedAccount.id, savedAccount.version);
+          } catch {
+            /* preserve the retry selection if cleanup is rejected */
+          }
+        }
+        throw error;
+      }
+      return;
+    }
+
     if (isWholeTablePayment && orderAccounts.length > 0) {
       let amountLeft = effectiveAmountToPayCents;
       const nextAccountPayments = accountPayments.map((entry) => ({
@@ -579,7 +694,8 @@ export function RegisterPaymentContainer({
           ticketId: ticket.id,
           methodCode: selectedMethod.code as PaymentMethodCode,
           amountCents: amountLeft,
-          tenderedCents: methodRequiresTendered && tenderedCents !== null ? tenderedCents : undefined,
+          tenderedCents:
+            methodRequiresTendered && tenderedCents !== null ? tenderedCents : undefined,
         });
         const ticketPayment = nextTicketPayments[nextTicketPayments.length - 1];
         if (ticketPayment) await paymentsPort.record(ticketPayment);
