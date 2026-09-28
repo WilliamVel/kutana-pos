@@ -94,41 +94,33 @@ describe("RegisterPaymentPanel", () => {
     expect(onSelectMethod).toHaveBeenCalledWith("QR_PAYMENT");
   });
 
-  it("keeps amount and tendered drafts editable without formatting snap-back", () => {
-    renderPanel();
-    const amount = screen.getByLabelText("Monto a cobrar");
-    fireEvent.change(amount, { target: { value: "" } });
-    expect((amount as HTMLInputElement).value).toBe("");
-    fireEvent.change(amount, { target: { value: "12" } });
-    expect((amount as HTMLInputElement).value).toBe("12");
+  it("shows the remaining balance without a duplicate amount-to-charge control", () => {
+    const onAmountToPayChange = vi.fn();
+    renderPanel({ remainingBalanceCents: 1500, amountToPayCents: 1500, onAmountToPayChange });
 
-    const tendered = screen.getByLabelText("Efectivo recibido");
-    fireEvent.change(tendered, { target: { value: "" } });
-    expect((tendered as HTMLInputElement).value).toBe("");
-    fireEvent.change(tendered, { target: { value: "123" } });
-    expect((tendered as HTMLInputElement).value).toBe("123");
+    expect(screen.getByText("Saldo pendiente")).toBeInTheDocument();
+    expect(screen.getByText("$15.00")).toBeInTheDocument();
+    expect(screen.queryByText("Monto a cobrar")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Monto a cobrar")).not.toBeInTheDocument();
+    expect(onAmountToPayChange).not.toHaveBeenCalled();
   });
 
-  it("resynchronizes drafts when parent payment amounts reset after an action", () => {
+  it("keeps only the tendered cash draft editable and resynchronizes it after a reset", () => {
     const props = renderPanel({ amountToPayCents: 1200, tenderedCents: 1500 });
-    fireEvent.change(screen.getByLabelText("Monto a cobrar"), { target: { value: "10" } });
-    fireEvent.change(screen.getByLabelText("Efectivo recibido"), { target: { value: "12" } });
+    const tendered = screen.getByLabelText("Efectivo recibido");
+    fireEvent.change(tendered, { target: { value: "12" } });
 
     props.rerender(<RegisterPaymentPanel {...props} amountToPayCents={784} tenderedCents={null} />);
 
-    expect(screen.getByLabelText("Monto a cobrar")).toHaveValue("7.84");
+    expect(screen.getByText("Saldo pendiente")).toBeInTheDocument();
+    expect(screen.getAllByText("$7.84").length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText("Monto a cobrar")).not.toBeInTheDocument();
     expect((screen.getByLabelText("Efectivo recibido") as HTMLInputElement).value).toBe("");
   });
 
-  it("accepts comma decimals for amount and tendered inputs while preserving raw drafts", () => {
-    const onAmountToPayChange = vi.fn();
+  it("accepts comma decimals for the tendered cash input while preserving its raw draft", () => {
     const onTenderedChange = vi.fn();
-    renderPanel({ onAmountToPayChange, onTenderedChange });
-
-    const amount = screen.getByLabelText("Monto a cobrar");
-    fireEvent.change(amount, { target: { value: "7,84" } });
-    expect(amount).toHaveValue("7,84");
-    expect(onAmountToPayChange).toHaveBeenCalledWith(784);
+    renderPanel({ onTenderedChange });
 
     const tendered = screen.getByLabelText("Efectivo recibido");
     fireEvent.change(tendered, { target: { value: "10,50" } });
@@ -168,16 +160,9 @@ describe("RegisterPaymentPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reintentar cobro" }));
     expect(onDismissError).toHaveBeenCalledOnce();
     expect(onConfirmPayment).toHaveBeenCalledOnce();
-    expect(screen.getByDisplayValue("7.84")).toBeInTheDocument();
-  });
-
-  it("lets the cashier enter a partial amount to pay now, distinct from the full remaining balance", () => {
-    const onAmountToPayChange = vi.fn();
-    renderPanel({ remainingBalanceCents: 1500, amountToPayCents: 1500, onAmountToPayChange });
-
-    fireEvent.change(screen.getByLabelText("Monto a cobrar"), { target: { value: "10.00" } });
-
-    expect(onAmountToPayChange).toHaveBeenCalledWith(1000);
+    expect(screen.getByText("Saldo pendiente")).toBeInTheDocument();
+    expect(screen.getAllByText("$7.84").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Monto a cobrar")).not.toBeInTheDocument();
   });
 
   it("omits the tax row for a zero-tax order and charges its listed total", () => {
@@ -212,8 +197,11 @@ describe("RegisterPaymentPanel", () => {
     expect(screen.getByRole("button", { name: /Cobrar ·/ })).toBeDisabled();
   });
 
-  it("shows the remaining balance so partial payments toward one ticket are visible", () => {
-    renderPanel({ remainingBalanceCents: 500 });
+  it("keeps the current remaining balance visible without a Monto a cobrar label", () => {
+    renderPanel({ remainingBalanceCents: 500, amountToPayCents: 500 });
+    expect(screen.getByText("Saldo pendiente")).toBeInTheDocument();
     expect(screen.getByText("$5.00")).toBeInTheDocument();
+    expect(screen.queryByText("Monto a cobrar")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Monto a cobrar")).not.toBeInTheDocument();
   });
 });

@@ -99,7 +99,6 @@ export function RegisterPaymentPanel({
   remainingBalanceCents,
   paidCents = 0,
   amountToPayCents,
-  onAmountToPayChange,
   methods,
   selectedMethodCode,
   onSelectMethod,
@@ -123,25 +122,15 @@ export function RegisterPaymentPanel({
     selectedMethod && !selectedMethod.requiresTendered && /transfer|qr/i.test(selectedMethod.label),
   );
   const [manualConfirmation, setManualConfirmation] = useState(false);
-  const [amountDraft, setAmountDraft] = useState(() => formatCentsToDollarsInput(amountToPayCents));
   const [tenderedDraft, setTenderedDraft] = useState(() =>
     formatCentsToDollarsInput(tenderedCents),
   );
-  const pendingAmountCentsRef = useRef<number | null>(null);
   const pendingTenderedCentsRef = useRef<number | null>(null);
   const errorDialogRef = useRef<HTMLDivElement>(null);
   const errorOpenerRef = useRef<HTMLElement | null>(null);
   const dismissErrorRef = useRef(onDismissError);
   dismissErrorRef.current = onDismissError;
   useEffect(() => setManualConfirmation(false), [selectedMethodCode]);
-  useEffect(() => {
-    if (pendingAmountCentsRef.current === amountToPayCents) {
-      pendingAmountCentsRef.current = null;
-      return;
-    }
-    pendingAmountCentsRef.current = null;
-    setAmountDraft(formatCentsToDollarsInput(amountToPayCents));
-  }, [amountToPayCents]);
   useEffect(() => {
     if (pendingTenderedCentsRef.current === tenderedCents) {
       pendingTenderedCentsRef.current = null;
@@ -166,7 +155,6 @@ export function RegisterPaymentPanel({
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [errorMessage]);
-  const postPaymentBalance = Math.max(0, remainingBalanceCents - amountToPayCents);
   const amountError =
     amountToPayCents <= 0
       ? "Ingresa un monto mayor que cero."
@@ -281,32 +269,6 @@ export function RegisterPaymentPanel({
                 ) : null}
               </div>
             </details>
-
-            <div className={styles.amountBlock}>
-              <div className={styles.currencyInput}>
-                <span aria-hidden="true">$</span>
-                <Input
-                  label="Monto a cobrar"
-                  type="text"
-                  inputMode="decimal"
-                  min={0.01}
-                  value={amountDraft}
-                  onChange={(value) => {
-                    const cents = parseDollarsToCents(value);
-                    pendingAmountCentsRef.current = cents;
-                    setAmountDraft(value);
-                    onAmountToPayChange(cents);
-                  }}
-                  error={amountError ?? undefined}
-                />
-              </div>
-              {amountToPayCents > 0 && amountToPayCents < remainingBalanceCents ? (
-                <p className={styles.afterPayment}>
-                  Después de este pago quedarán{" "}
-                  <strong data-numeric="true">{formatCents(postPaymentBalance)}</strong> pendientes.
-                </p>
-              ) : null}
-            </div>
 
             <fieldset className={styles.methodFieldset}>
               <legend>Método de pago</legend>

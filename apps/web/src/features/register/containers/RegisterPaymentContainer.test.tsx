@@ -23,7 +23,7 @@ describe("RegisterPaymentContainer", () => {
     expect(screen.queryByText(/card/i)).not.toBeInTheDocument();
   });
 
-  it("supports two partial payments (CASH then QR_PAYMENT) that together cover the full ticket total", async () => {
+  it("charges the full remaining balance and keeps cash as the only entered amount", async () => {
     const ports = buildMockPorts();
     render(
       <PortsProvider value={ports}>
@@ -35,33 +35,21 @@ describe("RegisterPaymentContainer", () => {
     await waitFor(() => expect(screen.getAllByText("$15.12").length).toBeGreaterThan(0));
     expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
     expect(screen.getByText("Loaded Nachos")).toBeInTheDocument();
+    expect(screen.getByText("Saldo pendiente")).toBeInTheDocument();
+    expect(screen.getAllByText("$15.12").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Monto a cobrar")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Monto a cobrar")).not.toBeInTheDocument();
 
-    // First partial payment: CASH, pay 1000 of the 1512 total, tendered exactly 1000.
-    fireEvent.click(screen.getByRole("radio", { name: "Efectivo" }));
-    fireEvent.change(screen.getByLabelText("Monto a cobrar"), { target: { value: "10.00" } });
-    fireEvent.change(screen.getByLabelText("Efectivo recibido"), { target: { value: "10.00" } });
-    fireEvent.click(screen.getByRole("button", { name: "Registrar pago · $10.00" }));
-
-    // Remaining balance drops to 512.
-    await waitFor(() => expect(screen.getByText("$5.12")).toBeInTheDocument());
-
-    // Second partial payment: QR_PAYMENT (no tendered/change UI) covers the rest.
-    fireEvent.click(screen.getByRole("radio", { name: "Pago QR" }));
-    fireEvent.click(
-      screen.getByRole("checkbox", { name: "Confirmo que el pago QR fue recibido." }),
-    );
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: /Registrar pago · \$5\.12/ })).toBeEnabled(),
-    );
-    fireEvent.click(screen.getByRole("button", { name: /Registrar pago · \$5\.12/ }));
+    fireEvent.change(screen.getByLabelText("Efectivo recibido"), { target: { value: "15.12" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cobrar · $15.12" }));
 
     await waitFor(() => expect(screen.getAllByText("$0.00").length).toBeGreaterThan(0));
 
     const finalPayments = await ports.payments.listByTicket(
       (await ports.tickets.listByOrder((await ports.orders.findByTable("table-1"))!.id))[0]!.id,
     );
-    expect(finalPayments).toHaveLength(2);
-    expect(finalPayments.reduce((sum, payment) => sum + payment.amountCents, 0)).toBe(1512);
+    expect(finalPayments).toHaveLength(1);
+    expect(finalPayments[0]!.amountCents).toBe(1512);
   });
 
   it("uses the same checkout screen to pay a selected personal account with method choice", async () => {

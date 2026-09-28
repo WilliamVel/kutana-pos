@@ -1,0 +1,7 @@
+# Feature task mirror
+
+Canonical task document: `odd/tasks/simplify-register-payment-amount.md`
+
+1. Replace editable amount control with the existing `Saldo pendiente` due summary and adjust payment panel hierarchy/accessibility. Status: done. Route: delegated writer.
+2. Update focused register payment tests for removed amount control and cash states. Status: done. Route: delegated writer.
+3. Run focused web tests and typecheck; inspect diff for unchanged payment contracts. Status: done. Route: delegated verifier.
