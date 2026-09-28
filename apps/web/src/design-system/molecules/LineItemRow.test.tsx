@@ -15,6 +15,7 @@ describe("LineItemRow", () => {
 
     expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
     expect(screen.getByText("x2")).toBeInTheDocument();
+    expect(screen.getByLabelText("2 unidades, solo lectura")).toBeInTheDocument();
     expect(screen.getByText("$7.00")).toBeInTheDocument();
   });
 

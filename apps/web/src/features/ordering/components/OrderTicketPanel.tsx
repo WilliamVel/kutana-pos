@@ -107,6 +107,7 @@ export function OrderTicketPanel({
 }: OrderTicketPanelProps): JSX.Element {
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
   const [showSelectionReview, setShowSelectionReview] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [filter, setFilter] = useState<"all" | "paid" | "pending">("all");
   const selectedById = new Map(selectedProducts.map((item) => [item.lineId, item.quantity]));
   const selectedUnits = selectedProducts.reduce((sum, item) => sum + item.quantity, 0);
@@ -127,6 +128,10 @@ export function OrderTicketPanel({
     onSelectionChange?.(next);
   };
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const reviewCloseButtonRef = useRef<HTMLButtonElement>(null);
+  const reviewDialogRef = useRef<HTMLElement>(null);
+  const reviewOpenerRef = useRef<HTMLElement | null>(null);
+  const paymentDetailsOpenerRef = useRef<HTMLElement | null>(null);
   const hasPaymentDetails = paidCents > 0 || paidLineCount > 0;
   const accountTotalCents = subtotalCents + taxCents;
   const filteredDetails = paymentDetails.filter(
@@ -219,20 +224,58 @@ export function OrderTicketPanel({
     );
   });
 
+  const closeSelectionReview = (): void => {
+    setShowSelectionReview(false);
+    setReviewSubmitting(false);
+    window.setTimeout(() => reviewOpenerRef.current?.focus(), 0);
+  };
+  const closePaymentDetails = (): void => {
+    setShowPaymentDetails(false);
+    window.setTimeout(() => paymentDetailsOpenerRef.current?.focus(), 0);
+  };
+
   useEffect(() => {
-    if (!showPaymentDetails) return;
+    if (!showPaymentDetails && !showSelectionReview) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    closeButtonRef.current?.focus();
+    const activeDialog = showPaymentDetails ? closeButtonRef.current : reviewDialogRef.current;
+    const firstFocusable = showPaymentDetails
+      ? closeButtonRef.current
+      : reviewDialogRef.current?.querySelector<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+    (firstFocusable ?? activeDialog)?.focus();
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") setShowPaymentDetails(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (showSelectionReview) closeSelectionReview();
+        else closePaymentDetails();
+        return;
+      }
+      if (event.key !== "Tab" || !showSelectionReview || !reviewDialogRef.current) return;
+      const focusable = Array.from(
+        reviewDialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [showPaymentDetails]);
+  }, [showPaymentDetails, showSelectionReview]);
 
   const productContent =
     lines.length === 0 ? (
@@ -320,7 +363,10 @@ export function OrderTicketPanel({
             <button
               type="button"
               className={styles.paymentDetailsButton}
-              onClick={() => setShowPaymentDetails(true)}
+              onClick={(event) => {
+                paymentDetailsOpenerRef.current = event.currentTarget;
+                setShowPaymentDetails(true);
+              }}
             >
               Ver detalle de pagos
             </button>
@@ -336,7 +382,10 @@ export function OrderTicketPanel({
           <button
             type="button"
             disabled={selectedUnits === 0}
-            onClick={() => setShowSelectionReview(true)}
+            onClick={(event) => {
+              reviewOpenerRef.current = event.currentTarget;
+              setShowSelectionReview(true);
+            }}
           >
             Revisar y cobrar
           </button>
@@ -346,9 +395,10 @@ export function OrderTicketPanel({
         <div
           className={styles.modalBackdrop}
           role="presentation"
-          onMouseDown={() => setShowSelectionReview(false)}
+          onMouseDown={closeSelectionReview}
         >
           <section
+            ref={reviewDialogRef}
             className={styles.paymentModal}
             role="dialog"
             aria-modal="true"
@@ -363,8 +413,9 @@ export function OrderTicketPanel({
               <button
                 type="button"
                 className={styles.closeModalButton}
-                onClick={() => setShowSelectionReview(false)}
-                aria-label="Volver a editar"
+                ref={reviewCloseButtonRef}
+                onClick={closeSelectionReview}
+                aria-label="Cerrar revisión del cobro"
               >
                 ×
               </button>
@@ -396,36 +447,44 @@ export function OrderTicketPanel({
                   <PriceTag cents={selectedCents} />
                 </strong>
               </div>
-              <div className={styles.totalRow}>
-                <span>Saldo pendiente después</span>
+              <div className={`${styles.totalRow} ${styles.remainingTotal}`}>
+                <span>
+                  Saldo restante
+                  <small>Después de este cobro</small>
+                </span>
                 <strong>
                   <PriceTag cents={Math.max(0, totalCents - selectedCents)} />
                 </strong>
               </div>
             </div>
             <div className={styles.selectionReviewActions}>
-              <button type="button" onClick={() => setShowSelectionReview(false)}>
+              <button type="button" onClick={closeSelectionReview}>
                 Volver a editar
               </button>
               <button
                 type="button"
+                disabled={reviewSubmitting}
+                aria-label={
+                  reviewSubmitting ? "Procesando cobro" : `Cobrar ${formatCents(selectedCents)}`
+                }
                 onClick={() => {
-                  setShowSelectionReview(false);
+                  if (reviewSubmitting) return;
+                  setReviewSubmitting(true);
                   onReviewSelectedProducts?.(selectedProducts);
+                  closeSelectionReview();
                 }}
               >
-                Ir a cobrar <PriceTag cents={selectedCents} />
+                <span>Cobrar</span>
+                <span className={styles.actionAmount} aria-hidden="true">
+                  {reviewSubmitting ? "Procesando…" : formatCents(selectedCents)}
+                </span>
               </button>
             </div>
           </section>
         </div>
       ) : null}
       {showPaymentDetails ? (
-        <div
-          className={styles.modalBackdrop}
-          role="presentation"
-          onMouseDown={() => setShowPaymentDetails(false)}
-        >
+        <div className={styles.modalBackdrop} role="presentation" onMouseDown={closePaymentDetails}>
           <section
             className={styles.paymentModal}
             role="dialog"
@@ -442,7 +501,7 @@ export function OrderTicketPanel({
                 ref={closeButtonRef}
                 type="button"
                 className={styles.closeModalButton}
-                onClick={() => setShowPaymentDetails(false)}
+                onClick={closePaymentDetails}
                 aria-label="Cerrar detalle de pagos"
               >
                 ×

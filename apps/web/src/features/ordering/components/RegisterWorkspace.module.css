@@ -65,6 +65,98 @@
   width: 100%;
   flex: 0 0 auto;
 }
+.splitMenuWrap {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.splitMenuWrap > button {
+  width: 100%;
+}
+.splitMenuBackdrop {
+  position: fixed;
+  z-index: 39;
+  inset: 0;
+  background: transparent;
+}
+.splitMenu {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  width: min(15rem, calc(100vw - 2rem));
+  max-height: min(22rem, calc(100dvh - 2rem));
+  flex-direction: column;
+  gap: 0.35rem;
+  overflow-y: auto;
+  padding: 0.6rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+  overscroll-behavior: contain;
+}
+.splitMenuHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0.35rem 0.55rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.splitMenuHeader > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.splitMenuHeader span,
+.splitMenuAction span {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+.splitMenuClose {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+.splitMenuClose:hover,
+.splitMenuClose:active {
+  background: var(--surface-active);
+}
+.splitMenuAction {
+  display: flex;
+  min-height: 3.4rem;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.splitMenuAction:hover,
+.splitMenuAction:active {
+  background: var(--surface-sunken);
+}
+.splitMenuAction:focus-visible,
+.splitMenuClose:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
 
 .rail {
   display: flex;
@@ -123,7 +215,9 @@
   box-shadow: var(--shadow-sm);
 }
 
-.mobileTabs { display: none; }
+.mobileTabs {
+  display: none;
+}
 
 /* Stack the columns on narrow viewports, matching the app-shell
    breakpoint in AppShell.module.css. */
@@ -237,6 +331,29 @@
     padding: var(--space-3) 0 calc(var(--space-3) + env(safe-area-inset-bottom));
     background: transparent;
     box-shadow: none;
+  }
+  .splitMenu {
+    top: auto !important;
+    right: 0;
+    bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
+    left: 0 !important;
+    width: auto;
+    max-height: min(75dvh, 28rem);
+    margin: 0 auto;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding: 0.75rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom));
+  }
+  .splitMenuBackdrop {
+    background: rgb(29 49 36 / 28%);
+    backdrop-filter: blur(3px);
+  }
+  .splitMenuAction {
+    min-height: 4rem;
+    padding: 0.85rem 1rem;
+  }
+  .splitMenuClose {
+    width: 2.75rem;
+    height: 2.75rem;
   }
 
   .centerActions button {

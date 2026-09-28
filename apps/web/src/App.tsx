@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AuthSession } from "@kutana/shared/auth/model/auth-session.js";
 import type { Product } from "@kutana/shared/catalog/model/product.js";
 import { AppShell } from "./app-shell/components/AppShell.js";
@@ -15,6 +15,7 @@ import { CategoryManagementContainer } from "./features/catalog/containers/Categ
 import { ProductFormContainer } from "./features/catalog/containers/ProductFormContainer.js";
 import { InventoryListContainer } from "./features/inventory/containers/InventoryListContainer.js";
 import { RegisterWorkspace } from "./features/ordering/components/RegisterWorkspace.js";
+import workspaceStyles from "./features/ordering/components/RegisterWorkspace.module.css";
 import { AddItemContainer } from "./features/ordering/containers/AddItemContainer.js";
 import { NewOrderContainer } from "./features/ordering/containers/NewOrderContainer.js";
 import { OrderTicketPanelContainer } from "./features/ordering/containers/OrderTicketPanelContainer.js";
@@ -54,6 +55,9 @@ export function App(): JSX.Element {
   const [productSelectionMode, setProductSelectionMode] = useState(false);
   const [selectedProductLines, setSelectedProductLines] = useState<SelectedProductLine[]>([]);
   const [ordersReloadKey, setOrdersReloadKey] = useState(0);
+  const splitMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const splitMenuRef = useRef<HTMLDivElement>(null);
+  const [splitMenuPosition, setSplitMenuPosition] = useState({ top: 0, left: 0 });
   const [newOrderRequest, setNewOrderRequest] = useState(0);
   const [pendingCreatedTableId, setPendingCreatedTableId] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -65,6 +69,56 @@ export function App(): JSX.Element {
     setSelectedTicketId(null);
     setSelectedAccountId(null);
   };
+
+  useEffect(() => {
+    if (!splitMenuOpen) return;
+    const trigger = splitMenuTriggerRef.current;
+    const updatePosition = (): void => {
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const gap = 8;
+      const viewportPadding = 16;
+      const menuHeight = Math.min(
+        splitMenuRef.current?.getBoundingClientRect().height ?? 352,
+        window.innerHeight - viewportPadding * 2,
+      );
+      const below = rect.bottom + gap;
+      const above = rect.top - menuHeight - gap;
+      const fitsBelow = below + menuHeight <= window.innerHeight - viewportPadding;
+      const fitsAbove = above >= viewportPadding;
+      const top = fitsBelow || !fitsAbove ? Math.max(viewportPadding, below) : above;
+      setSplitMenuPosition({
+        top,
+        left: Math.max(16, Math.min(rect.right - 240, window.innerWidth - 256)),
+      });
+    };
+    updatePosition();
+    splitMenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+    const onPointerDown = (event: PointerEvent): void => {
+      if (
+        !splitMenuRef.current?.contains(event.target as Node) &&
+        !trigger?.contains(event.target as Node)
+      )
+        setSplitMenuOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setSplitMenuOpen(false);
+        trigger?.focus();
+      }
+    };
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [splitMenuOpen]);
 
   useEffect(() => {
     const expireSession = (): void => {
@@ -180,66 +234,87 @@ export function App(): JSX.Element {
       centerActions = (
         <ButtonRow>
           {selectedOrderReady && selectedOrderListReady ? (
-            <div style={{ position: "relative" }}>
+            <div className={workspaceStyles.splitMenuWrap}>
               <Button
+                buttonRef={splitMenuTriggerRef}
                 variant="secondary"
                 ariaLabel="Dividir cuenta"
+                ariaExpanded={splitMenuOpen}
+                ariaControls="split-payment-menu"
                 onClick={() => setSplitMenuOpen((open) => !open)}
               >
                 <Icon name="split" size={22} />
                 Dividir
               </Button>
               {splitMenuOpen ? (
-                <div
-                  role="menu"
-                  aria-label="Opciones para dividir"
-                  style={{
-                    position: "absolute",
-                    zIndex: 3,
-                    right: 0,
-                    bottom: "calc(100% + .5rem)",
-                    display: "flex",
-                    minWidth: "13rem",
-                    flexDirection: "column",
-                    gap: ".25rem",
-                    padding: ".5rem",
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: ".6rem",
-                    background: "var(--surface-raised)",
-                    boxShadow: "var(--shadow-lg)",
-                  }}
-                >
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setProductSelectionMode(true);
-                      setSplitMenuOpen(false);
-                    }}
+                <>
+                  <div className={workspaceStyles.splitMenuBackdrop} aria-hidden="true" />
+                  <div
+                    ref={splitMenuRef}
+                    id="split-payment-menu"
+                    className={workspaceStyles.splitMenu}
+                    role="menu"
+                    aria-label="Opciones para dividir"
+                    style={{ top: splitMenuPosition.top, left: splitMenuPosition.left }}
                   >
-                    Cobrar productos
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setCenterView("assignment");
-                      setSplitMenuOpen(false);
-                    }}
-                  >
-                    Partes iguales
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setCenterView("assignment");
-                      setSplitMenuOpen(false);
-                    }}
-                  >
-                    Por monto
-                  </button>
-                </div>
+                    <div className={workspaceStyles.splitMenuHeader}>
+                      <div>
+                        <strong>Dividir cuenta</strong>
+                        <span>Elegí cómo cobrarla</span>
+                      </div>
+                      <button
+                        type="button"
+                        className={workspaceStyles.splitMenuClose}
+                        aria-label="Cerrar opciones para dividir"
+                        onClick={() => {
+                          setSplitMenuOpen(false);
+                          splitMenuTriggerRef.current?.focus();
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <button
+                      className={workspaceStyles.splitMenuAction}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setProductSelectionMode(true);
+                        setSplitMenuOpen(false);
+                        splitMenuTriggerRef.current?.focus();
+                      }}
+                    >
+                      <strong>Cobrar productos</strong>
+                      <span>Seleccioná unidades concretas de la orden</span>
+                    </button>
+                    <button
+                      className={workspaceStyles.splitMenuAction}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setCenterView("assignment");
+                        setSplitMenuOpen(false);
+                        splitMenuTriggerRef.current?.focus();
+                      }}
+                    >
+                      <strong>Partes iguales</strong>
+                      <span>Distribuí el total entre personas</span>
+                    </button>
+                    <button
+                      className={workspaceStyles.splitMenuAction}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setCenterView("assignment");
+                        setSplitMenuOpen(false);
+                        splitMenuTriggerRef.current?.focus();
+                      }}
+                    >
+                      <strong>Por monto</strong>
+                      <span>Asigná un importe específico</span>
+                    </button>
+                  </div>
+                </>
               ) : null}
             </div>
           ) : null}

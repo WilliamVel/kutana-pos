@@ -124,10 +124,19 @@
   scrollbar-width: thin;
 }
 .checkoutActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   flex: 0 0 auto;
   padding-top: var(--space-2);
   border-top: 1px solid var(--border-subtle);
   background: var(--surface-raised);
+}
+.paymentStatus {
+  min-height: 1.25rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 650;
 }
 .balanceHero {
   display: flex;
@@ -136,7 +145,7 @@
   gap: var(--space-3);
   padding: var(--space-3);
   color: var(--text-primary);
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface-raised));
+  background: color-mix(in srgb, var(--accent-emphasis) 10%, var(--surface-raised));
   border: 1px solid color-mix(in srgb, var(--accent-strong) 35%, var(--border-subtle));
   border-radius: var(--radius-md);
 }

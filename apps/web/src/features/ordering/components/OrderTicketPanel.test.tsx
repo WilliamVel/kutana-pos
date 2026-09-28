@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { OrderTicketPanel, type OrderTicketPanelLine } from "./OrderTicketPanel.js";
 
@@ -143,7 +143,7 @@ describe("OrderTicketPanel", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("selects whole units, shows the amount, and preserves the review before checkout", () => {
+  it("selects whole units, shows the amount, and preserves the review before checkout", async () => {
     let selection = [] as { lineId: string; quantity: number }[];
     const onSelectionChange = (next: readonly { lineId: string; quantity: number }[]): void => {
       selection = [...next];
@@ -189,9 +189,17 @@ describe("OrderTicketPanel", () => {
     ).toHaveTextContent("$3.92");
     fireEvent.click(screen.getByRole("button", { name: "Revisar y cobrar" }));
     expect(screen.getByRole("dialog", { name: "Mesa 4" })).toBeInTheDocument();
-    expect(screen.getByText("Saldo pendiente después")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Volver a editar", { exact: true }));
+    expect(screen.getByText("Saldo restante")).toBeInTheDocument();
+    expect(screen.getByText("Después de este cobro")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cerrar revisión del cobro" })).toBeInTheDocument();
+    const payButton = screen.getByRole("button", { name: "Cobrar $3.92" });
+    expect(payButton).toHaveTextContent("Cobrar");
+    expect(payButton).toHaveTextContent("$3.92");
+    fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Revisar y cobrar" })).toHaveFocus(),
+    );
   });
 
   it("shows an empty state when the order has no line items yet", () => {

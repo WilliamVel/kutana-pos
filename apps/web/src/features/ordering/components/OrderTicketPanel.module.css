@@ -3,102 +3,629 @@
   height: 100%;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-4);
   width: 100%;
   max-width: 100%;
   min-width: 0;
   min-height: 0;
-  padding: 1rem;
-  overflow: visible;
+  padding: var(--space-5);
+  overflow: auto;
+  overscroll-behavior: contain;
   background-color: var(--surface-raised);
-  border-radius: 0.5rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
-.header { display: flex; align-items: center; justify-content: space-between; }
-.header h2 { margin: 0; }
-.orderMeta { margin: 0.1rem 0 0; color: var(--text-secondary); font-size: 0.9rem; }
-.orderSummary { display: flex; align-items: center; gap: 0.4rem; min-width: 0; width: 100%; max-width: 100%; padding: 0.7rem 0.85rem; border-radius: 0.75rem; background: var(--surface-sunken); color: var(--text-primary); }
-.orderSummary > span:nth-child(3) { overflow: hidden; text-overflow: ellipsis; }
-.orderSummary .orderSummaryStatus { margin-left: auto; }
-.desktopLines { min-height: 0; width: 100%; max-width: 100%; min-width: 0; flex: 0 1 auto; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-width: thin; }
-.lineTable { width: 100%; max-width: 100%; min-width: 0; border-collapse: collapse; table-layout: fixed; }
-.quantityColumn { width: 3.5rem; }
-.productColumn { width: auto; }
-.priceColumn { width: clamp(7rem, 18%, 9rem); }
-.totalColumn { width: clamp(6.25rem, 15%, 7.5rem); }
-.actionColumn { width: 3rem; }
-.lineTable th { padding: 0 0 8px; color: var(--text-secondary); font-size: 0.72rem; font-weight: 700; text-align: left; text-transform: uppercase; letter-spacing: 0.04em; white-space: normal; overflow-wrap: anywhere; }
-.lineTable th:first-child, .lineTable th:nth-child(2) { padding-left: 24px; }
-.lineTable th:last-child { padding-right: 8px; }
-.priceHeader, .totalHeader { text-align: right !important; font-variant-numeric: tabular-nums; }
-.mobileLines { display: none; }
-.totals { position: static; display: flex; width: 100%; max-width: 100%; min-width: 0; flex: 0 0 auto; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border-radius: var(--radius-md); background-color: var(--surface-sunken); }
-.totalRow { display: flex; min-width: 0; justify-content: space-between; gap: 16px; color: var(--text-secondary); font-size: 0.9375rem; }
-.totalRow > span { min-width: 0; }
-.totalRow > span:first-child { overflow-wrap: anywhere; }
-.paymentSummary { margin: var(--space-2) 0 0; color: var(--text-secondary); font-size: 0.8125rem; text-align: center; }
-.paymentDetailsButton { align-self: center; min-height: 2rem; padding: 0 0.25rem; border: 0; background: transparent; color: var(--accent-emphasis); font: inherit; font-size: 0.8125rem; font-weight: 700; text-decoration: underline; cursor: pointer; }
-.paymentDetailsButton:focus-visible, .closeModalButton:focus-visible { outline: 2px solid var(--accent-emphasis); outline-offset: 2px; }
-.modalBackdrop { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: var(--space-4); background: rgb(0 0 0 / 45%); overscroll-behavior: contain; }
-.paymentModal { display: flex; width: min(42rem, 100%); max-height: min(42rem, calc(100dvh - 2rem)); flex-direction: column; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); box-shadow: var(--shadow-lg); }
-.paymentModalHeader { position: sticky; top: 0; z-index: 1; display: flex; flex: 0 0 auto; align-items: flex-start; justify-content: space-between; gap: var(--space-3); padding: var(--space-5) var(--space-5) var(--space-3); background: var(--surface-raised); }
-.paymentModalHeader h3, .paymentEyebrow { margin: 0; }
-.paymentEyebrow { color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
-.closeModalButton { flex: 0 0 auto; width: 2.25rem; height: 2.25rem; border: 0; border-radius: 50%; background: var(--surface-sunken); color: var(--text-secondary); cursor: pointer; font-size: 1.15rem; line-height: 1; }
-.paymentOverview { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); padding: 0 var(--space-5) var(--space-3); font-variant-numeric: tabular-nums; }
-.paymentOverview div { display: flex; min-width: 0; flex-direction: column; gap: 0.15rem; }
-.paymentOverview span, .paymentOverview small, .paymentLine small { color: var(--text-secondary); font-size: 0.75rem; }
-.paymentOverview strong { font-size: 1rem; }
-.paymentFilters { display: flex; gap: 0.2rem; margin: 0 var(--space-5) var(--space-2); padding: 0.2rem; border-radius: 999px; background: var(--surface-sunken); }
-.paymentFilters button { flex: 1; min-height: 2rem; border: 0; border-radius: 999px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 0.8125rem; font-weight: 700; cursor: pointer; }
-.paymentFilters .activeFilter { background: var(--surface-raised); color: var(--text-primary); box-shadow: var(--shadow-sm); }
-.paymentList { display: flex; min-height: 0; flex-direction: column; gap: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 var(--space-5) var(--space-5); scrollbar-gutter: stable; scrollbar-width: thin; }
-.paymentLine { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); padding: 0.8rem 0; border-bottom: 1px solid var(--border-subtle); }
-.paymentLineTitle { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
-.paymentLineMain, .paymentAmounts { min-width: 0; }
-.paymentAmounts { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; font-variant-numeric: tabular-nums; text-align: right; }
-.paymentMembers { grid-column: 1 / -1; color: var(--text-secondary); font-size: 0.75rem; }
-.paymentMembers summary { cursor: pointer; }
-.paymentMembers div { display: flex; justify-content: space-between; gap: var(--space-2); padding-top: 0.35rem; }
-.paymentList .empty { padding: 1rem 0; }
-.grandTotal { margin-top: var(--space-1); padding-top: var(--space-2); border-top: 1px solid var(--border-subtle); color: var(--text-primary); font-weight: 700; font-size: 1.0625rem; }
-.empty { padding: 1rem 0; color: var(--text-secondary); }
-.selectionList { display: flex; flex-direction: column; gap: .5rem; overflow-y: auto; }
-.selectionRow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 1rem; padding: .85rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); }
-.selectionCheck { display: flex; align-items: flex-start; gap: .75rem; cursor: pointer; }
-.selectionCheck input { width: 1.25rem; height: 1.25rem; margin-top: .15rem; accent-color: var(--accent-emphasis); }
-.selectionCheck span { display: flex; flex-direction: column; gap: .2rem; }
-.selectionCheck small { color: var(--text-secondary); }
-.quantityPicker { display: flex; align-items: center; gap: .4rem; color: var(--text-secondary); font-size: .8rem; }
-.quantityPicker input { width: 4rem; min-height: 2.25rem; padding: .25rem; border: 1px solid var(--border-subtle); border-radius: .4rem; text-align: center; }
-.selectionSummary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border-radius: var(--radius-md); background: var(--surface-sunken); font-weight: 700; }
-.selectionSummary button, .selectionReviewActions button { min-height: 2.5rem; padding: .5rem .85rem; border: 0; border-radius: .5rem; background: var(--accent-emphasis); color: var(--surface-raised); font: inherit; font-weight: 700; cursor: pointer; }
-.selectionSummary button:disabled { opacity: .5; cursor: not-allowed; }
-.selectionReviewList, .selectionReviewTotals { display: flex; flex-direction: column; gap: .65rem; padding: 0 var(--space-5) var(--space-4); }
-.selectionReviewTotals { padding-top: var(--space-3); border-top: 1px solid var(--border-subtle); }
-.selectionReviewActions { display: flex; justify-content: flex-end; gap: .75rem; padding: var(--space-4) var(--space-5) var(--space-5); }
-.selectionReviewActions button:first-child { background: var(--surface-sunken); color: var(--text-primary); }
-@media (max-width: 42rem) { .selectionRow { grid-template-columns: minmax(0, 1fr) auto; } .selectionRow > strong { grid-column: 2; grid-row: 1; } .quantityPicker { grid-column: 1 / -1; } .selectionSummary { align-items: stretch; flex-direction: column; } .selectionReviewActions { flex-direction: column-reverse; } .selectionReviewActions button { width: 100%; } }
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.header h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.45rem, 2.2vw, 2rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.orderMeta {
+  margin: var(--space-2) 0 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+.header :global([data-status]) {
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+}
+.orderSummary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.75rem;
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+}
+.orderSummary > span:nth-child(3) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.orderSummary .orderSummaryStatus {
+  margin-left: auto;
+}
+.desktopLines {
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+.lineTable {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.quantityColumn {
+  width: 3.5rem;
+}
+.productColumn {
+  width: auto;
+}
+.priceColumn {
+  width: clamp(7rem, 18%, 9rem);
+}
+.totalColumn {
+  width: clamp(6.25rem, 15%, 7.5rem);
+}
+.actionColumn {
+  width: 3rem;
+}
+.lineTable th {
+  padding: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.lineTable th:first-child,
+.lineTable th:nth-child(2) {
+  padding-left: 24px;
+}
+.lineTable th:last-child {
+  padding-right: 8px;
+}
+.priceHeader,
+.totalHeader {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+.mobileLines {
+  display: none;
+}
+.totals {
+  position: static;
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background-color: var(--surface-sunken);
+  box-shadow: var(--shadow-sm);
+}
+.totals .totalRow {
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+}
+.totals .grandTotal {
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  font-size: 1.15rem;
+}
+.totals .grandTotal :global([data-numeric="true"]) {
+  font-size: 1.25rem;
+}
+.totalRow {
+  display: flex;
+  min-width: 0;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+.totalRow > span {
+  min-width: 0;
+}
+.totalRow > :global([data-numeric="true"]) {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.totalRow > span:first-child {
+  overflow-wrap: anywhere;
+}
+.paymentSummary {
+  margin: var(--space-2) 0 0;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+.paymentDetailsButton {
+  align-self: center;
+  min-height: 2rem;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--accent-emphasis);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.paymentDetailsButton:focus-visible,
+.closeModalButton:focus-visible {
+  outline: 2px solid var(--accent-emphasis);
+  outline-offset: 2px;
+}
+.modalBackdrop {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(0 0 0 / 45%);
+  overscroll-behavior: contain;
+}
+.paymentModal {
+  display: flex;
+  width: min(42rem, 100%);
+  max-height: min(42rem, calc(100dvh - 2rem));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+.paymentModalHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) var(--space-3);
+  background: var(--surface-raised);
+}
+.paymentModalHeader h3,
+.paymentEyebrow {
+  margin: 0;
+}
+.paymentEyebrow {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.closeModalButton {
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+.paymentOverview {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+  padding: 0 var(--space-5) var(--space-3);
+  font-variant-numeric: tabular-nums;
+}
+.paymentOverview div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.paymentOverview span,
+.paymentOverview small,
+.paymentLine small {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+.paymentOverview strong {
+  font-size: 1rem;
+}
+.paymentFilters {
+  display: flex;
+  gap: 0.2rem;
+  margin: 0 var(--space-5) var(--space-2);
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+.paymentFilters button {
+  flex: 1;
+  min-height: 2rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.paymentFilters .activeFilter {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+.paymentList {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--space-5) var(--space-5);
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+.paymentLine {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.paymentLineTitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.paymentLineMain,
+.paymentAmounts {
+  min-width: 0;
+}
+.paymentAmounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.paymentMembers {
+  grid-column: 1 / -1;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+.paymentMembers summary {
+  cursor: pointer;
+}
+.paymentMembers div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-top: 0.35rem;
+}
+.paymentList .empty {
+  padding: 1rem 0;
+}
+.grandTotal {
+  border-top: 1px solid var(--border-strong);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.empty {
+  padding: 1rem 0;
+  color: var(--text-secondary);
+}
+.selectionList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+}
+.selectionRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.selectionCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+.selectionCheck input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.15rem;
+  accent-color: var(--accent-emphasis);
+}
+.selectionCheck:focus-within,
+.quantityPicker:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+.selectionRow:has(input:checked) {
+  border-color: var(--border-active);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--border-active) 55%, transparent);
+}
+.selectionCheck span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.selectionCheck small {
+  color: var(--text-secondary);
+}
+.quantityPicker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+.quantityPicker input {
+  width: 4rem;
+  min-height: 2.75rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.selectionSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font-weight: 700;
+}
+.selectionSummary button,
+.selectionReviewActions button {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.85rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--accent-emphasis);
+  color: var(--surface-raised);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.selectionSummary button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.selectionReviewList,
+.selectionReviewTotals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-5) var(--space-3);
+}
+.selectionReviewList {
+  max-height: min(18rem, 34dvh);
+  overflow-y: auto;
+}
+.selectionReviewTotals {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  font-variant-numeric: tabular-nums;
+}
+.selectionReviewTotals .totalRow:first-child {
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.remainingTotal {
+  align-items: flex-start;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.remainingTotal > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.remainingTotal small {
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.selectionReviewActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: var(--space-3) var(--space-5) var(--space-4);
+}
+.selectionReviewActions button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0.65rem 1rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.selectionReviewActions button:first-child {
+  justify-content: center;
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+}
+.selectionReviewActions button:last-child {
+  min-width: 12rem;
+}
+.selectionReviewActions button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+.actionAmount {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.selectionReviewActions button:focus-visible,
+.closeModalButton:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
 @media (max-width: 42rem) {
-  .modalBackdrop { align-items: end; padding: 0; }
-  .paymentModal { width: 100%; max-height: min(90dvh, 42rem); border-radius: var(--radius-md) var(--radius-md) 0 0; }
-  .paymentModalHeader { padding: var(--space-4) var(--space-4) var(--space-3); }
-  .paymentOverview { grid-template-columns: repeat(2, 1fr); padding-right: var(--space-4); padding-left: var(--space-4); }
-  .paymentFilters { margin-right: var(--space-4); margin-left: var(--space-4); }
-  .paymentList { padding-right: var(--space-4); padding-left: var(--space-4); }
+  .selectionRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .selectionRow > strong {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .quantityPicker {
+    grid-column: 1 / -1;
+  }
+  .selectionSummary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .selectionReviewActions {
+    flex-direction: column;
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  }
+  .selectionReviewActions button {
+    width: 100%;
+  }
+}
+@media (max-width: 42rem) {
+  .modalBackdrop {
+    align-items: end;
+    padding: 0;
+  }
+  .paymentModal {
+    width: 100%;
+    max-height: min(90dvh, 42rem);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+  }
+  .selectionReviewList {
+    max-height: min(40dvh, 16rem);
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
+  }
+  .selectionReviewTotals {
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
+  }
+  .selectionReviewActions {
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
+  }
+  .selectionReviewActions button:last-child {
+    min-width: 0;
+  }
+  .paymentModalHeader {
+    padding: var(--space-4) var(--space-4) var(--space-3);
+  }
+  .paymentOverview {
+    grid-template-columns: repeat(2, 1fr);
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
+  }
+  .paymentFilters {
+    margin-right: var(--space-4);
+    margin-left: var(--space-4);
+  }
+  .paymentList {
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
+  }
 }
 @container (max-width: 64rem) {
-  .panel { width: 100%; height: auto; max-height: none; padding: 0; overflow: visible; background: transparent; }
-  .header { padding: 0.15rem 0.2rem; }
-  .header h2 { font-size: 1.35rem; }
-  .desktopLines { display: none; }
-  .mobileLines { display: block; width: 100%; max-width: 100%; min-width: 0; margin: 0; }
-  .totals { width: 100%; max-width: 100%; min-width: 0; margin-top: 0.2rem; padding: 1rem; border-radius: 0.85rem; background: var(--surface-raised); box-shadow: var(--shadow-sm); }
+  .panel {
+    width: 100%;
+    height: auto;
+    max-height: none;
+    padding: 0;
+    overflow: visible;
+    background: transparent;
+  }
+  .header {
+    padding: 0.15rem 0.2rem;
+  }
+  .header h2 {
+    font-size: 1.35rem;
+  }
+  .desktopLines {
+    display: none;
+  }
+  .mobileLines {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+  .totals {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-top: 0.2rem;
+    padding: 1rem;
+    border-radius: 0.85rem;
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+  }
 }
 
 @media (max-width: 48rem) {
-  .panel { min-height: 0; }
+  .panel {
+    min-height: 0;
+  }
 }
 
 @media (max-width: 48rem) and (max-height: 42rem) {
-  .totals { padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+  .totals {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
 }

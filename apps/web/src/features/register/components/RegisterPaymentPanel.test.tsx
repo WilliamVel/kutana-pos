@@ -114,13 +114,7 @@ describe("RegisterPaymentPanel", () => {
     fireEvent.change(screen.getByLabelText("Monto a cobrar"), { target: { value: "10" } });
     fireEvent.change(screen.getByLabelText("Efectivo recibido"), { target: { value: "12" } });
 
-    props.rerender(
-      <RegisterPaymentPanel
-        {...props}
-        amountToPayCents={784}
-        tenderedCents={null}
-      />,
-    );
+    props.rerender(<RegisterPaymentPanel {...props} amountToPayCents={784} tenderedCents={null} />);
 
     expect(screen.getByLabelText("Monto a cobrar")).toHaveValue("7.84");
     expect((screen.getByLabelText("Efectivo recibido") as HTMLInputElement).value).toBe("");
@@ -161,6 +155,22 @@ describe("RegisterPaymentPanel", () => {
     expect(onConfirmPayment).toHaveBeenCalledOnce();
   });
 
+  it("offers an explicit retry while preserving payment context after a failure", () => {
+    const onConfirmPayment = vi.fn();
+    const onDismissError = vi.fn();
+    renderPanel({
+      errorMessage: "No se pudo conectar con el servidor.",
+      onConfirmPayment,
+      onDismissError,
+      canConfirm: true,
+    });
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("No se pudo conectar");
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar cobro" }));
+    expect(onDismissError).toHaveBeenCalledOnce();
+    expect(onConfirmPayment).toHaveBeenCalledOnce();
+    expect(screen.getByDisplayValue("7.84")).toBeInTheDocument();
+  });
+
   it("lets the cashier enter a partial amount to pay now, distinct from the full remaining balance", () => {
     const onAmountToPayChange = vi.fn();
     renderPanel({ remainingBalanceCents: 1500, amountToPayCents: 1500, onAmountToPayChange });
@@ -172,15 +182,17 @@ describe("RegisterPaymentPanel", () => {
 
   it("omits the tax row for a zero-tax order and charges its listed total", () => {
     renderPanel({
-      lines: [{
-        id: "line-zero-tax",
-        name: "KUTANA Pilsener 500ml",
-        quantity: 2,
-        unitPriceCents: 350,
-        totalCents: 700,
-        pourSizeMl: 500,
-        isAdjustment: false,
-      }],
+      lines: [
+        {
+          id: "line-zero-tax",
+          name: "KUTANA Pilsener 500ml",
+          quantity: 2,
+          unitPriceCents: 350,
+          totalCents: 700,
+          pourSizeMl: 500,
+          isAdjustment: false,
+        },
+      ],
       subtotalCents: 700,
       taxCents: 0,
       totalCents: 700,

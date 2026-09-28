@@ -29,6 +29,29 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Inventario" })).toBeInTheDocument();
   });
 
+  it("opens and dismisses the split-payment menu with keyboard focus restoration", async () => {
+    render(
+      <PortsProvider value={buildMockPorts()}>
+        <App />
+      </PortsProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
+    const table = await screen.findByRole("button", { name: /Table 1/ });
+    fireEvent.click(table);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Dividir cuenta" })).toBeInTheDocument(),
+    );
+    const trigger = screen.getByRole("button", { name: "Dividir cuenta" });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("menu", { name: "Opciones para dividir" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Cobrar productos/ })).toHaveFocus();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
   it("opens category management from the inventory actions", async () => {
     render(
       <PortsProvider value={buildMockPorts()}>
@@ -110,7 +133,9 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Nombre del producto *"), {
       target: { value: "Blonde Ale 330ml Editada" },
     });
-    fireEvent.change(screen.getByLabelText("Precio de venta * (USD)"), { target: { value: "3.25" } });
+    fireEvent.change(screen.getByLabelText("Precio de venta * (USD)"), {
+      target: { value: "3.25" },
+    });
     fireEvent.submit(screen.getByRole("form"));
 
     await waitFor(() => expect(screen.getByText("Blonde Ale 330ml Editada")).toBeInTheDocument());
