@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { Profiler } from "react";
 import { describe, expect, it, vi } from "vitest";
 import {
   SplitBillView,
@@ -75,6 +76,47 @@ function renderView(overrides: Partial<React.ComponentProps<typeof SplitBillView
 }
 
 describe("SplitBillView", () => {
+  it("does not commit an extra render when derived lines keep the same data", () => {
+    const commits: string[] = [];
+    const props: React.ComponentProps<typeof SplitBillView> = {
+      tableLabel: "Table 1",
+      tableTotalCents: 784,
+      tableRemainingCents: 784,
+      customers: [],
+      selectedCustomerId: "",
+      freeName: "",
+      lines: [LINE],
+      accounts: [],
+      allocationDraft: { accountId: "", lineItemId: "", quantity: "1" },
+      reviewMessage: null,
+      onSelectCustomer: vi.fn(),
+      onFreeNameChange: vi.fn(),
+      onCreateCustomerAccount: vi.fn(),
+      onCreateFreeNameAccount: vi.fn(),
+      onAllocationDraftChange: vi.fn(),
+      onAssignQuantity: vi.fn(),
+      onPayAccount: vi.fn(),
+      onMarkPending: vi.fn(),
+      onDeleteAccount: vi.fn(),
+      onAttemptClose: vi.fn(),
+      onPayOrder: vi.fn(),
+    };
+    const view = render(
+      <Profiler id="split-bill" onRender={() => commits.push("commit")}>
+        <SplitBillView {...props} />
+      </Profiler>,
+    );
+
+    commits.length = 0;
+    view.rerender(
+      <Profiler id="split-bill" onRender={() => commits.push("commit")}>
+        <SplitBillView {...props} lines={[...props.lines]} />
+      </Profiler>,
+    );
+
+    expect(commits).toHaveLength(1);
+  });
+
   it("starts with a compact split-method choice and persistent total", () => {
     renderView();
     expect(
@@ -84,6 +126,59 @@ describe("SplitBillView", () => {
     expect(screen.getByRole("button", { name: /Partes iguales/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Por monto/ })).toBeInTheDocument();
     expect(screen.getByLabelText("Resumen de la mesa")).toHaveTextContent("Saldo pendiente$7.84");
+  });
+
+  it("orders unassigned products with the same category sections as the order ticket", () => {
+    const lines: AccountAssignmentLine[] = [
+      {
+        ...LINE,
+        id: "food-line",
+        lineItemIds: ["food-line"],
+        productId: "food",
+        pourSizeMl: null,
+        categoryName: "Food",
+        stockKind: "unit",
+        name: "Loaded Nachos",
+      },
+      {
+        ...LINE,
+        id: "beer-500-line",
+        lineItemIds: ["beer-500-line"],
+        productId: "beer-500",
+        pourSizeMl: 500,
+        categoryName: "Draft Beer",
+        stockKind: "volume",
+        name: "Pilsener 500ml",
+      },
+      {
+        ...LINE,
+        id: "beer-330-line",
+        lineItemIds: ["beer-330-line"],
+        productId: "beer-330",
+        pourSizeMl: 330,
+        categoryName: "Draft Beer",
+        stockKind: "volume",
+        name: "Pilsener 330ml",
+      },
+    ];
+    renderView({ lines, accounts: [ACCOUNT] });
+    fireEvent.click(screen.getByRole("tab", { name: /Sin asignar/ }));
+
+    const pending = screen.getByRole("region", { name: "Productos pendientes" });
+    expect(
+      within(pending)
+        .getAllByRole("heading", { level: 4 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["Bebidas", "Comida"]);
+    expect(
+      within(pending)
+        .getAllByRole("article")
+        .map((article) => article.textContent),
+    ).toEqual([
+      expect.stringContaining("Pilsener 330ml"),
+      expect.stringContaining("Pilsener 500ml"),
+      expect.stringContaining("Loaded Nachos"),
+    ]);
   });
 
   it("labels zero-tax assigned lines as importe total while preserving historical tax labels", () => {
@@ -96,11 +191,13 @@ describe("SplitBillView", () => {
     expect(screen.queryByText("Total (incl. impuestos)")).not.toBeInTheDocument();
 
     renderView({
-      accounts: [{
-        ...ACCOUNT,
-        id: "account-taxed",
-        assignedLines: [{ ...ACCOUNT.assignedLines![0]!, taxRateBp: 1200 }],
-      }],
+      accounts: [
+        {
+          ...ACCOUNT,
+          id: "account-taxed",
+          assignedLines: [{ ...ACCOUNT.assignedLines![0]!, taxRateBp: 1200 }],
+        },
+      ],
       allocationDraft: { accountId: "account-taxed", lineItemId: "line-a", quantity: "1" },
     });
     expect(screen.getAllByText("Total (incl. impuestos)").length).toBeGreaterThanOrEqual(2);
@@ -244,7 +341,9 @@ describe("SplitBillView", () => {
       accounts: [
         {
           ...ACCOUNT,
-          payments: [{ id: "payment-a", amountCents: 392, methodLabel: "Efectivo", recordedAt: "now" }],
+          payments: [
+            { id: "payment-a", amountCents: 392, methodLabel: "Efectivo", recordedAt: "now" },
+          ],
           paidCents: 392,
           remainingCents: 0,
           status: "paid",
@@ -290,7 +389,9 @@ describe("SplitBillView", () => {
     fireEvent.change(quantity, { target: { value: "12" } });
     expect((quantity as HTMLInputElement).value).toBe("12");
     expect(onAllocationDraftChange).toHaveBeenLastCalledWith({
-      accountId: "account-a", lineItemId: "line-a", quantity: "12",
+      accountId: "account-a",
+      lineItemId: "line-a",
+      quantity: "12",
     });
   });
 
@@ -309,7 +410,9 @@ describe("SplitBillView", () => {
     expect((quantity as HTMLInputElement).value).toBe("");
     fireEvent.click(screen.getByRole("button", { name: "Asignar" }));
     expect(onAssignQuantity).toHaveBeenCalledWith({
-      accountId: "account-a", lineItemId: "line-a", quantity: "1",
+      accountId: "account-a",
+      lineItemId: "line-a",
+      quantity: "1",
     });
   });
 

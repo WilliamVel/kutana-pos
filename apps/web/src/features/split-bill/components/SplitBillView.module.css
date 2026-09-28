@@ -487,6 +487,15 @@
   color: var(--text-primary);
 }
 
+.categoryHeading {
+  margin: var(--space-3) 0 var(--space-1);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .productRow {
   display: grid;
   grid-template-columns: minmax(10rem, 1fr) max-content max-content max-content;
@@ -865,6 +874,12 @@
   align-items: center;
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--border-subtle);
+}
+
+.assignedProducts li.categoryHeading {
+  display: block;
+  padding: var(--space-3) 0 var(--space-1);
+  border-bottom: 0;
 }
 
 .assignedProducts li > span {

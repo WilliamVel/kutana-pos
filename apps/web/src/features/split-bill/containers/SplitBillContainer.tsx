@@ -1,5 +1,5 @@
 import { createUuid } from "@kutana/shared/platform/uuid.js";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createCustomerDebtEntry } from "@kutana/shared/billing/model/customer-debt-ledger.js";
 import { closeOrderWithPersonalAccounts } from "@kutana/shared/billing/model/order-closure.js";
 import {
@@ -18,11 +18,13 @@ import type { Payment } from "@kutana/shared/payments/model/payment.js";
 import type { Order } from "@kutana/shared/ordering/model/order.js";
 import type { Table } from "@kutana/shared/ordering/model/table.js";
 import {
+  useCategories,
   useCustomerDebts,
   useCustomers,
   useOrderEvents,
   useOrders,
   usePaymentMethods,
+  useProducts,
   usePayments,
   usePaymentClosure,
   usePersonalAccounts,
@@ -38,6 +40,7 @@ import {
   type AssignedAccountLine,
   type AccountPaymentDetail,
 } from "../components/SplitBillView.js";
+import { orderTicketLines, type VisualProductMetadata } from "../../ordering/visual-ordering.js";
 import styles from "./SplitBillContainer.module.css";
 
 export interface SplitBillContainerProps {
@@ -62,6 +65,7 @@ function ownerLabel(account: PersonalAccount, customers: readonly Customer[]): s
 function toLines(
   order: Order,
   allocations: readonly AccountLineAllocation[],
+  metadataByProductId: ReadonlyMap<string, VisualProductMetadata>,
 ): AccountAssignmentLine[] {
   const grouped = new Map<string, AccountAssignmentLine>();
 
@@ -72,6 +76,7 @@ function toLines(
       line.unitPriceCents,
       line.pourSizeMl ?? "",
       line.taxRateBp,
+      line.isAdjustment,
     ].join("|");
     const assigned = allocations
       .filter((allocation) => allocation.lineItemId === line.id)
@@ -82,6 +87,12 @@ function toLines(
         ...existing,
         lineItemIds: [...existing.lineItemIds, line.id],
         presentation: line.pourSizeMl ? `${line.pourSizeMl} ml` : "Unidad",
+        productId: line.productId,
+        pourSizeMl: line.pourSizeMl,
+        isAdjustment: line.isAdjustment,
+        categoryName:
+          existing.categoryName ?? metadataByProductId.get(line.productId)?.categoryName,
+        stockKind: existing.stockKind ?? metadataByProductId.get(line.productId)?.stockKind,
         quantity: existing.quantity + line.quantity,
         totalCents: existing.totalCents + line.totalCents,
         unassignedQuantity: existing.unassignedQuantity + line.quantity - assigned,
@@ -95,6 +106,11 @@ function toLines(
         quantity: line.quantity,
         unitPriceCents: line.unitPriceCents,
         totalCents: line.totalCents,
+        productId: line.productId,
+        pourSizeMl: line.pourSizeMl,
+        isAdjustment: line.isAdjustment,
+        categoryName: metadataByProductId.get(line.productId)?.categoryName,
+        stockKind: metadataByProductId.get(line.productId)?.stockKind,
         unassignedQuantity: line.quantity - assigned,
       });
     }
@@ -119,6 +135,8 @@ export function SplitBillContainer({
 }: SplitBillContainerProps): JSX.Element | null {
   const tables = useTables();
   const tickets = useTickets();
+  const categoriesPort = useCategories();
+  const productsPort = useProducts();
   const orders = useOrders();
   const customersPort = useCustomers();
   const accountsPort = usePersonalAccounts();
@@ -135,6 +153,9 @@ export function SplitBillContainer({
   const [allocations, setAllocations] = useState<AccountLineAllocation[]>([]);
   const [payments, setPayments] = useState<AccountPaymentCache[]>([]);
   const [tablePayments, setTablePayments] = useState<Payment[]>([]);
+  const [metadataByProductId, setMetadataByProductId] = useState<
+    ReadonlyMap<string, VisualProductMetadata>
+  >(new Map());
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [freeName, setFreeName] = useState("");
   const [allocationDraft, setAllocationDraft] = useState<AccountAllocationDraft>({
@@ -185,6 +206,38 @@ export function SplitBillContainer({
     void load();
   }, [load]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadCatalogMetadata = async (): Promise<void> => {
+      try {
+        const catalogCategories = await categoriesPort.listAll();
+        const productsByCategory = await Promise.all(
+          catalogCategories.map((category) =>
+            productsPort.listByCategory(category.id, { includeInactive: true }),
+          ),
+        );
+        if (cancelled) return;
+        const metadata = new Map<string, VisualProductMetadata>();
+        catalogCategories.forEach((category, index) => {
+          for (const product of productsByCategory[index] ?? []) {
+            metadata.set(product.id, {
+              categoryName: category.name,
+              stockKind: product.stockKind,
+              pourSizeMl: product.pourSizeMl,
+            });
+          }
+        });
+        setMetadataByProductId(metadata);
+      } catch {
+        if (!cancelled) setMetadataByProductId(new Map());
+      }
+    };
+    void loadCatalogMetadata();
+    return () => {
+      cancelled = true;
+    };
+  }, [categoriesPort, productsPort]);
+
   const runMutation = useCallback(
     async (mutation: () => Promise<void>): Promise<boolean> => {
       setBusy(true);
@@ -212,72 +265,97 @@ export function SplitBillContainer({
     [load],
   );
 
+  const lines = useMemo(
+    () => (order ? toLines(order, allocations, metadataByProductId) : []),
+    [allocations, metadataByProductId, order],
+  );
+  const accountRows = useMemo<AccountAssignmentAccount[]>(() => {
+    if (!order) return [];
+
+    return accounts.map((account) => {
+      const assignedLinesByProduct = new Map<string, AssignedAccountLine>();
+      for (const allocation of allocations.filter(
+        (candidate) => candidate.accountId === account.id,
+      )) {
+        const line = order.lineItems.find((candidate) => candidate.id === allocation.lineItemId);
+        const name = line?.nameSnapshot ?? allocation.lineItemId;
+        const key = [
+          line?.productId ?? allocation.lineItemId,
+          name,
+          line?.unitPriceCents ?? "",
+          line?.pourSizeMl ?? "",
+          line?.taxRateBp ?? "",
+          line?.isAdjustment ?? false,
+        ].join("|");
+        const existing = assignedLinesByProduct.get(key);
+        assignedLinesByProduct.set(
+          key,
+          existing
+            ? {
+                ...existing,
+                allocationIds: [...existing.allocationIds, allocation.id],
+                quantity: existing.quantity + allocation.quantity,
+                totalCents:
+                  (existing.totalCents ?? 0) +
+                  Math.round(
+                    ((line?.totalCents ?? 0) / (line?.quantity ?? 1)) * allocation.quantity,
+                  ),
+              }
+            : {
+                allocationIds: [allocation.id],
+                productId: line?.productId,
+                pourSizeMl: line?.pourSizeMl ?? null,
+                isAdjustment: line?.isAdjustment ?? false,
+                categoryName: line?.productId
+                  ? metadataByProductId.get(line.productId)?.categoryName
+                  : undefined,
+                stockKind: line?.productId
+                  ? metadataByProductId.get(line.productId)?.stockKind
+                  : undefined,
+                name,
+                presentation: line?.pourSizeMl ? `${line.pourSizeMl} ml` : "Unidad",
+                quantity: allocation.quantity,
+                unitPriceCents: line?.unitPriceCents ?? 0,
+                taxRateBp: line?.taxRateBp ?? 0,
+                totalCents: Math.round(
+                  ((line?.totalCents ?? 0) / (line?.quantity ?? 1)) * allocation.quantity,
+                ),
+              },
+        );
+      }
+      const assignedLines = orderTicketLines(
+        [...assignedLinesByProduct.values()],
+        metadataByProductId,
+      );
+      const balance = accountBalance({
+        accountId: account.id,
+        lineItems: order.lineItems,
+        allocations,
+        payments: toAccountPayments(payments),
+      });
+      const accountPayments =
+        payments.find((entry) => entry.accountId === account.id)?.payments ?? [];
+      const paymentDetails: AccountPaymentDetail[] = accountPayments.map((payment) => ({
+        id: payment.id,
+        amountCents: payment.amountCents,
+        methodLabel:
+          methods.find((method) => method.code === payment.methodCode)?.label ?? payment.methodCode,
+        recordedAt: payment.recordedAt,
+      }));
+      return {
+        ...balance,
+        id: account.id,
+        owner: account.owner,
+        status: account.status,
+        ownerLabel: ownerLabel(account, customers),
+        assignedLines,
+        payments: paymentDetails,
+      };
+    });
+  }, [accounts, allocations, customers, metadataByProductId, methods, order, payments]);
+
   if (!table || !order) return null;
 
-  const accountRows: AccountAssignmentAccount[] = accounts.map((account) => {
-    const assignedLinesByProduct = new Map<string, AssignedAccountLine>();
-    for (const allocation of allocations.filter(
-      (candidate) => candidate.accountId === account.id,
-    )) {
-      const line = order.lineItems.find((candidate) => candidate.id === allocation.lineItemId);
-      const name = line?.nameSnapshot ?? allocation.lineItemId;
-      const key = [
-        line?.productId ?? allocation.lineItemId,
-        name,
-        line?.unitPriceCents ?? "",
-        line?.taxRateBp ?? "",
-      ].join("|");
-      const existing = assignedLinesByProduct.get(key);
-      assignedLinesByProduct.set(
-        key,
-        existing
-          ? {
-              ...existing,
-              allocationIds: [...existing.allocationIds, allocation.id],
-              quantity: existing.quantity + allocation.quantity,
-              totalCents:
-                (existing.totalCents ?? 0) +
-                Math.round(((line?.totalCents ?? 0) / (line?.quantity ?? 1)) * allocation.quantity),
-            }
-          : {
-              allocationIds: [allocation.id],
-              name,
-              presentation: line?.pourSizeMl ? `${line.pourSizeMl} ml` : "Unidad",
-              quantity: allocation.quantity,
-              unitPriceCents: line?.unitPriceCents ?? 0,
-              taxRateBp: line?.taxRateBp ?? 0,
-              totalCents: Math.round(
-                ((line?.totalCents ?? 0) / (line?.quantity ?? 1)) * allocation.quantity,
-              ),
-            },
-      );
-    }
-    const assignedLines = [...assignedLinesByProduct.values()];
-    const balance = accountBalance({
-      accountId: account.id,
-      lineItems: order.lineItems,
-      allocations,
-      payments: toAccountPayments(payments),
-    });
-    const accountPayments =
-      payments.find((entry) => entry.accountId === account.id)?.payments ?? [];
-    const paymentDetails: AccountPaymentDetail[] = accountPayments.map((payment) => ({
-      id: payment.id,
-      amountCents: payment.amountCents,
-      methodLabel:
-        methods.find((method) => method.code === payment.methodCode)?.label ?? payment.methodCode,
-      recordedAt: payment.recordedAt,
-    }));
-    return {
-      ...balance,
-      id: account.id,
-      owner: account.owner,
-      status: account.status,
-      ownerLabel: ownerLabel(account, customers),
-      assignedLines,
-      payments: paymentDetails,
-    };
-  });
   const tableTotalCents = order.lineItems.reduce((sum, line) => sum + line.totalCents, 0);
   const tablePaidCents =
     accountRows.reduce((sum, account) => sum + account.paidCents, 0) +
@@ -312,7 +390,7 @@ export function SplitBillContainer({
       let nextAllocations = [...allocations];
       for (const draft of drafts) {
         const quantity = Number(draft.quantity);
-        const groupedLine = toLines(order, nextAllocations).find(
+        const groupedLine = toLines(order, nextAllocations, metadataByProductId).find(
           (line) => line.id === draft.lineItemId,
         );
         if (!groupedLine || !Number.isFinite(quantity) || quantity <= 0) return;
@@ -435,13 +513,13 @@ export function SplitBillContainer({
         }
       }
       let version = account.version;
-      const idsToRemove = quantity === 1
-        ? [
-            [...allocations]
-              .reverse()
-              .find((allocation) => allocationIds.includes(allocation.id))?.id,
-          ].filter((id): id is string => Boolean(id))
-        : allocationIds;
+      const idsToRemove =
+        quantity === 1
+          ? [
+              [...allocations].reverse().find((allocation) => allocationIds.includes(allocation.id))
+                ?.id,
+            ].filter((id): id is string => Boolean(id))
+          : allocationIds;
       for (const allocationId of idsToRemove) {
         await accountsPort.removeAllocation(accountId, allocationId, version);
         version += 1;
@@ -522,7 +600,7 @@ export function SplitBillContainer({
         customers={customers}
         selectedCustomerId={selectedCustomerId}
         freeName={freeName}
-        lines={toLines(order, allocations)}
+        lines={lines}
         accounts={accountRows}
         allocationDraft={allocationDraft}
         reviewMessage={reviewMessage}
