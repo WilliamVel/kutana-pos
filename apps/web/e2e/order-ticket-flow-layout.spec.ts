@@ -255,6 +255,53 @@ test("keeps desktop dividers continuous with and without a variant", async ({ pa
   await page.screenshot({ path: testInfo.outputPath("desktop-dividers-1440.png"), fullPage: true });
 });
 
+test("wheel over added products scrolls the order ticket", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await stubLoadedOrder(page, longOrder);
+  await page.goto("/");
+  await page.locator(`[data-table-id="${table.id}"]`).click();
+
+  const panel = page.locator('section[aria-label="Resumen de orden para Mesa de prueba"]');
+  await expect(panel).toBeVisible();
+  const products = panel.locator("[data-layout-products]");
+  const lastRow = products.locator("tbody tr").last();
+  await expect(lastRow).toBeAttached();
+
+  const before = await panel.evaluate((element) => {
+    const inner = element.querySelector<HTMLElement>("[data-layout-products]");
+    if (!inner) throw new Error("Product list not found");
+    element.scrollTop = 0;
+    inner.scrollTop = 0;
+    return {
+      panelTop: element.scrollTop,
+      panelRange: element.scrollHeight - element.clientHeight,
+      innerTop: inner.scrollTop,
+      innerRange: inner.scrollHeight - inner.clientHeight,
+    };
+  });
+  expect(before.panelRange + before.innerRange).toBeGreaterThan(0);
+
+  // Wheel over a product row, not over a scrollbar or through direct scrollTop assignment.
+  const firstRow = products.locator("tbody tr").first();
+  const box = await firstRow.boundingBox();
+  if (!box) throw new Error("First product row has no visible box");
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel(0, 480);
+  await page.waitForTimeout(300);
+
+  const after = await panel.evaluate((element) => ({
+    panelTop: element.scrollTop,
+    innerTop: element.querySelector<HTMLElement>("[data-layout-products]")?.scrollTop ?? 0,
+  }));
+  await testInfo.attach("wheel-scroll-measurements.json", {
+    body: JSON.stringify({ before, after }, null, 2),
+    contentType: "application/json",
+  });
+  expect(after.panelTop + after.innerTop, JSON.stringify({ before, after })).toBeGreaterThan(
+    before.panelTop + before.innerTop,
+  );
+});
+
 test("scrolls nine selected products without cutting the summary or actions", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await stubLoadedOrder(page, longOrder);
