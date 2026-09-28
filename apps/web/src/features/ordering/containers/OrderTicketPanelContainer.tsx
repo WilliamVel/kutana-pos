@@ -29,6 +29,7 @@ import {
   type OrderPaymentDetailLine,
   type OrderPaymentDetailMember,
   type OrderTicketPanelLine,
+  type SelectedProductLine,
 } from "../components/OrderTicketPanel.js";
 import type { OrderStatus } from "../../../design-system/molecules/StatusPill.js";
 
@@ -49,15 +50,27 @@ function aggregateLines(
 ): OrderTicketPanelLine[] {
   const source = lines.map((line) => ({ ...line, name: line.nameSnapshot }));
   return aggregateOrderLines(source).map((line) => {
-    const members = source.filter((candidate) => orderLineGroupingKey(candidate) === orderLineGroupingKey(line));
-    const paidCents = members.reduce((sum, member) => sum + (paidCentsByLineId.get(member.id) ?? 0), 0);
-    const paymentStatus = paidCents >= line.totalCents && line.totalCents > 0
-      ? "paid"
-      : paidCents > 0 ? "partial" : undefined;
+    const members = source.filter(
+      (candidate) => orderLineGroupingKey(candidate) === orderLineGroupingKey(line),
+    );
+    const paidCents = members.reduce(
+      (sum, member) => sum + (paidCentsByLineId.get(member.id) ?? 0),
+      0,
+    );
+    const unitCents = line.quantity > 0 ? Math.round(line.totalCents / line.quantity) : 0;
+    const paidQuantity =
+      unitCents > 0 ? Math.min(line.quantity, Math.floor(paidCents / unitCents)) : 0;
+    const paymentStatus =
+      paidCents >= line.totalCents && line.totalCents > 0
+        ? "paid"
+        : paidCents > 0
+          ? "partial"
+          : undefined;
     return {
       id: line.id,
       name: line.name,
       quantity: line.quantity,
+      pendingQuantity: Math.max(0, line.quantity - paidQuantity),
       unitPriceCents: line.unitPriceCents,
       totalCents: line.unitPriceCents * line.quantity,
       settlementTotalCents: line.totalCents,
@@ -77,6 +90,10 @@ function aggregateLines(
 export interface OrderTicketPanelContainerProps {
   readonly tableId: string;
   readonly onLoadStateChange?: (state: "loading" | "ready" | "empty" | "error") => void;
+  readonly selectionMode?: boolean;
+  readonly selectedProducts?: readonly SelectedProductLine[];
+  readonly onSelectionChange?: (selection: readonly SelectedProductLine[]) => void;
+  readonly onReviewSelectedProducts?: (selection: readonly SelectedProductLine[]) => void;
 }
 
 /**
@@ -88,6 +105,10 @@ export interface OrderTicketPanelContainerProps {
 export function OrderTicketPanelContainer({
   tableId,
   onLoadStateChange,
+  selectionMode = false,
+  selectedProducts = [],
+  onSelectionChange,
+  onReviewSelectedProducts,
 }: OrderTicketPanelContainerProps): JSX.Element | null {
   const tables = useTables();
   const orders = useOrders();
@@ -211,12 +232,15 @@ export function OrderTicketPanelContainer({
     const targetKey = targetLine
       ? orderLineGroupingKey({ ...targetLine, name: targetLine.nameSnapshot })
       : null;
-    const hasPositiveAllocation = targetKey !== null && current.lineItems.some((line) =>
-      orderLineGroupingKey({ ...line, name: line.nameSnapshot }) === targetKey
-      && freshAllocations.some(
-        (allocation) => allocation.lineItemId === line.id && allocation.quantity > 0,
-      ),
-    );
+    const hasPositiveAllocation =
+      targetKey !== null &&
+      current.lineItems.some(
+        (line) =>
+          orderLineGroupingKey({ ...line, name: line.nameSnapshot }) === targetKey &&
+          freshAllocations.some(
+            (allocation) => allocation.lineItemId === line.id && allocation.quantity > 0,
+          ),
+      );
     if (hasPositiveAllocation) {
       const message = "No se puede eliminar un producto asignado a una cuenta.";
       setRemoveBlockedMessage(message);
@@ -277,7 +301,9 @@ export function OrderTicketPanelContainer({
   const paidCentsByLineId = new Map<string, number>();
   const lineById = new Map(order.lineItems.map((line) => [line.id, line]));
   for (const account of accounts) {
-    const allocations = accountAllocations.filter((allocation) => allocation.accountId === account.id);
+    const allocations = accountAllocations.filter(
+      (allocation) => allocation.accountId === account.id,
+    );
     const values = allocations.map((allocation) => {
       const line = lineById.get(allocation.lineItemId);
       return line ? Math.round((line.totalCents / line.quantity) * allocation.quantity) : 0;
@@ -286,9 +312,12 @@ export function OrderTicketPanelContainer({
     let remainingPaidCents = Math.min(accountPaidById[account.id] ?? 0, accountTotalCents);
     allocations.forEach((allocation, index) => {
       const value = values[index] ?? 0;
-      const paid = index === allocations.length - 1
-        ? remainingPaidCents
-        : accountTotalCents > 0 ? Math.floor((remainingPaidCents * value) / accountTotalCents) : 0;
+      const paid =
+        index === allocations.length - 1
+          ? remainingPaidCents
+          : accountTotalCents > 0
+            ? Math.floor((remainingPaidCents * value) / accountTotalCents)
+            : 0;
       remainingPaidCents -= paid;
       paidCentsByLineId.set(
         allocation.lineItemId,
@@ -297,34 +326,89 @@ export function OrderTicketPanelContainer({
     });
   }
   const lines = aggregateLines(order.lineItems, paidCentsByLineId, accountAllocations);
+  const resolveSelection = (selection: readonly SelectedProductLine[]): SelectedProductLine[] => {
+    const resolved: SelectedProductLine[] = [];
+    for (const selected of selection) {
+      const aggregate = lines.find((line) => line.id === selected.lineId);
+      if (!aggregate) continue;
+      let remaining = selected.quantity;
+      const representative = order.lineItems.find((candidate) => candidate.id === aggregate.id);
+      if (!representative) continue;
+      for (const source of order.lineItems.filter(
+        (candidate) =>
+          orderLineGroupingKey({ ...candidate, name: candidate.nameSnapshot }) ===
+          orderLineGroupingKey({ ...representative, name: representative.nameSnapshot }),
+      )) {
+        const unitCents = source.quantity > 0 ? Math.round(source.totalCents / source.quantity) : 0;
+        const paidQuantity =
+          unitCents > 0
+            ? Math.min(
+                source.quantity,
+                Math.floor((paidCentsByLineId.get(source.id) ?? 0) / unitCents),
+              )
+            : 0;
+        const available = Math.max(0, source.quantity - paidQuantity);
+        const quantity = Math.min(remaining, available);
+        if (quantity > 0) resolved.push({ lineId: source.id, quantity });
+        remaining -= quantity;
+        if (remaining <= 0) break;
+      }
+    }
+    return resolved;
+  };
   const paymentDetailsByKey = new Map<string, OrderPaymentDetailLine>();
   order.lineItems.forEach((line) => {
-    const lineAllocations = accountAllocations.filter((allocation) => allocation.lineItemId === line.id);
-    const payerLabels = [...new Set(lineAllocations.map((allocation) => {
-      const account = accounts.find((candidate) => candidate.id === allocation.accountId);
-      return account ? accountOwnerLabel(account) : "Asignación no disponible";
-    }))];
+    const lineAllocations = accountAllocations.filter(
+      (allocation) => allocation.lineItemId === line.id,
+    );
+    const payerLabels = [
+      ...new Set(
+        lineAllocations.map((allocation) => {
+          const account = accounts.find((candidate) => candidate.id === allocation.accountId);
+          return account ? accountOwnerLabel(account) : "Asignación no disponible";
+        }),
+      ),
+    ];
     const paidCents = paidCentsByLineId.get(line.id) ?? 0;
-    const status = paidCents >= line.totalCents && line.totalCents > 0 ? "paid" : paidCents > 0 ? "partial" : "pending" as const;
+    const status =
+      paidCents >= line.totalCents && line.totalCents > 0
+        ? "paid"
+        : paidCents > 0
+          ? "partial"
+          : ("pending" as const);
     const unitCents = line.quantity > 0 ? Math.round(line.totalCents / line.quantity) : 0;
     const key = orderLineGroupingKey({ ...line, name: line.nameSnapshot });
     const member: OrderPaymentDetailMember = { id: line.id, payerLabels, paidCents, status };
     const existing = paymentDetailsByKey.get(key);
     if (existing) {
-      const paidQuantity = existing.paidQuantity + Math.min(line.quantity, unitCents > 0 ? Math.floor(paidCents / unitCents) : 0);
+      const paidQuantity =
+        existing.paidQuantity +
+        Math.min(line.quantity, unitCents > 0 ? Math.floor(paidCents / unitCents) : 0);
       paymentDetailsByKey.set(key, {
         ...existing,
         quantity: existing.quantity + line.quantity,
         totalCents: existing.totalCents + line.totalCents,
         paidCents: existing.paidCents + paidCents,
         paidQuantity,
-        pendingQuantity: existing.pendingQuantity + line.quantity - Math.min(line.quantity, unitCents > 0 ? Math.floor(paidCents / unitCents) : 0),
+        pendingQuantity:
+          existing.pendingQuantity +
+          line.quantity -
+          Math.min(line.quantity, unitCents > 0 ? Math.floor(paidCents / unitCents) : 0),
         payerLabels: [...new Set([...existing.payerLabels, ...payerLabels])],
-        status: existing.paidCents + paidCents >= existing.totalCents + line.totalCents && existing.totalCents + line.totalCents > 0 ? "paid" : existing.paidCents + paidCents > 0 ? "partial" : "pending",
+        status:
+          existing.paidCents + paidCents >= existing.totalCents + line.totalCents &&
+          existing.totalCents + line.totalCents > 0
+            ? "paid"
+            : existing.paidCents + paidCents > 0
+              ? "partial"
+              : "pending",
         members: [...(existing.members ?? []), member],
       });
     } else {
-      const paidQuantity = Math.min(line.quantity, unitCents > 0 ? Math.floor(paidCents / unitCents) : 0);
+      const paidQuantity = Math.min(
+        line.quantity,
+        unitCents > 0 ? Math.floor(paidCents / unitCents) : 0,
+      );
       paymentDetailsByKey.set(key, {
         id: line.id,
         name: line.nameSnapshot,
@@ -372,6 +456,12 @@ export function OrderTicketPanelContainer({
         order.status === "paid" || order.status === "closed_with_pending"
           ? undefined
           : (lineId) => void handleRemoveLine(lineId)
+      }
+      selectionMode={selectionMode}
+      selectedProducts={selectedProducts}
+      onSelectionChange={onSelectionChange}
+      onReviewSelectedProducts={(selection) =>
+        onReviewSelectedProducts?.(resolveSelection(selection))
       }
     />
   );

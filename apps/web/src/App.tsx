@@ -18,6 +18,7 @@ import { RegisterWorkspace } from "./features/ordering/components/RegisterWorksp
 import { AddItemContainer } from "./features/ordering/containers/AddItemContainer.js";
 import { NewOrderContainer } from "./features/ordering/containers/NewOrderContainer.js";
 import { OrderTicketPanelContainer } from "./features/ordering/containers/OrderTicketPanelContainer.js";
+import type { SelectedProductLine } from "./features/ordering/components/OrderTicketPanel.js";
 import { OrdersOverviewContainer } from "./features/ordering/containers/OrdersOverviewContainer.js";
 import { RegisterPaymentContainer } from "./features/register/containers/RegisterPaymentContainer.js";
 import { SplitBillContainer } from "./features/split-bill/containers/SplitBillContainer.js";
@@ -49,6 +50,9 @@ export function App(): JSX.Element {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [centerView, setCenterView] = useState<CenterView>("account");
+  const [splitMenuOpen, setSplitMenuOpen] = useState(false);
+  const [productSelectionMode, setProductSelectionMode] = useState(false);
+  const [selectedProductLines, setSelectedProductLines] = useState<SelectedProductLine[]>([]);
   const [ordersReloadKey, setOrdersReloadKey] = useState(0);
   const [newOrderRequest, setNewOrderRequest] = useState(0);
   const [pendingCreatedTableId, setPendingCreatedTableId] = useState<string | null>(null);
@@ -107,9 +111,15 @@ export function App(): JSX.Element {
         <>
           <RegisterPaymentContainer
             tableId={selectedTableId}
+            selectedProductLines={
+              selectedProductLines.length > 0 ? selectedProductLines : undefined
+            }
             ticketId={selectedTicketId ?? undefined}
             personalAccountId={selectedAccountId ?? undefined}
-            onBack={resetCenter}
+            onBack={() => {
+              if (selectedProductLines.length > 0) setProductSelectionMode(true);
+              resetCenter();
+            }}
             onReviewPayment={() => {
               setSelectedTicketId(null);
               setSelectedAccountId(null);
@@ -121,6 +131,8 @@ export function App(): JSX.Element {
               });
             }}
             onPaymentComplete={() => {
+              setSelectedProductLines([]);
+              setProductSelectionMode(false);
               resetCenter();
               setSelectedTableId(null);
               setOrdersReloadKey((key) => key + 1);
@@ -154,20 +166,82 @@ export function App(): JSX.Element {
         <OrderTicketPanelContainer
           key={`${selectedTableId}:${selectedOrderId ?? ""}`}
           tableId={selectedTableId}
+          selectionMode={productSelectionMode}
+          selectedProducts={selectedProductLines}
+          onSelectionChange={(selection) => setSelectedProductLines([...selection])}
+          onReviewSelectedProducts={(selection) => {
+            setSelectedProductLines([...selection]);
+            setProductSelectionMode(false);
+            setCenterView("payment");
+          }}
           onLoadStateChange={(state) => setSelectedOrderReady(state === "ready")}
         />
       );
       centerActions = (
         <ButtonRow>
           {selectedOrderReady && selectedOrderListReady ? (
-            <Button
-              variant="secondary"
-              ariaLabel="Dividir cuenta"
-              onClick={() => setCenterView("assignment")}
-            >
-              <Icon name="split" size={22} />
-              Dividir
-            </Button>
+            <div style={{ position: "relative" }}>
+              <Button
+                variant="secondary"
+                ariaLabel="Dividir cuenta"
+                onClick={() => setSplitMenuOpen((open) => !open)}
+              >
+                <Icon name="split" size={22} />
+                Dividir
+              </Button>
+              {splitMenuOpen ? (
+                <div
+                  role="menu"
+                  aria-label="Opciones para dividir"
+                  style={{
+                    position: "absolute",
+                    zIndex: 3,
+                    right: 0,
+                    bottom: "calc(100% + .5rem)",
+                    display: "flex",
+                    minWidth: "13rem",
+                    flexDirection: "column",
+                    gap: ".25rem",
+                    padding: ".5rem",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: ".6rem",
+                    background: "var(--surface-raised)",
+                    boxShadow: "var(--shadow-lg)",
+                  }}
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setProductSelectionMode(true);
+                      setSplitMenuOpen(false);
+                    }}
+                  >
+                    Cobrar productos
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setCenterView("assignment");
+                      setSplitMenuOpen(false);
+                    }}
+                  >
+                    Partes iguales
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setCenterView("assignment");
+                      setSplitMenuOpen(false);
+                    }}
+                  >
+                    Por monto
+                  </button>
+                </div>
+              ) : null}
+            </div>
           ) : null}
           {selectedOrderReady && selectedOrderListReady ? (
             <Button
@@ -269,7 +343,10 @@ export function App(): JSX.Element {
                     reloadKey={ordersReloadKey}
                     openRequest={newOrderRequest}
                     onCreated={(tableId, orderId) => {
-                      toast.success("Orden creada", { id: `order-created-${orderId}`, duration: 4200 });
+                      toast.success("Orden creada", {
+                        id: `order-created-${orderId}`,
+                        duration: 4200,
+                      });
                       setSelectedOrderId(orderId);
                       // Keep this selection alive while the refreshed list catches up.
                       // The list is keyed by table, while the API's saved order ID is

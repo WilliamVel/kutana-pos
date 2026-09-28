@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { createAccountLineAllocation, createPersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
+import {
+  createAccountLineAllocation,
+  createPersonalAccount,
+} from "@kutana/shared/billing/model/personal-account.js";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../../composition/mock.js";
 import { RegisterPaymentContainer } from "./RegisterPaymentContainer.js";
@@ -44,8 +47,12 @@ describe("RegisterPaymentContainer", () => {
 
     // Second partial payment: QR_PAYMENT (no tendered/change UI) covers the rest.
     fireEvent.click(screen.getByRole("radio", { name: "Pago QR" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "Confirmo que el pago QR fue recibido." }));
-    await waitFor(() => expect(screen.getByRole("button", { name: /Registrar pago · \$5\.12/ })).toBeEnabled());
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Confirmo que el pago QR fue recibido." }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Registrar pago · \$5\.12/ })).toBeEnabled(),
+    );
     fireEvent.click(screen.getByRole("button", { name: /Registrar pago · \$5\.12/ }));
 
     await waitFor(() => expect(screen.getAllByText("$0.00").length).toBeGreaterThan(0));
@@ -60,7 +67,11 @@ describe("RegisterPaymentContainer", () => {
   it("uses the same checkout screen to pay a selected personal account with method choice", async () => {
     const ports = buildMockPorts();
     const order = (await ports.orders.findByTable("table-1"))!;
-    const account = createPersonalAccount({ id: "account-juan", orderId: order.id, freeName: "Juan P." });
+    const account = createPersonalAccount({
+      id: "account-juan",
+      orderId: order.id,
+      freeName: "Juan P.",
+    });
     const allocation = createAccountLineAllocation({
       id: "account-allocation-1",
       accountId: account.id,
@@ -75,21 +86,63 @@ describe("RegisterPaymentContainer", () => {
       </PortsProvider>,
     );
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Cobrar orden" })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Cobrar orden" })).toBeInTheDocument(),
+    );
     expect(screen.getByRole("radio", { name: /Efectivo/ })).toBeInTheDocument();
     expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
     expect(screen.queryByText("Loaded Nachos")).not.toBeInTheDocument();
     expect(screen.getAllByText("$3.92").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("radio", { name: /Pago QR/ }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "Confirmo que el pago QR fue recibido." }));
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Confirmo que el pago QR fue recibido." }),
+    );
     fireEvent.click(screen.getByRole("button", { name: /Registrar pago ·/ }));
 
     await waitFor(async () => {
-      const payments = await ports.payments.listByTarget({ kind: "personal_account", accountId: account.id });
+      const payments = await ports.payments.listByTarget({
+        kind: "personal_account",
+        accountId: account.id,
+      });
       expect(payments).toHaveLength(1);
       expect(payments[0]!.amountCents).toBe(392);
       expect((await ports.personalAccounts.findById(account.id))?.status).toBe("paid");
+    });
+  });
+
+  it("settles only the selected whole units after payment confirmation", async () => {
+    const ports = buildMockPorts();
+    const order = (await ports.orders.findByTable("table-1"))!;
+    const line = order.lineItems[0]!;
+    render(
+      <PortsProvider value={ports}>
+        <RegisterPaymentContainer
+          tableId="table-1"
+          selectedProductLines={[{ lineId: line.id, quantity: 1 }]}
+        />
+      </PortsProvider>,
+    );
+    await waitFor(() => expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument());
+    expect(screen.getAllByText("$3.92").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("radio", { name: "Pago QR" }));
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Confirmo que el pago QR fue recibido." }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Registrar pago ·/ }));
+    await waitFor(async () => {
+      const accounts = await ports.personalAccounts.listByOrder(order.id);
+      expect(accounts).toHaveLength(1);
+      const allocations = await ports.personalAccounts.listAllocationsByOrder(order.id);
+      expect(allocations).toHaveLength(1);
+      expect(allocations[0]!.lineItemId).toBe(line.id);
+      expect(allocations[0]!.quantity).toBe(1);
+      const payments = await ports.payments.listByTarget({
+        kind: "personal_account",
+        accountId: accounts[0]!.id,
+      });
+      expect(payments[0]!.amountCents).toBe(392);
+      expect((await ports.orders.findByTable("table-1"))?.status).toBe("active");
     });
   });
 
@@ -176,7 +229,9 @@ describe("RegisterPaymentContainer", () => {
     expect(screen.queryByText("KUTANA Pilsener 500ml")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("radio", { name: "Pago QR" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "Confirmo que el pago QR fue recibido." }));
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Confirmo que el pago QR fue recibido." }),
+    );
     fireEvent.click(screen.getByRole("button", { name: /Registrar pago ·/ }));
 
     await waitFor(async () => {

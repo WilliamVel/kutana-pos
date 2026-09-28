@@ -61,7 +61,9 @@ describe("OrderTicketPanel", () => {
       />,
     );
 
-    expect(screen.queryByRole("button", { name: "Eliminar KUTANA Pilsener" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Eliminar KUTANA Pilsener" }),
+    ).not.toBeInTheDocument();
   });
 
   it("omits the tax row for a new zero-tax order while preserving its listed total", () => {
@@ -111,20 +113,22 @@ describe("OrderTicketPanel", () => {
         paidCents={1000}
         paidLineCount={1}
         pendingLineCount={1}
-        paymentDetails={[{
-          id: "line-1",
-          name: "KUTANA Pilsener 500ml",
-          quantity: 2,
-          unitPriceCents: 350,
-          totalCents: 784,
-          paidCents: 392,
-          pourSizeMl: 500,
-          payerLabels: ["Ana"],
-          paidQuantity: 1,
-          pendingQuantity: 1,
-          status: "partial",
-          members: [{ id: "unit-1", payerLabels: ["Ana"], paidCents: 392, status: "paid" }],
-        }]}
+        paymentDetails={[
+          {
+            id: "line-1",
+            name: "KUTANA Pilsener 500ml",
+            quantity: 2,
+            unitPriceCents: 350,
+            totalCents: 784,
+            paidCents: 392,
+            pourSizeMl: 500,
+            payerLabels: ["Ana"],
+            paidQuantity: 1,
+            pendingQuantity: 1,
+            status: "partial",
+            members: [{ id: "unit-1", payerLabels: ["Ana"], paidCents: 392, status: "paid" }],
+          },
+        ]}
       />,
     );
 
@@ -136,6 +140,57 @@ describe("OrderTicketPanel", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Pendientes" }));
     expect(screen.getByText("KUTANA Pilsener · 500 ml × 2")).toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("selects whole units, shows the amount, and preserves the review before checkout", () => {
+    let selection = [] as { lineId: string; quantity: number }[];
+    const onSelectionChange = (next: readonly { lineId: string; quantity: number }[]): void => {
+      selection = [...next];
+    };
+    const onReview = (next: readonly { lineId: string; quantity: number }[]): void => {
+      selection = [...next];
+    };
+    const { rerender } = render(
+      <OrderTicketPanel
+        tableLabel="Mesa 4"
+        status="active"
+        lines={LINES}
+        subtotalCents={1350}
+        taxCents={162}
+        totalCents={1512}
+        selectionMode
+        selectedProducts={selection}
+        onSelectionChange={onSelectionChange}
+        onReviewSelectedProducts={onReview}
+      />,
+    );
+    const checkboxes = screen.getAllByRole("checkbox");
+    fireEvent.click(checkboxes[0]!);
+    rerender(
+      <OrderTicketPanel
+        tableLabel="Mesa 4"
+        status="active"
+        lines={LINES}
+        subtotalCents={1350}
+        taxCents={162}
+        totalCents={1512}
+        selectionMode
+        selectedProducts={selection}
+        onSelectionChange={onSelectionChange}
+        onReviewSelectedProducts={onReview}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Revisar y cobrar" }).parentElement,
+    ).toHaveTextContent("1 unidad seleccionadas");
+    expect(
+      screen.getByRole("button", { name: "Revisar y cobrar" }).parentElement,
+    ).toHaveTextContent("$3.92");
+    fireEvent.click(screen.getByRole("button", { name: "Revisar y cobrar" }));
+    expect(screen.getByRole("dialog", { name: "Mesa 4" })).toBeInTheDocument();
+    expect(screen.getByText("Saldo pendiente después")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Volver a editar", { exact: true }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
