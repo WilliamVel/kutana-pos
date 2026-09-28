@@ -49,6 +49,7 @@ export function OrdersOverview({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "in-review" | "paid">("all");
+  const lastScrolledSelectedTableIdRef = useRef<string | null>(null);
   const filteredRows = useMemo(
     () =>
       rows.filter((row) => {
@@ -64,7 +65,12 @@ export function OrdersOverview({
   );
 
   useEffect(() => {
-    if (!selectedTableId || !rows.some((row) => row.tableId === selectedTableId)) return;
+    if (!selectedTableId || !rows.some((row) => row.tableId === selectedTableId)) {
+      lastScrolledSelectedTableIdRef.current = null;
+      return;
+    }
+    if (lastScrolledSelectedTableIdRef.current === selectedTableId) return;
+    lastScrolledSelectedTableIdRef.current = selectedTableId;
     const frame = window.requestAnimationFrame(() => {
       Array.from(document.querySelectorAll<HTMLElement>("[data-table-id]"))
         .find((element) => element.dataset.tableId === selectedTableId)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type {
   Order,
   OrderStatus as DomainOrderStatus,
@@ -243,9 +243,14 @@ export function OrdersOverviewContainer({
     onOrderRemoved?.();
   }
 
+  const sortedRows = useMemo(
+    () => [...rows].sort((a, b) => a.tableLabel.localeCompare(b.tableLabel)),
+    [rows],
+  );
+
   return (
     <OrdersOverview
-      rows={[...rows].sort((a, b) => a.tableLabel.localeCompare(b.tableLabel))}
+      rows={sortedRows}
       selectedTableId={selectedTableId}
       onSelectTable={onSelectTable}
       onRemoveEmptyOrder={(tableId) => void removeEmptyOrder(tableId)}

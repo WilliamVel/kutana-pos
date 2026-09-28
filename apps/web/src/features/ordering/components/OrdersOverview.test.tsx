@@ -80,6 +80,42 @@ describe("OrdersOverview", () => {
     expect(screen.getByText(longLabel)).toHaveAttribute("aria-label", longLabel);
   });
 
+  it("does not re-scroll the selected table when parent rerenders with equivalent rows", () => {
+    vi.useFakeTimers();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    try {
+      const scrollIntoView = vi.fn();
+      Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+        configurable: true,
+        value: scrollIntoView,
+      });
+      const { rerender } = render(
+        <OrdersOverview rows={ROWS} selectedTableId="table-2" onSelectTable={vi.fn()} />,
+      );
+
+      vi.runAllTimers();
+      expect(scrollIntoView).toHaveBeenCalledOnce();
+      scrollIntoView.mockClear();
+
+      rerender(
+        <OrdersOverview rows={[...ROWS]} selectedTableId="table-2" onSelectTable={vi.fn()} />,
+      );
+
+      vi.runAllTimers();
+      expect(scrollIntoView).not.toHaveBeenCalled();
+    } finally {
+      if (originalScrollIntoView) {
+        Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+          configurable: true,
+          value: originalScrollIntoView,
+        });
+      } else {
+        Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView");
+      }
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps both header actions visible and usable when there are no open orders", () => {
     const onCreateOrder = vi.fn();
     render(
