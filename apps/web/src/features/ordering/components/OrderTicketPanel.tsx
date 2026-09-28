@@ -34,6 +34,7 @@ export interface OrderPaymentDetailLine {
 
 export interface OrderTicketPanelLine {
   readonly id: string;
+  readonly productId?: string;
   readonly name: string;
   readonly quantity: number;
   readonly pendingQuantity?: number;
@@ -53,10 +54,16 @@ export interface SelectedProductLine {
   readonly quantity: number;
 }
 
+export interface OrderTicketPanelSection {
+  readonly label: "Bebidas" | "Comida" | "Ajustes";
+  readonly lines: readonly OrderTicketPanelLine[];
+}
+
 export interface OrderTicketPanelProps {
   readonly tableLabel: string;
   readonly status: OrderStatus;
   readonly lines: readonly OrderTicketPanelLine[];
+  readonly sections?: readonly OrderTicketPanelSection[];
   readonly subtotalCents: number;
   readonly taxCents: number;
   readonly totalCents: number;
@@ -91,6 +98,7 @@ export function OrderTicketPanel({
   tableLabel,
   status,
   lines,
+  sections,
   subtotalCents,
   taxCents,
   totalCents,
@@ -138,10 +146,14 @@ export function OrderTicketPanel({
     (line) =>
       filter === "all" || (filter === "paid" ? line.status !== "pending" : line.status !== "paid"),
   );
-  const regularDesktopLines = lines.map((line) => (
+  const displayedSections = sections ?? [{ label: "Comida" as const, lines }];
+  const hasRemovableLines = Boolean(
+    onRemoveLine && lines.some((line) => !line.isAdjustment && line.canRemove !== false),
+  );
+  const renderLine = (line: OrderTicketPanelLine, layout: "table" | "mobile"): JSX.Element => (
     <LineItemRow
       key={line.id}
-      layout="table"
+      layout={layout}
       name={line.name}
       quantity={line.quantity}
       unitPriceCents={line.unitPriceCents}
@@ -157,72 +169,93 @@ export function OrderTicketPanel({
           : undefined
       }
     />
-  ));
-  const regularMobileLines = lines.map((line) => (
-    <LineItemRow
-      key={line.id}
-      layout="mobile"
-      name={line.name}
-      quantity={line.quantity}
-      unitPriceCents={line.unitPriceCents}
-      totalCents={line.totalCents}
-      settlementTotalCents={line.settlementTotalCents}
-      pourSizeMl={line.pourSizeMl}
-      isAdjustment={line.isAdjustment}
-      statusLabel={line.paymentStatus}
-      paidCents={line.paidCents}
-      onRemove={
-        onRemoveLine && !line.isAdjustment && line.canRemove !== false
-          ? () => onRemoveLine(line.id)
-          : undefined
-      }
-    />
-  ));
-  const selectionRows = lines.map((line) => {
-    const max = line.pendingQuantity ?? line.quantity;
-    const selected = selectedById.get(line.id) ?? 0;
-    const unitCents =
-      line.quantity > 0
-        ? Math.round((line.settlementTotalCents ?? line.totalCents) / line.quantity)
-        : 0;
-    return (
-      <article className={styles.selectionRow} key={line.id}>
-        <label className={styles.selectionCheck}>
-          <input
-            type="checkbox"
-            checked={selected > 0}
-            disabled={max <= 0 || line.isAdjustment}
-            onChange={(event) => updateSelection(line, event.target.checked ? Math.min(1, max) : 0)}
-          />
-          <span>
-            <strong>
-              {line.quantity}× {line.name}
-            </strong>
-            <small>
-              {max} {max === 1 ? "unidad disponible" : "unidades disponibles"} ·{" "}
-              <PriceTag cents={unitCents} /> c/u
-            </small>
-          </span>
-        </label>
-        {selected > 0 ? (
-          <label className={styles.quantityPicker}>
-            Cantidad
+  );
+  const regularDesktopLines = displayedSections.flatMap((section) => [
+    <tr key={`${section.label}-header`} className={styles.sectionHeader}>
+      <th colSpan={5} scope="colgroup">
+        {section.label}
+      </th>
+    </tr>,
+    ...section.lines.map((line) => renderLine(line, "table")),
+  ]);
+  const regularMobileLines = displayedSections.flatMap((section) => [
+    <h3 key={`${section.label}-header`} className={styles.sectionHeader}>
+      {section.label}
+    </h3>,
+    ...section.lines.map((line) => renderLine(line, "mobile")),
+  ]);
+  const selectionRows = displayedSections.flatMap((section) => [
+    <h3 key={`${section.label}-selection-header`} className={styles.sectionHeader}>
+      {section.label}
+    </h3>,
+    ...section.lines.map((line) => {
+      const max = line.pendingQuantity ?? line.quantity;
+      const selected = selectedById.get(line.id) ?? 0;
+      const unitCents =
+        line.quantity > 0
+          ? Math.round((line.settlementTotalCents ?? line.totalCents) / line.quantity)
+          : 0;
+      return (
+        <article className={styles.selectionRow} key={line.id}>
+          <label className={styles.selectionCheck}>
             <input
-              aria-label={`Cantidad de ${line.name}`}
-              type="number"
-              min={1}
-              max={max}
-              value={selected}
-              onChange={(event) => updateSelection(line, Number(event.target.value) || 0)}
+              type="checkbox"
+              checked={selected > 0}
+              disabled={max <= 0 || line.isAdjustment}
+              onChange={(event) =>
+                updateSelection(line, event.target.checked ? Math.min(1, max) : 0)
+              }
             />
+            <span>
+              <strong>
+                {line.quantity}× {line.name}
+              </strong>
+              <small>
+                {max} {max === 1 ? "unidad disponible" : "unidades disponibles"} ·{" "}
+                <PriceTag cents={unitCents} /> c/u
+              </small>
+            </span>
           </label>
-        ) : null}
-        <strong>
-          <PriceTag cents={unitCents * selected} />
-        </strong>
-      </article>
-    );
-  });
+          {selected > 0 ? (
+            <div className={styles.quantityPicker}>
+              <span>Cantidad</span>
+              {max > 1 ? (
+                <button
+                  type="button"
+                  aria-label={`Disminuir cantidad de ${line.name}`}
+                  disabled={selected <= 1}
+                  onClick={() => updateSelection(line, selected - 1)}
+                >
+                  ▼
+                </button>
+              ) : null}
+              <input
+                aria-label={`Cantidad de ${line.name}`}
+                type="number"
+                min={1}
+                max={max}
+                value={selected}
+                onChange={(event) => updateSelection(line, Number(event.target.value) || 0)}
+              />
+              {max > 1 ? (
+                <button
+                  type="button"
+                  aria-label={`Aumentar cantidad de ${line.name}`}
+                  disabled={selected >= max}
+                  onClick={() => updateSelection(line, selected + 1)}
+                >
+                  ▲
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          <strong>
+            <PriceTag cents={unitCents * selected} />
+          </strong>
+        </article>
+      );
+    }),
+  ]);
 
   const closeSelectionReview = (): void => {
     setShowSelectionReview(false);
@@ -286,8 +319,13 @@ export function OrderTicketPanel({
       </div>
     ) : (
       <div>
-        <div className={styles.desktopLines} data-layout-products>
-          <table className={styles.lineTable}>
+        <div
+          className={`${styles.desktopLines} ${hasRemovableLines ? styles.hasActions : styles.noActions}`}
+          data-layout-products
+        >
+          <table
+            className={`${styles.lineTable} ${hasRemovableLines ? styles.hasActions : styles.noActions}`}
+          >
             <colgroup>
               <col className={styles.quantityColumn} />
               <col className={styles.productColumn} />
@@ -311,7 +349,11 @@ export function OrderTicketPanel({
             <tbody>{regularDesktopLines}</tbody>
           </table>
         </div>
-        <div className={styles.mobileLines}>{regularMobileLines}</div>
+        <div
+          className={`${styles.mobileLines} ${hasRemovableLines ? styles.hasActions : styles.noActions}`}
+        >
+          {regularMobileLines}
+        </div>
       </div>
     );
 

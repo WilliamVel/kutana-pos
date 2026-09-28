@@ -13,11 +13,13 @@ import type {
 } from "@kutana/shared/billing/model/personal-account.js";
 import { removeLineItemUnit } from "@kutana/shared/ordering/services/line-item-service.js";
 import {
+  useCategories,
   useCustomers,
   useOrderEvents,
   useOrders,
   usePayments,
   usePersonalAccounts,
+  useProducts,
   useTables,
 } from "../../../composition/PortsProvider.js";
 import {
@@ -32,6 +34,11 @@ import {
   type SelectedProductLine,
 } from "../components/OrderTicketPanel.js";
 import type { OrderStatus } from "../../../design-system/molecules/StatusPill.js";
+import {
+  orderTicketLines,
+  sectionizeOrderTicketLines,
+  type VisualProductMetadata,
+} from "../visual-ordering.js";
 
 const STATUS_MAP: Record<DomainOrderStatus, OrderStatus> = {
   active: "active",
@@ -68,6 +75,7 @@ function aggregateLines(
           : undefined;
     return {
       id: line.id,
+      productId: line.productId,
       name: line.name,
       quantity: line.quantity,
       pendingQuantity: Math.max(0, line.quantity - paidQuantity),
@@ -113,6 +121,8 @@ export function OrderTicketPanelContainer({
   const tables = useTables();
   const orders = useOrders();
   const personalAccounts = usePersonalAccounts();
+  const categories = useCategories();
+  const products = useProducts();
   const customersPort = useCustomers();
   const payments = usePayments();
   const events = useOrderEvents();
@@ -123,6 +133,9 @@ export function OrderTicketPanelContainer({
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [accountAllocations, setAccountAllocations] = useState<AccountLineAllocation[]>([]);
   const [accountPaidById, setAccountPaidById] = useState<Record<string, number>>({});
+  const [metadataByProductId, setMetadataByProductId] = useState<
+    ReadonlyMap<string, VisualProductMetadata>
+  >(new Map());
   const [loadState, setLoadState] = useState<"loading" | "ready" | "empty" | "error">("loading");
   const [removeBlockedMessage, setRemoveBlockedMessage] = useState<string | null>(null);
   const mountedRef = useRef(false);
@@ -199,6 +212,38 @@ export function OrderTicketPanelContainer({
     },
     [customersPort, orders, payments, personalAccounts, tableId, tables],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCatalogMetadata(): Promise<void> {
+      try {
+        const catalogCategories = await categories.listAll();
+        const productsByCategory = await Promise.all(
+          catalogCategories.map((category) =>
+            products.listByCategory(category.id, { includeInactive: true }),
+          ),
+        );
+        if (cancelled) return;
+        const metadata = new Map<string, VisualProductMetadata>();
+        catalogCategories.forEach((category, index) => {
+          for (const product of productsByCategory[index] ?? []) {
+            metadata.set(product.id, {
+              categoryName: category.name,
+              stockKind: product.stockKind,
+              pourSizeMl: product.pourSizeMl,
+            });
+          }
+        });
+        setMetadataByProductId(metadata);
+      } catch {
+        if (!cancelled) setMetadataByProductId(new Map());
+      }
+    }
+    void loadCatalogMetadata();
+    return () => {
+      cancelled = true;
+    };
+  }, [categories, products]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -325,7 +370,11 @@ export function OrderTicketPanelContainer({
       );
     });
   }
-  const lines = aggregateLines(order.lineItems, paidCentsByLineId, accountAllocations);
+  const lines = orderTicketLines(
+    aggregateLines(order.lineItems, paidCentsByLineId, accountAllocations),
+    metadataByProductId,
+  );
+  const sections = sectionizeOrderTicketLines(lines, metadataByProductId);
   const resolveSelection = (selection: readonly SelectedProductLine[]): SelectedProductLine[] => {
     const resolved: SelectedProductLine[] = [];
     for (const selected of selection) {
@@ -444,6 +493,7 @@ export function OrderTicketPanelContainer({
       tableLabel={table.label}
       status={STATUS_MAP[order.status]}
       lines={lines}
+      sections={sections}
       subtotalCents={subtotalCents}
       taxCents={taxCents}
       totalCents={totalCents}

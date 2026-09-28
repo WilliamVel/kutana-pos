@@ -48,6 +48,27 @@ describe("OrderTicketPanel", () => {
     expect(screen.getAllByText("$15.12").length).toBe(2); // total and balance
   });
 
+  it("shows beverage and food section labels while selecting products", () => {
+    render(
+      <OrderTicketPanel
+        tableLabel="Table 1"
+        status="active"
+        lines={LINES}
+        sections={[
+          { label: "Bebidas", lines: [LINES[0]!] },
+          { label: "Comida", lines: [LINES[1]!] },
+        ]}
+        subtotalCents={1350}
+        taxCents={162}
+        totalCents={1512}
+        selectionMode
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Bebidas" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Comida" })).toBeInTheDocument();
+  });
+
   it("hides the remove affordance for an assigned aggregated row", () => {
     render(
       <OrderTicketPanel

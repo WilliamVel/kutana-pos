@@ -64,7 +64,6 @@
   min-width: 0;
   flex: 0 1 auto;
   overflow-y: auto;
-  overscroll-behavior: contain;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
 }
@@ -115,6 +114,35 @@
 }
 .mobileLines {
   display: none;
+}
+.sectionHeader {
+  margin: 0;
+  padding: 0.65rem 0.5rem 0.4rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-align: left;
+  text-transform: uppercase;
+}
+.lineTable .sectionHeader th {
+  padding: var(--space-3) 24px var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-align: left !important;
+  text-transform: uppercase;
+}
+.lineTable.noActions .actionColumn,
+.lineTable.noActions .actionTableCell {
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
 }
 .totals {
   position: static;
@@ -402,6 +430,30 @@
   color: var(--text-secondary);
   font-size: 0.8rem;
 }
+.quantityPicker button {
+  display: inline-flex;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.quantityPicker button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.quantityPicker button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
 .quantityPicker input {
   width: 4rem;
   min-height: 2.75rem;
@@ -606,6 +658,13 @@
     min-width: 0;
     margin: 0;
   }
+  .mobileLines.noActions > div {
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    grid-template-areas: "qty product total" "qty price total";
+  }
+  .mobileLines.noActions > div > :last-child {
+    display: none;
+  }
   .totals {
     width: 100%;
     max-width: 100%;
@@ -621,6 +680,7 @@
 @media (max-width: 48rem) {
   .panel {
     min-height: 0;
+    padding-top: calc(var(--space-4) + env(safe-area-inset-top));
   }
 }
 
