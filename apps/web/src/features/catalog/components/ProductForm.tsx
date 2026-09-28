@@ -120,7 +120,6 @@ export function ProductForm({ categories, initialValues, onSubmit, onCancel, sub
 
   const shownError = (key: keyof ProductFormValues): string | undefined => visibleErrors[key];
   const stockUnitLabel = values.stockKind === "volume" ? (values.stockUnit === "l" ? "L" : "ml") : "unidades";
-  const displayQuantity = (quantity: number): string => displayQuantityForUnit(quantity, values.stockUnit ?? "ea", values.stockKind);
   const toStoredQuantity = (value: string): number => {
     const parsed = Number(value.replace(",", ".")) || 0;
     return values.stockKind === "volume" && values.stockUnit === "l" ? parsed * 1000 : parsed;
