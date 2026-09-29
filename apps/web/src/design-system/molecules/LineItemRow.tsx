@@ -41,18 +41,27 @@ const statusCopy: Record<
 
 function Status({
   statusLabel,
+  quantity,
   paidCents = 0,
   settlementTotalCents = 0,
 }: {
   readonly statusLabel?: LinePaymentStatus;
+  readonly quantity: number;
   readonly paidCents?: number;
   readonly settlementTotalCents?: number;
 }): JSX.Element | null {
   const status = statusLabel ? statusCopy[statusLabel] : null;
   if (!status) return null;
+  const settlementUnitCents =
+    quantity > 0 ? Math.round(settlementTotalCents / quantity) : 0;
+  const paidWholeUnits =
+    settlementUnitCents > 0
+      ? Math.min(quantity, Math.floor(paidCents / settlementUnitCents))
+      : 0;
+  const representedPaidCents = paidWholeUnits * settlementUnitCents;
   const detail =
     statusLabel === "partial" && paidCents > 0
-      ? ` · ${formatCents(paidCents)} de ${formatCents(settlementTotalCents)}`
+      ? ` · ${formatCents(representedPaidCents)} de ${formatCents(settlementTotalCents)}`
       : "";
   return (
     <>
@@ -99,6 +108,7 @@ function ProductDetails({
             <span className={styles.paymentStatus}>
               <Status
                 statusLabel={statusLabel}
+                quantity={quantity}
                 paidCents={paidCents}
                 settlementTotalCents={settlementTotalCents}
               />

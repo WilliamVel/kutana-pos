@@ -1,0 +1,9 @@
+# Fix payment tabs and partial amounts — reconciled task mirror
+
+1. [x] Update product payment tabs layout and payment display data.
+2. [x] Add regression coverage for tab layout contract and whole-unit partial amounts.
+3. [x] Run focused web tests and checks; record evidence and commit.
+
+Evidence: focused ordering, line-item, and container tests 27 passed; `pnpm typecheck` passed; focused ESLint passed; `git diff --check` passed.
+
+Source of truth: `odd/tasks/fix-payment-tabs-and-partial-amount.md`.

@@ -39,6 +39,22 @@ describe("LineItemRow", () => {
     expect(screen.queryByText(/ml$/)).not.toBeInTheDocument();
   });
 
+  it("shows the amount represented by paid whole units for partial payments", () => {
+    render(
+      <LineItemRow
+        name="Blonde Ale"
+        quantity={2}
+        unitPriceCents={1000}
+        totalCents={2000}
+        settlementTotalCents={784}
+        statusLabel="partial"
+        paidCents={400}
+      />,
+    );
+
+    expect(screen.getByText(/Parcial/).textContent).toContain("$3.92 de $7.84");
+  });
+
   it("renders complete paid and partial payment states without a truncated Pago label", () => {
     const { rerender } = render(
       <LineItemRow
@@ -52,7 +68,7 @@ describe("LineItemRow", () => {
     );
 
     expect(screen.getByText(/Parcial/)).toBeInTheDocument();
-    expect(screen.getByText(/Parcial/).textContent).toContain("$5.60 de $11.20");
+    expect(screen.getByText(/Parcial/).textContent).toContain("$0.00 de $11.20");
     expect(screen.queryByText(/^Pago$/)).not.toBeInTheDocument();
 
     rerender(
