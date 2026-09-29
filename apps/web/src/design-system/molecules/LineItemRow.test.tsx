@@ -55,7 +55,7 @@ describe("LineItemRow", () => {
     expect(screen.getByText(/Parcial/).textContent).toContain("$3.92 de $7.84");
   });
 
-  it("renders complete paid and partial payment states without a truncated Pago label", () => {
+  it("falls back to positive allocated cents for sub-unit partial payments", () => {
     const { rerender } = render(
       <LineItemRow
         name="Blonde Ale"
@@ -68,7 +68,7 @@ describe("LineItemRow", () => {
     );
 
     expect(screen.getByText(/Parcial/)).toBeInTheDocument();
-    expect(screen.getByText(/Parcial/).textContent).toContain("$0.00 de $11.20");
+    expect(screen.getByText(/Parcial/).textContent).toContain("$5.60 de $11.20");
     expect(screen.queryByText(/^Pago$/)).not.toBeInTheDocument();
 
     rerender(
