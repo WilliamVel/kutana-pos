@@ -290,6 +290,37 @@
 .paymentOverview strong {
   font-size: 1rem;
 }
+.productFilters {
+  display: flex;
+  gap: 0.2rem;
+  margin-bottom: var(--space-2);
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+.productFilters button,
+.paymentFilters button {
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.productFilters button:focus-visible,
+.paymentFilters button:focus-visible {
+  outline: 2px solid var(--accent-emphasis);
+  outline-offset: 2px;
+}
+.activeProductFilter,
+.activeFilter {
+  background: var(--surface-raised) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--shadow-sm);
+}
 .paymentFilters {
   display: flex;
   gap: 0.2rem;

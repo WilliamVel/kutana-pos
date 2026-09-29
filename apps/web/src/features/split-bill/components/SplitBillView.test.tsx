@@ -298,12 +298,36 @@ describe("SplitBillView", () => {
     expect(props.onRemoveAllocation).toHaveBeenCalledWith("account-a", ["allocation-a"], 1);
   });
 
+  it("hides assigned products for a paid account while preserving account totals", () => {
+    renderView({
+      accounts: [{ ...ACCOUNT, status: "paid", paidCents: 392, remainingCents: 0 }],
+      allocationDraft: { accountId: "account-a", lineItemId: "", quantity: "1" },
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: "Productos de Juan P." }));
+    expect(
+      screen.getByText("Esta cuenta está pagada; sus productos asignados ya no se muestran."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("KUTANA Pilsener 500ml")).not.toBeInTheDocument();
+    expect(screen.getByText("Restante").parentElement).toHaveTextContent("$0.00");
+  });
+
+  it("keeps assigned products visible for a partially paid account", () => {
+    renderView({
+      accounts: [{ ...ACCOUNT, status: "partially_paid", paidCents: 100, remainingCents: 292 }],
+      allocationDraft: { accountId: "account-a", lineItemId: "", quantity: "1" },
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: "Productos de Juan P." }));
+    expect(screen.getByText("KUTANA Pilsener 500ml")).toBeInTheDocument();
+  });
+
   it("marks paid account tabs and prevents editing their products", () => {
     renderView({ accounts: [{ ...ACCOUNT, status: "paid", paidCents: 392, remainingCents: 0 }] });
     expect(screen.getByRole("tab", { name: "Seleccionar cuenta Juan P." })).toHaveTextContent(
       "✓ Juan P.",
     );
-    expect(screen.getByRole("button", { name: /Devolver KUTANA/ })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /Devolver KUTANA/ })).not.toBeInTheDocument();
   });
 
   it("confirms removing an empty person and calls the deletion action", () => {

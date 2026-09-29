@@ -116,7 +116,8 @@ export function OrderTicketPanel({
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
   const [showSelectionReview, setShowSelectionReview] = useState(false);
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [filter, setFilter] = useState<"all" | "paid" | "pending">("all");
+  const [filter, setFilter] = useState<"paid" | "pending">("pending");
+  const [paymentFilter, setPaymentFilter] = useState<"all" | "paid" | "pending">("all");
   const selectedById = new Map(selectedProducts.map((item) => [item.lineId, item.quantity]));
   const selectedUnits = selectedProducts.reduce((sum, item) => sum + item.quantity, 0);
   const selectedCents = selectedProducts.reduce((sum, item) => {
@@ -144,9 +145,24 @@ export function OrderTicketPanel({
   const accountTotalCents = subtotalCents + taxCents;
   const filteredDetails = paymentDetails.filter(
     (line) =>
-      filter === "all" || (filter === "paid" ? line.status !== "pending" : line.status !== "paid"),
+      paymentFilter === "all" ||
+      (paymentFilter === "paid" ? line.status !== "pending" : line.status !== "paid"),
   );
   const displayedSections = sections ?? [{ label: "Comida" as const, lines }];
+  const hasPaidRows = displayedSections.some((section) =>
+    section.lines.some((line) => line.paymentStatus === "paid"),
+  );
+  useEffect(() => {
+    if (!hasPaidRows && filter === "paid") setFilter("pending");
+  }, [filter, hasPaidRows]);
+  const filteredSections = displayedSections
+    .map((section) => ({
+      ...section,
+      lines: section.lines.filter((line) =>
+        filter === "paid" ? line.paymentStatus === "paid" : line.paymentStatus !== "paid",
+      ),
+    }))
+    .filter((section) => section.lines.length > 0);
   const hasRemovableLines = Boolean(
     onRemoveLine && lines.some((line) => !line.isAdjustment && line.canRemove !== false),
   );
@@ -170,7 +186,7 @@ export function OrderTicketPanel({
       }
     />
   );
-  const regularDesktopLines = displayedSections.flatMap((section) => [
+  const regularDesktopLines = filteredSections.flatMap((section) => [
     <tr key={`${section.label}-header`} className={styles.sectionHeader}>
       <th colSpan={5} scope="colgroup">
         {section.label}
@@ -178,13 +194,13 @@ export function OrderTicketPanel({
     </tr>,
     ...section.lines.map((line) => renderLine(line, "table")),
   ]);
-  const regularMobileLines = displayedSections.flatMap((section) => [
+  const regularMobileLines = filteredSections.flatMap((section) => [
     <h3 key={`${section.label}-header`} className={styles.sectionHeader}>
       {section.label}
     </h3>,
     ...section.lines.map((line) => renderLine(line, "mobile")),
   ]);
-  const selectionRows = displayedSections.flatMap((section) => [
+  const selectionRows = filteredSections.flatMap((section) => [
     <h3 key={`${section.label}-selection-header`} className={styles.sectionHeader}>
       {section.label}
     </h3>,
@@ -313,48 +329,80 @@ export function OrderTicketPanel({
   const productContent =
     lines.length === 0 ? (
       <p className={styles.empty}>Todavía no hay productos en esta orden.</p>
-    ) : selectionMode ? (
-      <div className={styles.selectionList} aria-label="Seleccionar productos para cobrar">
-        {selectionRows}
-      </div>
     ) : (
-      <div>
+      <>
         <div
-          className={`${styles.desktopLines} ${hasRemovableLines ? styles.hasActions : styles.noActions}`}
-          data-layout-products
+          className={styles.productFilters}
+          role="tablist"
+          aria-label="Filtrar productos por pago"
         >
-          <table
-            className={`${styles.lineTable} ${hasRemovableLines ? styles.hasActions : styles.noActions}`}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={filter === "pending"}
+            className={filter === "pending" ? styles.activeProductFilter : undefined}
+            onClick={() => setFilter("pending")}
           >
-            <colgroup>
-              <col className={styles.quantityColumn} />
-              <col className={styles.productColumn} />
-              <col className={styles.priceColumn} />
-              <col className={styles.totalColumn} />
-              <col className={styles.actionColumn} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th scope="col" />
-                <th scope="col">Producto</th>
-                <th scope="col" className={styles.priceHeader}>
-                  Precio
-                </th>
-                <th scope="col" className={styles.totalHeader}>
-                  Total
-                </th>
-                <th scope="col" />
-              </tr>
-            </thead>
-            <tbody>{regularDesktopLines}</tbody>
-          </table>
+            Pendientes
+          </button>
+          {hasPaidRows ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={filter === "paid"}
+              className={filter === "paid" ? styles.activeProductFilter : undefined}
+              onClick={() => setFilter("paid")}
+            >
+              Pagados
+            </button>
+          ) : null}
         </div>
-        <div
-          className={`${styles.mobileLines} ${hasRemovableLines ? styles.hasActions : styles.noActions}`}
-        >
-          {regularMobileLines}
-        </div>
-      </div>
+        {filteredSections.length === 0 ? (
+          <p className={styles.empty}>No hay productos en este filtro.</p>
+        ) : selectionMode ? (
+          <div className={styles.selectionList} aria-label="Seleccionar productos para cobrar">
+            {selectionRows}
+          </div>
+        ) : (
+          <div>
+            <div
+              className={`${styles.desktopLines} ${hasRemovableLines ? styles.hasActions : styles.noActions}`}
+              data-layout-products
+            >
+              <table
+                className={`${styles.lineTable} ${hasRemovableLines ? styles.hasActions : styles.noActions}`}
+              >
+                <colgroup>
+                  <col className={styles.quantityColumn} />
+                  <col className={styles.productColumn} />
+                  <col className={styles.priceColumn} />
+                  <col className={styles.totalColumn} />
+                  <col className={styles.actionColumn} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th scope="col" />
+                    <th scope="col">Producto</th>
+                    <th scope="col" className={styles.priceHeader}>
+                      Precio
+                    </th>
+                    <th scope="col" className={styles.totalHeader}>
+                      Total
+                    </th>
+                    <th scope="col" />
+                  </tr>
+                </thead>
+                <tbody>{regularDesktopLines}</tbody>
+              </table>
+            </div>
+            <div
+              className={`${styles.mobileLines} ${hasRemovableLines ? styles.hasActions : styles.noActions}`}
+            >
+              {regularMobileLines}
+            </div>
+          </div>
+        )}
+      </>
     );
 
   return (
@@ -580,9 +628,9 @@ export function OrderTicketPanel({
                   key={value}
                   type="button"
                   role="tab"
-                  aria-selected={filter === value}
-                  className={filter === value ? styles.activeFilter : undefined}
-                  onClick={() => setFilter(value)}
+                  aria-selected={paymentFilter === value}
+                  className={paymentFilter === value ? styles.activeFilter : undefined}
+                  onClick={() => setPaymentFilter(value)}
                 >
                   {value === "all" ? "Todos" : value === "paid" ? "Pagados" : "Pendientes"}
                 </button>

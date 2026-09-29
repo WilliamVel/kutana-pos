@@ -931,7 +931,12 @@ export function SplitBillView({
                   aria-label={`Productos asignados a ${selectedAccount.ownerLabel}`}
                   className={styles.assignedProducts}
                 >
-                  {(selectedAccount.assignedLines?.length ?? 0) === 0 ? (
+                  {selectedAccount.status === "paid" ? (
+                    <div className={styles.emptyState}>
+                      <Icon name="receipt" size={20} />
+                      <p>Esta cuenta está pagada; sus productos asignados ya no se muestran.</p>
+                    </div>
+                  ) : (selectedAccount.assignedLines?.length ?? 0) === 0 ? (
                     <div className={styles.emptyState}>
                       <Icon name="receipt" size={20} />
                       <p>Esta persona todavía no tiene productos.</p>
