@@ -30,8 +30,10 @@
 }
 .logo {
   display: block;
-  width: 6.5rem;
-  height: auto;
+  width: auto;
+  height: 2.75rem;
+  max-width: 6.5rem;
+  object-fit: contain;
 }
 
 .menuButton {
@@ -133,9 +135,6 @@
 .menuAction:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
-}
-.menuButton:focus {
-  outline: none;
 }
 .tab[aria-current="page"] {
   background: var(--surface-active);
@@ -273,7 +272,7 @@
     gap: var(--space-3);
   }
   .logo {
-    width: 6rem;
+    max-width: 6rem;
   }
   .tab {
     padding-inline: var(--space-2);

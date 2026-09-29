@@ -1,0 +1,7 @@
+# Compact POS header — task mirror
+
+- [x] Inspect authenticated header geometry with Playwright and implement responsive logo/header sizing.
+- [x] Add or update regression coverage for compact header layout and image sizing.
+- [x] Run focused web tests, typecheck, lint, and Playwright evidence; record results.
+
+Evidence: TopBar CSS now constrains the logo to 2.75rem height with intrinsic width; Playwright measured desktop header 61px and mobile header 68px. TopBar tests 5/5 passed, TypeScript passed, diff check passed. Full Playwright was 16 passed / 3 unrelated order-ticket layout failures. No commit created.
