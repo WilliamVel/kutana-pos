@@ -37,3 +37,7 @@ Prevent the product-division screen from jumping to the top when products are se
 4. [x] Add a Playwright mobile regression that observes the settled scroll after tapping the last product.
 5. [x] Stabilize table-list identity and prevent selected-table re-scrolling on unrelated renders.
 6. [x] Run focused tests and browser regression.
+
+## Work-unit commits
+- `c75210e` — stop re-scrolling the selected table when product selection rerenders the workspace; includes the mobile browser regression.
+- `f0b19be` — exercise mouse-wheel scrolling over order product rows in Playwright. The CSS fix is already present in the prior `f2550d6` commit on `main`.
