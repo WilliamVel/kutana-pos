@@ -55,7 +55,7 @@ describe("LineItemRow", () => {
     expect(screen.getByText(/Parcial/).textContent).toContain("$3.92 de $7.84");
   });
 
-  it("falls back to positive allocated cents for sub-unit partial payments", () => {
+  it("shows only the partial status for payments without a complete unit", () => {
     const { rerender } = render(
       <LineItemRow
         name="Blonde Ale"
@@ -67,9 +67,10 @@ describe("LineItemRow", () => {
       />,
     );
 
-    expect(screen.getByText(/Parcial/)).toBeInTheDocument();
-    expect(screen.getByText(/Parcial/).textContent).toContain("$5.60 de $11.20");
-    expect(screen.queryByText(/^Pago$/)).not.toBeInTheDocument();
+    const partialStatus = screen.getByText(/Parcial/);
+    expect(partialStatus).toBeInTheDocument();
+    expect(partialStatus.textContent).not.toContain("$5.60 de $11.20");
+    expect(partialStatus.textContent).toBe("Parcial");
 
     rerender(
       <LineItemRow

@@ -58,10 +58,9 @@ function Status({
     settlementUnitCents > 0
       ? Math.min(quantity, Math.floor(paidCents / settlementUnitCents))
       : 0;
-  const representedPaidCents =
-    paidWholeUnits > 0 ? paidWholeUnits * settlementUnitCents : Math.max(0, paidCents);
+  const representedPaidCents = paidWholeUnits * settlementUnitCents;
   const detail =
-    statusLabel === "partial" && paidCents > 0
+    statusLabel === "partial" && paidWholeUnits > 0
       ? ` · ${formatCents(representedPaidCents)} de ${formatCents(settlementTotalCents)}`
       : "";
   return (
