@@ -50,7 +50,7 @@ const STATUS_MAP: Record<DomainOrderStatus, OrderStatus> = {
 
 type LineItem = Order["lineItems"][number];
 
-function aggregateLines(
+export function aggregateLines(
   lines: readonly LineItem[],
   paidCentsByLineId: ReadonlyMap<string, number>,
   accountAllocations: readonly AccountLineAllocation[],
@@ -60,39 +60,75 @@ function aggregateLines(
     const members = source.filter(
       (candidate) => orderLineGroupingKey(candidate) === orderLineGroupingKey(line),
     );
-    const paidCents = members.reduce(
-      (sum, member) => sum + (paidCentsByLineId.get(member.id) ?? 0),
-      0,
+    const settlementUnits = members.flatMap((member) => {
+      const unitCents =
+        member.quantity > 0 ? Math.round(member.totalCents / member.quantity) : 0;
+      const paidQuantity =
+        unitCents > 0
+          ? Math.min(
+              member.quantity,
+              Math.floor((paidCentsByLineId.get(member.id) ?? 0) / unitCents),
+            )
+          : 0;
+      return [
+        ...Array.from({ length: paidQuantity }, () => ({ unitCents, paid: true })),
+        ...Array.from({ length: member.quantity - paidQuantity }, () => ({
+          unitCents,
+          paid: false,
+        })),
+      ];
+    });
+    const paidQuantity = settlementUnits.filter((unit) => unit.paid).length;
+    const paidSettlementTotalCents = settlementUnits
+      .filter((unit) => unit.paid)
+      .reduce((sum, unit) => sum + unit.unitCents, 0);
+    const pendingSettlementTotalCents = settlementUnits
+      .filter((unit) => !unit.paid)
+      .reduce((sum, unit) => sum + unit.unitCents, 0);
+    const canRemove = !members.some((member) =>
+      accountAllocations.some(
+        (allocation) => allocation.lineItemId === member.id && allocation.quantity > 0,
+      ),
     );
-    const unitCents = line.quantity > 0 ? Math.round(line.totalCents / line.quantity) : 0;
-    const paidQuantity =
-      unitCents > 0 ? Math.min(line.quantity, Math.floor(paidCents / unitCents)) : 0;
-    const paymentStatus =
-      paidCents >= line.totalCents && line.totalCents > 0
-        ? "paid"
-        : paidCents > 0
-          ? "partial"
-          : undefined;
-    return {
+    const base = {
       id: line.id,
       productId: line.productId,
       name: line.name,
-      quantity: line.quantity,
-      pendingQuantity: Math.max(0, line.quantity - paidQuantity),
       unitPriceCents: line.unitPriceCents,
-      totalCents: line.unitPriceCents * line.quantity,
-      settlementTotalCents: line.totalCents,
       pourSizeMl: line.pourSizeMl as OrderTicketPanelLine["pourSizeMl"],
       isAdjustment: line.isAdjustment,
-      paymentStatus,
-      paidCents,
-      canRemove: !members.some((member) =>
-        accountAllocations.some(
-          (allocation) => allocation.lineItemId === member.id && allocation.quantity > 0,
-        ),
-      ),
+      canRemove,
     };
-  });
+    const pendingQuantity = Math.max(0, line.quantity - paidQuantity);
+    const segments: OrderTicketPanelLine[] = [];
+    if (paidQuantity > 0) {
+      const paidTotalCents = line.unitPriceCents * paidQuantity;
+      segments.push({
+        ...base,
+        quantity: paidQuantity,
+        pendingQuantity: 0,
+        totalCents: paidTotalCents,
+        settlementTotalCents: paidSettlementTotalCents,
+        paymentSegment: "paid",
+        paymentStatus: "paid",
+        paidCents: paidSettlementTotalCents,
+      });
+    }
+    if (pendingQuantity > 0) {
+      const pendingTotalCents = line.unitPriceCents * pendingQuantity;
+      segments.push({
+        ...base,
+        quantity: pendingQuantity,
+        pendingQuantity,
+        totalCents: pendingTotalCents,
+        settlementTotalCents: pendingSettlementTotalCents,
+        paymentSegment: "pending",
+        ...(paidQuantity > 0 ? { paymentStatus: "partial" as const } : {}),
+        paidCents: 0,
+      });
+    }
+    return segments;
+  }).flat();
 }
 
 export interface OrderTicketPanelContainerProps {

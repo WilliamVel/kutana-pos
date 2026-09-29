@@ -44,6 +44,8 @@ export interface OrderTicketPanelLine {
   readonly pourSizeMl: PourSize | null;
   readonly isAdjustment: boolean;
   readonly paymentStatus?: LinePaymentStatus;
+  /** Presentation-only discriminator; paymentStatus remains the persisted/rendering status. */
+  readonly paymentSegment?: "paid" | "pending";
   readonly paidCents?: number;
   readonly payerLabels?: readonly string[];
   readonly canRemove?: boolean;
@@ -120,8 +122,14 @@ export function OrderTicketPanel({
   const [paymentFilter, setPaymentFilter] = useState<"all" | "paid" | "pending">("all");
   const selectedById = new Map(selectedProducts.map((item) => [item.lineId, item.quantity]));
   const selectedUnits = selectedProducts.reduce((sum, item) => sum + item.quantity, 0);
+  const isPaidSegment = (line: OrderTicketPanelLine): boolean =>
+    line.paymentSegment === "paid" ||
+    (line.paymentSegment === undefined && line.paymentStatus === "paid");
+  const isPendingSegment = (line: OrderTicketPanelLine): boolean => !isPaidSegment(line);
+  const selectableLineById = (lineId: string): OrderTicketPanelLine | undefined =>
+    lines.find((candidate) => candidate.id === lineId && isPendingSegment(candidate));
   const selectedCents = selectedProducts.reduce((sum, item) => {
-    const line = lines.find((candidate) => candidate.id === item.lineId);
+    const line = selectableLineById(item.lineId);
     if (!line) return sum;
     const unitCents =
       line.quantity > 0
@@ -149,9 +157,25 @@ export function OrderTicketPanel({
       (paymentFilter === "paid" ? line.status !== "pending" : line.status !== "paid"),
   );
   const displayedSections = sections ?? [{ label: "Comida" as const, lines }];
-  const hasPaidRows = displayedSections.some((section) =>
-    section.lines.some((line) => line.paymentStatus === "paid"),
+  const paidUnitCount = displayedSections.reduce(
+    (sum, section) =>
+      sum +
+      section.lines.reduce(
+        (sectionSum, line) => sectionSum + (isPaidSegment(line) ? line.quantity : 0),
+        0,
+      ),
+    0,
   );
+  const pendingUnitCount = displayedSections.reduce(
+    (sum, section) =>
+      sum +
+      section.lines.reduce(
+        (sectionSum, line) => sectionSum + (isPendingSegment(line) ? line.quantity : 0),
+        0,
+      ),
+    0,
+  );
+  const hasPaidRows = paidUnitCount > 0;
   useEffect(() => {
     if (!hasPaidRows && filter === "paid") setFilter("pending");
   }, [filter, hasPaidRows]);
@@ -159,7 +183,7 @@ export function OrderTicketPanel({
     .map((section) => ({
       ...section,
       lines: section.lines.filter((line) =>
-        filter === "paid" ? line.paymentStatus === "paid" : line.paymentStatus !== "paid",
+        filter === "paid" ? isPaidSegment(line) : isPendingSegment(line),
       ),
     }))
     .filter((section) => section.lines.length > 0);
@@ -343,7 +367,7 @@ export function OrderTicketPanel({
             className={filter === "pending" ? styles.activeProductFilter : undefined}
             onClick={() => setFilter("pending")}
           >
-            Pendientes
+            Pendientes · {pendingUnitCount}
           </button>
           {hasPaidRows ? (
             <button
@@ -353,7 +377,7 @@ export function OrderTicketPanel({
               className={filter === "paid" ? styles.activeProductFilter : undefined}
               onClick={() => setFilter("paid")}
             >
-              Pagados
+              Pagados · {paidUnitCount}
             </button>
           ) : null}
         </div>
@@ -431,15 +455,13 @@ export function OrderTicketPanel({
           </div>
         ) : null}
         <div className={styles.totalRow}>
-          <span>Total</span>
+          <span>Total de la orden</span>
           <PriceTag cents={accountTotalCents} />
         </div>
-        {paidCents > 0 ? (
-          <div className={styles.totalRow}>
-            <span>Pagado</span>
-            <PriceTag cents={paidCents} />
-          </div>
-        ) : null}
+        <div className={styles.totalRow}>
+          <span>Pagado</span>
+          <PriceTag cents={paidCents} />
+        </div>
         <div className={`${styles.totalRow} ${styles.grandTotal}`}>
           <span>Saldo pendiente</span>
           <PriceTag cents={totalCents} />
@@ -512,7 +534,7 @@ export function OrderTicketPanel({
             </div>
             <div className={styles.selectionReviewList}>
               {selectedProducts.map((item) => {
-                const line = lines.find((candidate) => candidate.id === item.lineId);
+                const line = selectableLineById(item.lineId);
                 if (!line) return null;
                 const unitCents =
                   line.quantity > 0
@@ -599,7 +621,7 @@ export function OrderTicketPanel({
             </div>
             <div className={styles.paymentOverview} aria-label="Resumen del pago">
               <div>
-                <span>Total</span>
+                <span>Total de la orden</span>
                 <strong>{formatCents(accountTotalCents)}</strong>
               </div>
               <div>
@@ -607,7 +629,7 @@ export function OrderTicketPanel({
                 <strong>{formatCents(paidCents)}</strong>
               </div>
               <div>
-                <span>Pendiente</span>
+                <span>Saldo pendiente</span>
                 <strong>{formatCents(totalCents)}</strong>
               </div>
               <div>

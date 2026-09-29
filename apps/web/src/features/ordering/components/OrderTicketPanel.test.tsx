@@ -46,6 +46,7 @@ describe("OrderTicketPanel", () => {
     expect(screen.getByText("$13.50")).toBeInTheDocument(); // subtotal
     expect(screen.getByText("$1.62")).toBeInTheDocument(); // tax — persisted at sale time, not recomputed
     expect(screen.getAllByText("$15.12").length).toBe(2); // total and balance
+    expect(screen.queryByText("Pendiente")).not.toBeInTheDocument();
   });
 
   it("defaults to pending rows, exposes paid rows conditionally, and keeps totals unchanged", () => {
@@ -65,16 +66,19 @@ describe("OrderTicketPanel", () => {
       />,
     );
 
-    expect(screen.getByRole("tab", { name: "Pendientes" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Pendientes · 1" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(screen.getByRole("tab", { name: "Pagados" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Pagados · 2" })).toBeInTheDocument();
+    expect(screen.getByText("Total de la orden")).toBeInTheDocument();
+    expect(screen.getByText("Pagado")).toBeInTheDocument();
+    expect(screen.getByText("Saldo pendiente")).toBeInTheDocument();
     expect(screen.queryAllByText("KUTANA Pilsener 500ml").length).toBe(0);
     expect(screen.getAllByText("Loaded Nachos").length).toBe(2);
     expect(screen.getByText("$13.50")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Pagados" }));
+    fireEvent.click(screen.getByRole("tab", { name: /Pagados/ }));
     expect(screen.getAllByText("KUTANA Pilsener 500ml").length).toBe(2);
     expect(screen.queryAllByText("Loaded Nachos").length).toBe(0);
   });
@@ -90,7 +94,7 @@ describe("OrderTicketPanel", () => {
         totalCents={700}
       />,
     );
-    fireEvent.click(screen.getByRole("tab", { name: "Pagados" }));
+    fireEvent.click(screen.getByRole("tab", { name: /Pagados/ }));
     rerender(
       <OrderTicketPanel
         tableLabel="Table 1"
@@ -101,11 +105,11 @@ describe("OrderTicketPanel", () => {
         totalCents={700}
       />,
     );
-    expect(screen.getByRole("tab", { name: "Pendientes" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: /Pendientes/ })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(screen.queryByRole("tab", { name: "Pagados" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /Pagados/ })).not.toBeInTheDocument();
   });
 
   it("keeps selection callbacks keyed by the existing aggregate line id", () => {
@@ -114,7 +118,7 @@ describe("OrderTicketPanel", () => {
       <OrderTicketPanel
         tableLabel="Table 1"
         status="active"
-        lines={[{ ...LINES[0]!, paymentStatus: "paid" }]}
+        lines={[{ ...LINES[0]!, paymentStatus: "pending", pendingQuantity: 2 }]}
         subtotalCents={700}
         taxCents={0}
         totalCents={700}
@@ -122,9 +126,50 @@ describe("OrderTicketPanel", () => {
         onSelectionChange={onSelectionChange}
       />,
     );
-    fireEvent.click(screen.getByRole("tab", { name: "Pagados" }));
     fireEvent.click(screen.getByRole("checkbox"));
     expect(onSelectionChange).toHaveBeenCalledWith([{ lineId: "line-1", quantity: 1 }]);
+  });
+
+  it("uses the pending segment when paid and pending segments share an id", () => {
+    const duplicatedId = "line-duplicated";
+    render(
+      <OrderTicketPanel
+        tableLabel="Table 1"
+        status="active"
+        lines={[
+          {
+            ...LINES[0]!,
+            id: duplicatedId,
+            quantity: 2,
+            totalCents: 1000,
+            settlementTotalCents: 1000,
+            paymentSegment: "paid",
+            paymentStatus: "paid",
+          },
+          {
+            ...LINES[0]!,
+            id: duplicatedId,
+            quantity: 2,
+            totalCents: 700,
+            settlementTotalCents: 600,
+            pendingQuantity: 2,
+            paymentSegment: "pending",
+            paymentStatus: "partial",
+          },
+        ]}
+        subtotalCents={1700}
+        taxCents={0}
+        totalCents={1700}
+        selectionMode
+        selectedProducts={[{ lineId: duplicatedId, quantity: 2 }]}
+      />,
+    );
+
+    expect(screen.getAllByText("$6.00").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Revisar y cobrar" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("Total a cobrar");
+    expect(screen.getByRole("dialog")).toHaveTextContent("$6.00");
+    expect(screen.getByRole("dialog")).not.toHaveTextContent("$10.00");
   });
 
   it("shows beverage and food section labels while selecting products", () => {

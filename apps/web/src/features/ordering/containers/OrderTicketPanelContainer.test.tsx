@@ -5,9 +5,49 @@ import { createAccountLineAllocation, createPersonalAccount } from "@kutana/shar
 import { addLineItem } from "@kutana/shared/ordering/services/line-item-service.js";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../../composition/mock.js";
-import { OrderTicketPanelContainer } from "./OrderTicketPanelContainer.js";
+import {
+  aggregateLines,
+  OrderTicketPanelContainer,
+} from "./OrderTicketPanelContainer.js";
 
 describe("OrderTicketPanelContainer", () => {
+  it("splits complete paid units into paid and pending presentation segments", async () => {
+    const ports = buildMockPorts();
+    const order = (await ports.orders.findByTable("table-1"))!;
+    const source = { ...order.lineItems[0]!, quantity: 7, totalCents: 2100, unitPriceCents: 350 };
+    const segments = aggregateLines([source], new Map([[source.id, 900]]), []);
+
+    expect(segments).toHaveLength(2);
+    expect(segments.map(({ id, quantity, paymentStatus, paymentSegment, totalCents, settlementTotalCents }) => ({
+      id,
+      quantity,
+      paymentStatus,
+      paymentSegment,
+      totalCents,
+      settlementTotalCents,
+    }))).toEqual([
+      { id: source.id, quantity: 3, paymentStatus: "paid", paymentSegment: "paid", totalCents: 1050, settlementTotalCents: 900 },
+      { id: source.id, quantity: 4, paymentStatus: "partial", paymentSegment: "pending", totalCents: 1400, settlementTotalCents: 1200 },
+    ]);
+  });
+
+  it("leaves all units pending when payment is below one complete unit", async () => {
+    const ports = buildMockPorts();
+    const order = (await ports.orders.findByTable("table-1"))!;
+    const source = { ...order.lineItems[0]!, quantity: 7, totalCents: 2100, unitPriceCents: 350 };
+    const segments = aggregateLines([source], new Map([[source.id, 299]]), []);
+
+    expect(segments).toHaveLength(1);
+    expect(segments[0]).toMatchObject({
+      id: source.id,
+      quantity: 7,
+      paymentSegment: "pending",
+      totalCents: 2450,
+      settlementTotalCents: 2100,
+    });
+    expect(segments[0]).not.toHaveProperty("paymentStatus");
+  });
+
   afterEach(() => {
     act(() => toast.dismiss());
   });

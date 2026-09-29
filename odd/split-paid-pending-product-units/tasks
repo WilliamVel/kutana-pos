@@ -1,0 +1,10 @@
+# Split paid and pending product units — reconciled task mirror
+
+1. [x] Derive separate paid/pending visual rows from aggregated product lines.
+2. [x] Update tabs, labels, selection behavior, and global summary copy.
+3. [x] Add regression coverage for split quantities, sub-unit payments, and global totals.
+4. [x] Run focused web checks and commit the work unit.
+
+Evidence: focused ordering/container/line-item/aggregation tests passed; full suite 528 passed and 59 skipped without `DATABASE_URL`; typecheck, focused ESLint, and diff check passed.
+
+Source of truth: `odd/tasks/split-paid-pending-product-units.md`.
