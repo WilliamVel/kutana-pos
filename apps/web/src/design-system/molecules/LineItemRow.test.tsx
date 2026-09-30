@@ -19,6 +19,23 @@ describe("LineItemRow", () => {
     expect(screen.getByText("$7.00")).toBeInTheDocument();
   });
 
+  it("uses a presentation total while retaining the original unit price", () => {
+    render(
+      <LineItemRow
+        name="Blonde Ale"
+        quantity={2}
+        unitPriceCents={100}
+        totalCents={200}
+        displayTotalCents={100}
+      />,
+    );
+
+    const prices = screen.getAllByText("$1.00");
+    expect(prices).toHaveLength(2);
+    expect(prices[0]?.parentElement?.parentElement).toHaveTextContent("$1.00 c/u");
+    expect(screen.queryByText("$2.00")).not.toBeInTheDocument();
+  });
+
   it("renders a pour size badge when the line item is a volume pour", () => {
     render(
       <LineItemRow

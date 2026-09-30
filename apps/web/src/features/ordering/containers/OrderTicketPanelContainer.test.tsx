@@ -43,9 +43,27 @@ describe("OrderTicketPanelContainer", () => {
       quantity: 7,
       paymentSegment: "pending",
       totalCents: 2450,
+      displayTotalCents: 1801,
       settlementTotalCents: 2100,
     });
     expect(segments[0]).not.toHaveProperty("paymentStatus");
+    expect(segments[0]).toHaveProperty("displayTotalCents", 1801);
+  });
+
+  it("shows the remaining balance without changing pending quantity", async () => {
+    const ports = buildMockPorts();
+    const order = (await ports.orders.findByTable("table-1"))!;
+    const source = { ...order.lineItems[0]!, quantity: 2, totalCents: 150, unitPriceCents: 100 };
+    const segments = aggregateLines([source], new Map([[source.id, 50]]), []);
+
+    expect(segments).toHaveLength(1);
+    expect(segments[0]).toMatchObject({
+      quantity: 2,
+      totalCents: 200,
+      displayTotalCents: 100,
+      settlementTotalCents: 150,
+      paymentSegment: "pending",
+    });
   });
 
   afterEach(() => {

@@ -117,11 +117,18 @@ export function aggregateLines(
     }
     if (pendingQuantity > 0) {
       const pendingTotalCents = line.unitPriceCents * pendingQuantity;
+      const allocatedPaidCents = members.reduce(
+        (sum, member) => sum + (paidCentsByLineId.get(member.id) ?? 0),
+        0,
+      );
+      const partialAllocationCents = Math.max(0, allocatedPaidCents - paidSettlementTotalCents);
+      const remainingCents = Math.max(0, pendingSettlementTotalCents - partialAllocationCents);
       segments.push({
         ...base,
         quantity: pendingQuantity,
         pendingQuantity,
         totalCents: pendingTotalCents,
+        ...(partialAllocationCents > 0 ? { displayTotalCents: remainingCents } : {}),
         settlementTotalCents: pendingSettlementTotalCents,
         paymentSegment: "pending",
         ...(paidQuantity > 0 ? { paymentStatus: "partial" as const } : {}),

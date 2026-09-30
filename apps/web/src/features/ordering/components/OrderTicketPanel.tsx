@@ -40,6 +40,8 @@ export interface OrderTicketPanelLine {
   readonly pendingQuantity?: number;
   readonly unitPriceCents: number;
   readonly totalCents: number;
+  /** Presentation-only remaining balance for a pending payment segment. */
+  readonly displayTotalCents?: number;
   readonly settlementTotalCents?: number;
   readonly pourSizeMl: PourSize | null;
   readonly isAdjustment: boolean;
@@ -198,6 +200,7 @@ export function OrderTicketPanel({
       quantity={line.quantity}
       unitPriceCents={line.unitPriceCents}
       totalCents={line.totalCents}
+      displayTotalCents={line.displayTotalCents}
       settlementTotalCents={line.settlementTotalCents}
       pourSizeMl={line.pourSizeMl}
       isAdjustment={line.isAdjustment}

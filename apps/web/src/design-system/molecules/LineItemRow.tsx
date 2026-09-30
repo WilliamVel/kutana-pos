@@ -12,6 +12,8 @@ export interface LineItemRowProps {
   readonly quantity: number;
   readonly unitPriceCents: number;
   readonly totalCents: number;
+  /** Presentation-only total; contract totals remain unchanged. */
+  readonly displayTotalCents?: number;
   readonly settlementTotalCents?: number;
   readonly pourSizeMl?: PourSize | null;
   readonly isAdjustment?: boolean;
@@ -154,6 +156,7 @@ export function LineItemRow({
   quantity,
   unitPriceCents,
   totalCents,
+  displayTotalCents,
   pourSizeMl,
   isAdjustment = false,
   statusLabel,
@@ -191,7 +194,7 @@ export function LineItemRow({
           <PriceTag cents={unitPriceCents} /> c/u
         </td>
         <td className={styles.totalCell}>
-          <PriceTag cents={unitPriceCents * quantity} />
+          <PriceTag cents={displayTotalCents ?? unitPriceCents * quantity} />
         </td>
         <td className={styles.actionTableCell}>
           <Action name={name} pourSizeMl={pourSizeMl} onRemove={onRemove} readOnly={readOnly} />
@@ -229,7 +232,7 @@ export function LineItemRow({
         <PriceTag cents={unitPriceCents} /> c/u
       </span>
       <span className={styles.mobileTotal}>
-        <PriceTag cents={unitPriceCents * quantity} />
+        <PriceTag cents={displayTotalCents ?? unitPriceCents * quantity} />
       </span>
       <Action name={name} pourSizeMl={pourSizeMl} onRemove={onRemove} readOnly={readOnly} />
     </div>
