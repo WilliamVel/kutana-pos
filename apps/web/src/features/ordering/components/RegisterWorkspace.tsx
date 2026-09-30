@@ -22,6 +22,11 @@ export interface RegisterWorkspaceProps {
   readonly railHidden?: boolean;
   /** Allows secondary center content to extend beyond the fixed workspace card. */
   readonly centerOverflowVisible?: boolean;
+  /** Fullscreen flow rendered above the workspace rather than inside its center column. */
+  readonly overlay?: ReactNode;
+  readonly overlayTitle?: string;
+  readonly onCloseOverlay?: () => void;
+  readonly listLocked?: boolean;
   readonly selectedTableId?: string | null;
 }
 
@@ -42,6 +47,10 @@ export function RegisterWorkspace({
   emptyRailMessage,
   railHidden = false,
   centerOverflowVisible = false,
+  overlay = null,
+  overlayTitle = "Flujo activo",
+  onCloseOverlay,
+  listLocked = false,
   selectedTableId = null,
 }: RegisterWorkspaceProps): JSX.Element {
   const [mobileView, setMobileView] = useState<"order" | "products">("order");
@@ -50,7 +59,14 @@ export function RegisterWorkspace({
 
   useEffect(() => {
     const onOrderUpdated = (event: Event): void => {
-      const detail = (event as CustomEvent<{ orderId?: string; tableId?: string; orderCount?: number; productCount?: number }>).detail;
+      const detail = (
+        event as CustomEvent<{
+          orderId?: string;
+          tableId?: string;
+          orderCount?: number;
+          productCount?: number;
+        }>
+      ).detail;
       if (detail.tableId !== selectedTableId) return;
       if (typeof detail.orderCount === "number") setOrderCount(detail.orderCount);
     };
@@ -67,21 +83,67 @@ export function RegisterWorkspace({
     setOrderCount(null);
   }, [selectedTableId]);
 
+  useEffect(() => {
+    if (!overlay) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [overlay]);
+
+  useEffect(() => {
+    if (!overlay || !onCloseOverlay) return;
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== "Escape") return;
+      const target = event.target;
+      // Let split-flow confirmations and popovers consume Escape first.
+      if (target instanceof HTMLElement && target.closest('[role="dialog"][aria-labelledby]'))
+        return;
+      event.preventDefault();
+      onCloseOverlay();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onCloseOverlay, overlay]);
+
   return (
     <div className={workspaceClass} data-mobile-view={mobileView}>
       <div className={styles.mobileTabs} role="tablist" aria-label="Vista de la orden">
-        <button type="button" role="tab" aria-selected={mobileView === "order"} onClick={() => setMobileView("order")}>
-          <span aria-hidden="true">▤</span> Pedido {orderCount === null ? null : <strong>{orderCount}</strong>}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileView === "order"}
+          onClick={() => setMobileView("order")}
+        >
+          <span aria-hidden="true">▤</span> Pedido{" "}
+          {orderCount === null ? null : <strong>{orderCount}</strong>}
         </button>
         {!railHidden ? (
-          <button type="button" role="tab" aria-selected={mobileView === "products"} onClick={() => setMobileView("products")}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileView === "products"}
+            onClick={() => setMobileView("products")}
+          >
             <span aria-hidden="true">♧</span> Productos
           </button>
         ) : null}
       </div>
-      <div className={styles.list}><div className={styles.listContent}>{list}</div></div>
+      <div
+        className={listLocked ? `${styles.list} ${styles.listLocked}` : styles.list}
+        aria-disabled={listLocked}
+      >
+        <div className={styles.listContent}>{list}</div>
+      </div>
       {center ? (
-        <div className={centerOverflowVisible ? `${styles.center} ${styles.centerOverflowVisible}` : styles.center}>
+        <div
+          className={
+            centerOverflowVisible
+              ? `${styles.center} ${styles.centerOverflowVisible}`
+              : styles.center
+          }
+        >
           {center}
           {actions ? <div className={styles.centerActions}>{actions}</div> : null}
         </div>
@@ -97,9 +159,36 @@ export function RegisterWorkspace({
               <h2>{emptyRailTitle}</h2>
               {emptyRailMessage ? <p className={styles.emptyMessage}>{emptyRailMessage}</p> : null}
             </section>
-          ) : rail}
+          ) : (
+            rail
+          )}
         </div>
       )}
+      {overlay ? (
+        <div className={styles.overlayBackdrop} role="presentation">
+          <section
+            className={styles.overlayPanel}
+            role="dialog"
+            aria-modal="true"
+            aria-label={overlayTitle}
+          >
+            <header className={styles.overlayHeader}>
+              <h2>{overlayTitle}</h2>
+              {onCloseOverlay ? (
+                <button
+                  type="button"
+                  className={styles.overlayClose}
+                  aria-label="Cerrar división de cuenta"
+                  onClick={onCloseOverlay}
+                >
+                  ×
+                </button>
+              ) : null}
+            </header>
+            <div className={styles.overlayContent}>{overlay}</div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

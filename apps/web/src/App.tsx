@@ -141,8 +141,9 @@ export function App(): JSX.Element {
       setSelectedOrderReady(false);
       setSelectedOrderListReady(false);
     } else {
-      // Keep the table selection for a possible return to Orders, but require
-      // the Orders container to validate it again before showing actions.
+      // Keep the table selection for a possible return to Orders, but reset
+      // the center sub-view so a split overlay cannot reopen stale.
+      resetCenter();
       setSelectedOrderReady(false);
       setSelectedOrderListReady(false);
     }
@@ -159,6 +160,7 @@ export function App(): JSX.Element {
 
   let center: JSX.Element | null = null;
   let centerActions: JSX.Element | null = null;
+  let splitOverlay: JSX.Element | null = null;
   if (selectedTableId) {
     if (centerView === "payment") {
       center = (
@@ -195,25 +197,20 @@ export function App(): JSX.Element {
         </>
       );
     } else if (centerView === "assignment") {
-      center = (
-        <>
-          <SplitBillContainer
-            tableId={selectedTableId}
-            onPayAccount={(accountId) => {
-              setSelectedTicketId(null);
-              setSelectedAccountId(accountId);
-              setCenterView("payment");
-            }}
-            onPayOrder={() => {
-              setSelectedTicketId(null);
-              setSelectedAccountId(null);
-              setCenterView("payment");
-            }}
-          />
-          <Button variant="secondary" onClick={resetCenter}>
-            Volver al pedido
-          </Button>
-        </>
+      splitOverlay = (
+        <SplitBillContainer
+          tableId={selectedTableId}
+          onPayAccount={(accountId) => {
+            setSelectedTicketId(null);
+            setSelectedAccountId(accountId);
+            setCenterView("payment");
+          }}
+          onPayOrder={() => {
+            setSelectedTicketId(null);
+            setSelectedAccountId(null);
+            setCenterView("payment");
+          }}
+        />
       );
     } else {
       center = (
@@ -434,7 +431,10 @@ export function App(): JSX.Element {
                   />
                 }
                 selectedTableId={selectedTableId}
-                onSelectTable={selectTable}
+                onSelectTable={(tableId) => {
+                  if (centerView === "assignment") return;
+                  selectTable(tableId);
+                }}
                 onSelectionStateChange={(state) => {
                   if (state === "valid") {
                     setSelectedOrderListReady(true);
@@ -476,7 +476,11 @@ export function App(): JSX.Element {
           }
           emptyRailTitle="Productos"
           emptyRailMessage="Selecciona una orden para agregar productos"
-          centerOverflowVisible={centerView === "assignment"}
+          centerOverflowVisible={false}
+          overlay={splitOverlay}
+          overlayTitle="Dividir cuenta"
+          onCloseOverlay={resetCenter}
+          listLocked={centerView === "assignment"}
           railHidden={Boolean(selectedTableId) && centerView !== "account"}
           selectedTableId={selectedTableId}
           rail={

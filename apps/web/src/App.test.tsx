@@ -50,6 +50,39 @@ describe("App", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
+
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("menuitem", { name: /Partes iguales/ }));
+    const splitDialog = await screen.findByRole("dialog", { name: "Dividir cuenta" });
+    fireEvent.click(screen.getByRole("button", { name: /Table 2/ }));
+    expect(splitDialog).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar división de cuenta" }));
+    expect(screen.queryByRole("dialog", { name: "Dividir cuenta" })).not.toBeInTheDocument();
+  });
+
+  it("resets the split view when navigating away from and back to register", async () => {
+    render(
+      <PortsProvider value={buildMockPorts()}>
+        <App />
+      </PortsProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
+    const table = await screen.findByRole("button", { name: /Table 1/ });
+    fireEvent.click(table);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Dividir cuenta" })).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Dividir cuenta" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Partes iguales/ }));
+    expect(await screen.findByRole("dialog", { name: "Dividir cuenta" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Inventario" }));
+    fireEvent.click(screen.getByRole("button", { name: "Órdenes" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Dividir cuenta" })).not.toBeInTheDocument(),
+    );
   });
 
   it("opens category management from the inventory actions", async () => {

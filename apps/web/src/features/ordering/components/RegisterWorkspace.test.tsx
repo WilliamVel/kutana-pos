@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { RegisterWorkspace } from "./RegisterWorkspace.js";
 import styles from "./RegisterWorkspace.module.css";
 
@@ -60,6 +60,69 @@ describe("RegisterWorkspace", () => {
 
     rerender(<RegisterWorkspace {...props} center={null} />);
     expect(screen.queryByRole("button", { name: "Pay order" })).not.toBeInTheDocument();
+  });
+
+  it("renders a fullscreen overlay with a visible close control", () => {
+    const onClose = vi.fn();
+    render(
+      <RegisterWorkspace
+        list={<p>order list</p>}
+        center={<p>account view</p>}
+        emptyCenter={<p>pick one</p>}
+        rail={<p>quick add</p>}
+        overlay={<p>split assignment</p>}
+        overlayTitle="Split account"
+        onCloseOverlay={onClose}
+      />,
+    );
+
+    expect(screen.getByRole("dialog", { name: "Split account" })).toBeInTheDocument();
+    expect(screen.getByText("split assignment")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar división de cuenta" }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("closes the overlay on Escape without removing the workspace context", () => {
+    const onClose = vi.fn();
+    render(
+      <RegisterWorkspace
+        list={<p>order list</p>}
+        center={<p>account view</p>}
+        emptyCenter={<p>pick one</p>}
+        rail={<p>quick add</p>}
+        overlay={<p>split assignment</p>}
+        onCloseOverlay={onClose}
+        listLocked
+      />,
+    );
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(screen.getByText("order list")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cerrar división de cuenta" })).toBeInTheDocument();
+  });
+
+  it("locks body scrolling while the overlay is open and restores it after close or unmount", () => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "scroll";
+    const props = {
+      list: <p>order list</p>,
+      center: <p>account view</p>,
+      emptyCenter: <p>pick one</p>,
+      rail: <p>quick add</p>,
+      overlay: <p>split assignment</p>,
+    };
+    const { rerender, unmount } = render(<RegisterWorkspace {...props} />);
+
+    expect(document.body.style.overflow).toBe("hidden");
+    rerender(<RegisterWorkspace {...props} overlay={null} />);
+    expect(document.body.style.overflow).toBe("scroll");
+
+    rerender(<RegisterWorkspace {...props} />);
+    expect(document.body.style.overflow).toBe("hidden");
+    unmount();
+    expect(document.body.style.overflow).toBe("scroll");
+    document.body.style.overflow = previousOverflow;
   });
 
   it("renders the center content instead of the empty state when provided", () => {

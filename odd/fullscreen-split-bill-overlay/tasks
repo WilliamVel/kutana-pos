@@ -1,0 +1,10 @@
+# Fullscreen split-bill overlay — reconciled task mirror
+
+1. [x] Render split-bill in a responsive fullscreen overlay with internal scrolling and accessible close behavior.
+2. [x] Keep the split flow bound to its order and block accidental order switching until exit.
+3. [x] Add regression coverage for overlay/close behavior and order context protection.
+4. [x] Run focused checks and commit the work unit.
+
+Evidence: App/RegisterWorkspace tests 15 passed; split-flow focused suite 35 passed; typecheck and diff check passed.
+
+Source of truth: `odd/tasks/fullscreen-split-bill-overlay.md`.
