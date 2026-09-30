@@ -113,6 +113,11 @@
   overscroll-behavior: contain;
 }
 
+.overlayContent > [data-overlay-scroll-owner="true"] {
+  height: auto;
+  overflow: visible;
+}
+
 .center {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;

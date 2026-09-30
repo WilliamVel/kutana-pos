@@ -47,6 +47,9 @@ describe("OrderTicketPanel", () => {
     expect(screen.getByText("$1.62")).toBeInTheDocument(); // tax — persisted at sale time, not recomputed
     expect(screen.getAllByText("$15.12").length).toBe(2); // total and balance
     expect(screen.queryByText("Pendiente")).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Resumen de orden para Table 1" })).not.toHaveAttribute(
+      "data-overlay-scroll-owner",
+    );
   });
 
   it("defaults to pending rows, exposes paid rows conditionally, and keeps totals unchanged", () => {
@@ -191,6 +194,10 @@ describe("OrderTicketPanel", () => {
 
     expect(screen.getByRole("heading", { name: "Bebidas" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Comida" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Resumen de orden para Table 1" })).toHaveAttribute(
+      "data-overlay-scroll-owner",
+      "true",
+    );
   });
 
   it("hides the remove affordance for an assigned aggregated row", () => {

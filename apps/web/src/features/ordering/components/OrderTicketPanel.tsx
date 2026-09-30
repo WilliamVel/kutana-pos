@@ -430,7 +430,11 @@ export function OrderTicketPanel({
     );
 
   return (
-    <section className={styles.panel} aria-label={`Resumen de orden para ${tableLabel}`}>
+    <section
+      className={styles.panel}
+      aria-label={`Resumen de orden para ${tableLabel}`}
+      data-overlay-scroll-owner={selectionMode ? "true" : undefined}
+    >
       <div className={styles.header}>
         <div>
           <h2>{tableLabel}</h2>
