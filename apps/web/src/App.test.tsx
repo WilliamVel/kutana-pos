@@ -60,6 +60,44 @@ describe("App", () => {
     expect(screen.queryByRole("dialog", { name: "Dividir cuenta" })).not.toBeInTheDocument();
   });
 
+  it("renders product selection in the fullscreen overlay and exits back to the account view", async () => {
+    render(
+      <PortsProvider value={buildMockPorts()}>
+        <App />
+      </PortsProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("Usuario"), { target: { value: "Mina" } });
+    fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "1234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Table 1/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Dividir cuenta" })).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Dividir cuenta" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Cobrar productos/ }));
+
+    const selectionDialog = await screen.findByRole("dialog", {
+      name: "Seleccionar productos para cobrar",
+    });
+    expect(selectionDialog).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getAllByLabelText("Seleccionar productos para cobrar")).toHaveLength(1),
+    );
+    expect(selectionDialog).toContainElement(
+      screen.getByLabelText("Seleccionar productos para cobrar"),
+    );
+    expect(screen.getByRole("button", { name: /Table 1/ }).closest("[aria-disabled='true']"))
+      .not.toBeNull();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Seleccionar productos para cobrar" })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Dividir cuenta" })).toBeInTheDocument(),
+    );
+  });
+
   it("resets the split view when navigating away from and back to register", async () => {
     render(
       <PortsProvider value={buildMockPorts()}>

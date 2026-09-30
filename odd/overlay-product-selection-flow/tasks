@@ -1,0 +1,10 @@
+# Overlay product-selection payment flow — reconciled task mirror
+
+1. [x] Move product selection mode into the fullscreen overlay without duplicating the order panel.
+2. [x] Add a clear overlay title/close behavior and keep selection state safe.
+3. [x] Add focused regression coverage for product-selection overlay rendering and exit.
+4. [x] Run focused checks and commit the work unit.
+
+Evidence: focused App/Register tests 16 passed; typecheck passed.
+
+Source of truth: `odd/tasks/overlay-product-selection-flow.md`.

@@ -70,6 +70,12 @@ export function App(): JSX.Element {
     setSelectedAccountId(null);
   };
 
+  const closeProductSelection = (): void => {
+    setProductSelectionMode(false);
+    setSelectedProductLines([]);
+    resetCenter();
+  };
+
   useEffect(() => {
     if (!splitMenuOpen) return;
     const trigger = splitMenuTriggerRef.current;
@@ -136,6 +142,8 @@ export function App(): JSX.Element {
   const navigate = (next: ScreenId): void => {
     if (!session) return;
     if (!canAccessScreen(next, session.role)) return;
+    setProductSelectionMode(false);
+    setSelectedProductLines([]);
     if (next === "register") {
       resetCenter();
       setSelectedOrderReady(false);
@@ -161,6 +169,21 @@ export function App(): JSX.Element {
   let center: JSX.Element | null = null;
   let centerActions: JSX.Element | null = null;
   let splitOverlay: JSX.Element | null = null;
+  const renderOrderTicketPanel = (selectionMode: boolean): JSX.Element => (
+    <OrderTicketPanelContainer
+      key={`${selectedTableId}:${selectedOrderId ?? ""}:${selectionMode ? "selection" : "account"}`}
+      tableId={selectedTableId!}
+      selectionMode={selectionMode}
+      selectedProducts={selectedProductLines}
+      onSelectionChange={(selection) => setSelectedProductLines([...selection])}
+      onReviewSelectedProducts={(selection) => {
+        setSelectedProductLines([...selection]);
+        setProductSelectionMode(false);
+        setCenterView("payment");
+      }}
+      onLoadStateChange={(state) => setSelectedOrderReady(state === "ready")}
+    />
+  );
   if (selectedTableId) {
     if (centerView === "payment") {
       center = (
@@ -212,22 +235,10 @@ export function App(): JSX.Element {
           }}
         />
       );
+    } else if (productSelectionMode) {
+      splitOverlay = renderOrderTicketPanel(true);
     } else {
-      center = (
-        <OrderTicketPanelContainer
-          key={`${selectedTableId}:${selectedOrderId ?? ""}`}
-          tableId={selectedTableId}
-          selectionMode={productSelectionMode}
-          selectedProducts={selectedProductLines}
-          onSelectionChange={(selection) => setSelectedProductLines([...selection])}
-          onReviewSelectedProducts={(selection) => {
-            setSelectedProductLines([...selection]);
-            setProductSelectionMode(false);
-            setCenterView("payment");
-          }}
-          onLoadStateChange={(state) => setSelectedOrderReady(state === "ready")}
-        />
-      );
+      center = renderOrderTicketPanel(false);
       centerActions = (
         <ButtonRow>
           {selectedOrderReady && selectedOrderListReady ? (
@@ -478,10 +489,12 @@ export function App(): JSX.Element {
           emptyRailMessage="Selecciona una orden para agregar productos"
           centerOverflowVisible={false}
           overlay={splitOverlay}
-          overlayTitle="Dividir cuenta"
-          onCloseOverlay={resetCenter}
-          listLocked={centerView === "assignment"}
-          railHidden={Boolean(selectedTableId) && centerView !== "account"}
+          overlayTitle={
+            productSelectionMode ? "Seleccionar productos para cobrar" : "Dividir cuenta"
+          }
+          onCloseOverlay={productSelectionMode ? closeProductSelection : resetCenter}
+          listLocked={centerView === "assignment" || productSelectionMode}
+          railHidden={Boolean(selectedTableId) && (centerView !== "account" || productSelectionMode)}
           selectedTableId={selectedTableId}
           rail={
             selectedTableId && centerView === "account" ? (
