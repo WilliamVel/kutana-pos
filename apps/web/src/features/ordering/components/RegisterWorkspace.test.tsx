@@ -77,7 +77,8 @@ describe("RegisterWorkspace", () => {
     );
 
     expect(screen.getByRole("dialog", { name: "Split account" })).toBeInTheDocument();
-    expect(screen.getByText("split assignment")).toBeInTheDocument();
+    expect(styles.overlayContent).toBeDefined();
+    expect(screen.getByText("split assignment").parentElement).toHaveClass(styles.overlayContent!);
     fireEvent.click(screen.getByRole("button", { name: "Cerrar división de cuenta" }));
     expect(onClose).toHaveBeenCalledOnce();
   });

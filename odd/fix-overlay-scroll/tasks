@@ -1,0 +1,9 @@
+# Fix overlay scrolling — reconciled task mirror
+
+1. [x] Give the overlay content flexible growth and internal vertical scrolling.
+2. [x] Add focused structural regression coverage.
+3. [x] Run focused checks and commit the work unit.
+
+Evidence: RegisterWorkspace tests 8 passed; diff check passed.
+
+Source of truth: `odd/tasks/fix-overlay-scroll.md`.
