@@ -42,7 +42,7 @@ describe("AddItemContainer", () => {
     expect(added?.quantity).toBe(1);
   });
 
-  it("undoes only the line from its toast, even after another identical addition or a double tap", async () => {
+  it("undoes every receipt in a rapid-add batch and ignores a double tap", async () => {
     const ports = buildMockPorts();
     await seedOrderableProduct(ports);
     const counts: number[] = [];
@@ -53,7 +53,7 @@ describe("AddItemContainer", () => {
     try {
       render(
         <PortsProvider value={ports}>
-          <Toaster closeButton visibleToasts={2} />
+          <Toaster />
           <AddItemContainer tableId="table-2" />
         </PortsProvider>,
       );
@@ -68,42 +68,27 @@ describe("AddItemContainer", () => {
         ).toBe(true),
       );
       await waitFor(() =>
-        expect(screen.getAllByRole("button", { name: "Deshacer última adición" })).toHaveLength(1),
+        expect(screen.getByRole("button", { name: "Deshacer última adición" })).toBeInTheDocument(),
       );
-      const oldUndo = screen.getByRole("button", { name: "Deshacer última adición" });
-      expect(oldUndo.querySelector('[data-icon="undo"]')).not.toBeNull();
-      expect(
-        oldUndo.closest("[data-sonner-toast]")?.querySelector("[data-close-button]"),
-      ).toBeNull();
+      expect(document.querySelector("[data-sonner-toast]")).not.toBeInTheDocument();
 
       await waitFor(() => expect(add.querySelector('[aria-label="Guardando"]')).toBeNull());
       fireEvent.click(add);
       await waitFor(() =>
-        expect(screen.getAllByRole("button", { name: "Deshacer última adición" })).toHaveLength(2),
+        expect(screen.getByRole("button", { name: "Deshacer lote" })).toBeInTheDocument(),
       );
+      expect(await screen.findByText("2 productos agregados")).toBeInTheDocument();
       const before = await ports.orders.findByTable("table-2");
-      const added =
-        before?.lineItems.filter((line) => line.productId === "product-blonde-1000") ?? [];
-      expect(added).toHaveLength(2);
-      fireEvent.click(oldUndo);
-      fireEvent.click(oldUndo);
+      expect(before?.lineItems.filter((line) => line.productId === "product-blonde-1000")).toHaveLength(2);
+      const batchUndo = screen.getByRole("button", { name: "Deshacer lote" });
+      fireEvent.click(batchUndo);
+      fireEvent.click(batchUndo);
       await waitFor(async () => {
         const after = await ports.orders.findByTable("table-2");
-        expect(
-          after?.lineItems
-            .filter((line) => line.productId === "product-blonde-1000")
-            .map((line) => line.id),
-        ).toEqual([added[1]!.id]);
+        expect(after?.lineItems.filter((line) => line.productId === "product-blonde-1000")).toHaveLength(0);
       });
-      const after = await ports.orders.findByTable("table-2");
-      expect(after!.lineItems.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0)).toBe(
-        before!.lineItems.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0) - 800,
-      );
-      expect(after!.lineItems.reduce((sum, line) => sum + line.totalCents, 0)).toBe(
-        before!.lineItems.reduce((sum, line) => sum + line.totalCents, 0) - 896,
-      );
       expect(counts.at(-1)).toBe(
-        before!.lineItems.reduce((sum, line) => sum + line.quantity, 0) - 1,
+        before!.lineItems.reduce((sum, line) => sum + line.quantity, 0) - 2,
       );
     } finally {
       window.removeEventListener("kutana.order.updated", onUpdated);
@@ -142,21 +127,19 @@ describe("AddItemContainer", () => {
     const add = await screen.findByRole("button", { name: "Agregar Blonde Ale 1000ml" });
     await waitFor(() => expect(add).not.toBeDisabled());
     fireEvent.click(add);
-    const oldUndo = await screen.findByRole("button", { name: "Deshacer última adición" });
+    await screen.findByRole("button", { name: "Deshacer última adición" });
     await waitFor(() => expect(add.querySelector('[aria-label="Guardando"]')).toBeNull());
     fireEvent.click(add);
-    await waitFor(() =>
-      expect(screen.getAllByRole("button", { name: "Deshacer última adición" })).toHaveLength(2),
-    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Deshacer lote" })).toBeInTheDocument());
     const current = await ports.orders.findByTable("table-2");
     const added = current!.lineItems.filter((line) => line.productId === "product-blonde-1000");
     await ports.orders.save(removeLineItem(current!, added[0]!.id), current!.version);
-    fireEvent.click(oldUndo);
+    fireEvent.click(screen.getByRole("button", { name: "Deshacer lote" }));
     await waitFor(() =>
       expect(screen.getByText(/No se pudo deshacer esta adición/)).toBeInTheDocument(),
     );
     const after = await ports.orders.findByTable("table-2");
-    expect(after?.lineItems.some((line) => line.id === added[1]!.id)).toBe(true);
+    expect(after?.lineItems.some((line) => line.id === added[1]!.id)).toBe(false);
   });
 
   it("disables the panel when the order is already paid", async () => {

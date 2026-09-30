@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Toaster, toast } from "sonner";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAccountLineAllocation, createPersonalAccount } from "@kutana/shared/billing/model/personal-account.js";
 import { addLineItem } from "@kutana/shared/ordering/services/line-item-service.js";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
@@ -50,6 +50,7 @@ describe("OrderTicketPanelContainer", () => {
 
   afterEach(() => {
     act(() => toast.dismiss());
+    vi.restoreAllMocks();
   });
 
   it("renders the seeded order's real line items and totals for table-1", async () => {
@@ -92,6 +93,7 @@ describe("OrderTicketPanelContainer", () => {
   });
 
   it("removes one unit from an aggregated product using the trash action", async () => {
+    const successToast = vi.spyOn(toast, "success");
     const ports = buildMockPorts();
     render(
       <PortsProvider value={ports}>
@@ -105,7 +107,13 @@ describe("OrderTicketPanelContainer", () => {
     fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Eliminar KUTANA Pilsener" }));
 
     await waitFor(() => expect(within(screen.getByRole("table")).getByText("x1")).toBeInTheDocument());
-    expect(await screen.findByText("KUTANA Pilsener 500ml eliminado")).toBeInTheDocument();
+    const removalToast = await screen.findByText("KUTANA Pilsener 500ml eliminado");
+    expect(removalToast.closest("[data-sonner-toast]")).toBeInTheDocument();
+    expect(successToast).toHaveBeenCalledWith("KUTANA Pilsener 500ml eliminado", {
+      id: "order-ticket-removal-success",
+      duration: 2600,
+    });
+    expect(document.querySelector('section[aria-label^="Resumen de orden"] p[role="status"]')).not.toBeInTheDocument();
     await waitFor(async () => {
       const order = await ports.orders.findByTable("table-1");
       const remainingPilsener = order?.lineItems.find((line) => line.nameSnapshot === "KUTANA Pilsener 500ml");
@@ -118,7 +126,7 @@ describe("OrderTicketPanelContainer", () => {
     });
   });
 
-  it("hides removal for a partially assigned aggregated product while leaving another product removable", async () => {
+  it("removes an unassigned unit from a partially assigned aggregate and preserves allocations", async () => {
     const ports = buildMockPorts();
     const order = await ports.orders.findByTable("table-1");
     if (!order) throw new Error("expected seeded order");
@@ -133,9 +141,16 @@ describe("OrderTicketPanelContainer", () => {
     render(<PortsProvider value={ports}><OrderTicketPanelContainer tableId="table-1" /></PortsProvider>);
 
     await waitFor(() => expect(within(screen.getByRole("table")).getByText("KUTANA Pilsener 500ml")).toBeInTheDocument());
-    expect(within(screen.getByRole("table")).queryByRole("button", { name: "Eliminar KUTANA Pilsener" })).not.toBeInTheDocument();
-    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Eliminar Loaded Nachos" }));
-    await waitFor(() => expect(within(screen.getByRole("table")).queryByText("Loaded Nachos")).not.toBeInTheDocument());
+    expect(within(screen.getByRole("table")).getByRole("button", { name: "Eliminar KUTANA Pilsener" })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Eliminar KUTANA Pilsener" }));
+
+    await waitFor(async () => {
+      const updated = await ports.orders.findByTable("table-1");
+      expect(updated?.lineItems[0]).toMatchObject({ quantity: 1 });
+    });
+    expect(await ports.personalAccounts.listAllocationsByOrder(order.id)).toEqual([
+      expect.objectContaining({ lineItemId: order.lineItems[0]!.id, quantity: 1 }),
+    ]);
   });
 
   it("hides removal when the assigned member is the second line in an aggregated group", async () => {
@@ -149,9 +164,14 @@ describe("OrderTicketPanelContainer", () => {
     await ports.orders.save(second, order.version);
     const secondLine = second.lineItems[second.lineItems.length - 1]!;
     const account = createPersonalAccount({ id: "account-second", orderId: second.id, freeName: "Ana" });
-    await ports.personalAccounts.save(account, [createAccountLineAllocation({
-      id: "allocation-second", accountId: account.id, lineItemId: secondLine.id, quantity: 1,
-    })], 0);
+    await ports.personalAccounts.save(account, [
+      createAccountLineAllocation({
+        id: "allocation-first", accountId: account.id, lineItemId: order.lineItems[0]!.id, quantity: 2,
+      }),
+      createAccountLineAllocation({
+        id: "allocation-second", accountId: account.id, lineItemId: secondLine.id, quantity: 1,
+      }),
+    ], 0);
 
     render(<PortsProvider value={ports}><OrderTicketPanelContainer tableId="table-1" /></PortsProvider>);
 
@@ -159,7 +179,7 @@ describe("OrderTicketPanelContainer", () => {
     expect(within(screen.getByRole("table")).queryByRole("button", { name: "Eliminar KUTANA Pilsener" })).not.toBeInTheDocument();
   });
 
-  it("blocks a stale remove click after an allocation appears and reports why", async () => {
+  it("blocks removal when every unit in an aggregate is assigned", async () => {
     const ports = buildMockPorts();
     render(<PortsProvider value={ports}><Toaster /><OrderTicketPanelContainer tableId="table-1" /></PortsProvider>);
     await waitFor(() => expect(within(screen.getByRole("table")).getByText("KUTANA Pilsener 500ml")).toBeInTheDocument());
@@ -168,13 +188,14 @@ describe("OrderTicketPanelContainer", () => {
     if (!order) throw new Error("expected seeded order");
     const account = createPersonalAccount({ id: "account-stale", orderId: order.id, freeName: "Ana" });
     await ports.personalAccounts.save(account, [createAccountLineAllocation({
-      id: "allocation-stale", accountId: account.id, lineItemId: order.lineItems[0]!.id, quantity: 1,
+      id: "allocation-stale", accountId: account.id, lineItemId: order.lineItems[0]!.id, quantity: 2,
     })], 0);
     fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Eliminar KUTANA Pilsener" }));
 
     expect(await ports.orders.findByTable("table-1")).toMatchObject({ version: order.version });
     expect(await screen.findByText("No se puede eliminar un producto asignado a una cuenta.")).toBeInTheDocument();
-    expect(screen.getAllByText("No se puede eliminar un producto asignado a una cuenta.")).toHaveLength(2);
+    expect(screen.getAllByText("No se puede eliminar un producto asignado a una cuenta.")).toHaveLength(1);
+    expect(document.querySelector("[data-sonner-toast]")).not.toBeInTheDocument();
   });
 
   it("removes a product from the table order using the trash action", async () => {
@@ -218,6 +239,31 @@ describe("OrderTicketPanelContainer", () => {
     await waitFor(() =>
       expect(screen.queryByRole("region", { name: "Resumen de orden para Table 1" })).not.toBeInTheDocument(),
     );
+  });
+
+  it("coalesces rapid live updates and renders the latest snapshot", async () => {
+    const ports = buildMockPorts();
+    render(<PortsProvider value={ports}><OrderTicketPanelContainer tableId="table-1" /></PortsProvider>);
+    await waitFor(() => expect(within(screen.getByRole("table")).getByText("Loaded Nachos")).toBeInTheDocument());
+
+    const currentOrder = await ports.orders.findByTable("table-1");
+    if (!currentOrder) throw new Error("expected seeded order");
+    const firstUpdate = addLineItem(currentOrder, {
+      productId: "product-empanadas", nameSnapshot: "Beef Empanadas (3pc)", unitPriceCents: 550,
+      quantity: 1, taxRateBp: 1200,
+    });
+    const latestUpdate = addLineItem(firstUpdate, {
+      productId: "product-empanadas", nameSnapshot: "Beef Empanadas (3pc)", unitPriceCents: 550,
+      quantity: 1, taxRateBp: 1200,
+    });
+
+    ports.events.publish({ type: "order.updated", orderId: firstUpdate.id, tableId: "table-1", version: firstUpdate.version, at: new Date().toISOString(), payload: firstUpdate });
+    ports.events.publish({ type: "order.updated", orderId: latestUpdate.id, tableId: "table-1", version: latestUpdate.version, at: new Date().toISOString(), payload: latestUpdate });
+    expect(screen.queryByText("Beef Empanadas (3pc)")).not.toBeInTheDocument();
+
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    await waitFor(() => expect(within(screen.getByRole("table")).getByText("Beef Empanadas (3pc)")).toBeInTheDocument());
+    expect(within(screen.getByRole("table")).getAllByText("x2")).toHaveLength(2);
   });
 
   it("updates live when OrderEvents publishes a change from another device (waiter -> register realtime)", async () => {

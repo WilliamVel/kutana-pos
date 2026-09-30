@@ -214,16 +214,22 @@
 }
 
 .undoAction {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 2.75rem;
-  height: 2.75rem;
-  margin-left: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin-left: auto;
+  padding: 0.35rem 0.65rem;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
   color: var(--text-primary);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -243,29 +249,36 @@
 }
 
 .success {
-  display: inline-flex;
-  width: fit-content;
+  display: flex;
+  width: 100%;
   max-width: 100%;
+  min-height: 2.75rem;
+  box-sizing: border-box;
   align-items: center;
   gap: 0.5rem;
   margin: 0;
-  padding: 0.55rem 0.7rem;
+  padding: 0.35rem 0.45rem 0.35rem 0.7rem;
+  overflow: hidden;
   border-radius: 0.75rem;
   background: var(--action-secondary-bg);
   color: var(--action-secondary-fg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-sm);
   font-size: 0.9rem;
   font-weight: 700;
+  line-height: 1.2;
   animation: toast-in 180ms ease-out both;
 }
 
-.success button {
-  margin-left: auto;
-  border: 0;
+.success > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.success .undoAction {
+  border-color: currentColor;
   background: transparent;
-  color: inherit;
-  font-size: 1.1rem;
-  cursor: pointer;
 }
 
 @keyframes toast-in {
@@ -324,6 +337,22 @@
     background: var(--surface-raised);
     box-shadow: var(--shadow-sm);
     font-size: 1rem;
+  }
+
+  .successSlot {
+    position: sticky;
+    top: calc(4.25rem + env(safe-area-inset-top) + 0.5rem);
+    z-index: 5;
+  }
+
+  .success {
+    position: relative;
+    top: auto;
+    z-index: 5;
+    min-height: 2.75rem;
+    margin-block: 0.1rem;
+    padding-block: 0.25rem;
+    background: color-mix(in srgb, var(--action-secondary-bg) 96%, transparent);
   }
 
   .tabs {
@@ -393,5 +422,10 @@
     border-radius: 0.55rem;
     background: var(--surface-sunken);
     font-size: 0.8rem;
+  }
+
+  .undoAction {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
   }
 }

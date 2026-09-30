@@ -86,6 +86,26 @@ describe("OrderTicketPanel", () => {
     expect(screen.queryAllByText("Loaded Nachos").length).toBe(0);
   });
 
+  it("keeps paid and pending tab counts based on complete visible units", () => {
+    render(
+      <OrderTicketPanel
+        tableLabel="Table 1"
+        status="active"
+        lines={LINES}
+        sections={[
+          { label: "Bebidas" as const, lines: [{ ...LINES[0]!, quantity: 3, paymentSegment: "paid" as const }] },
+          { label: "Bebidas" as const, lines: [{ ...LINES[0]!, quantity: 4, paymentSegment: "pending" as const }] },
+        ]}
+        subtotalCents={2450}
+        taxCents={0}
+        totalCents={2450}
+      />,
+    );
+
+    expect(screen.getByRole("tab", { name: "Pagados · 3" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Pendientes · 4" })).toBeInTheDocument();
+  });
+
   it("resets to pending when no paid rows remain", () => {
     const { rerender } = render(
       <OrderTicketPanel

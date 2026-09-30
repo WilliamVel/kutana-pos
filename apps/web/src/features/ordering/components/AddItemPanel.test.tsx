@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AddItemPanel, type AddItemPanelProduct, type AdditionReceipt } from "./AddItemPanel.js";
 
@@ -76,6 +76,44 @@ describe("AddItemPanel", () => {
       target: { value: "zzz" },
     });
     expect(screen.getByText("No hay productos que coincidan.")).toBeInTheDocument();
+  });
+
+  it("does not render an empty feedback slot before the first addition", () => {
+    const { container } = renderPanel();
+
+    expect(container.querySelector(".successSlot")).not.toBeInTheDocument();
+  });
+
+  it("shows one inline undo action for a slow addition and no Sonner toast", async () => {
+    renderPanel();
+
+    fireEvent.click(screen.getByRole("button", { name: "Agregar Loaded Nachos" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Producto agregado: Loaded Nachos",
+    );
+    expect(screen.getByRole("button", { name: "Deshacer última adición" })).toBeInTheDocument();
+    expect(document.querySelector("[data-sonner-toast]")).not.toBeInTheDocument();
+  });
+
+  it("groups rapid additions and undoes each captured receipt once", async () => {
+    const receipts = PRODUCTS.map((product, index) => ({ orderId: "order-1", lineItemId: `line-${index}` }));
+    const onAdd = vi.fn(async (productId: string) =>
+      receipts[PRODUCTS.findIndex((product) => product.id === productId)]!,
+    );
+    const onUndo = vi.fn(async (_receipt: AdditionReceipt) => undefined);
+    renderPanel({ onAdd, onUndo });
+
+    fireEvent.click(screen.getByRole("button", { name: "Agregar KUTANA Pilsener 500ml" }));
+    fireEvent.click(screen.getByRole("button", { name: "Agregar Loaded Nachos" }));
+
+    const batchUndo = await screen.findByRole("button", { name: "Deshacer lote" });
+    expect(screen.getByRole("status")).toHaveTextContent("2 productos agregados");
+    fireEvent.click(batchUndo);
+    fireEvent.click(batchUndo);
+
+    await waitFor(() => expect(onUndo).toHaveBeenCalledTimes(2));
+    expect(onUndo.mock.calls.map((call) => call[0]?.lineItemId)).toEqual(["line-0", "line-1"]);
   });
 
   it("disables the add buttons when disabled", () => {

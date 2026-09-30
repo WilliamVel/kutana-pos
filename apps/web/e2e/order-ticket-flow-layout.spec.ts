@@ -90,6 +90,9 @@ async function stubLoadedOrder(page: Page, loadedOrder = order): Promise<void> {
     else if (url.pathname.endsWith("/account-line-allocations")) body = [];
     else if (url.pathname === "/billing/customers") body = [];
     else if (url.pathname === "/payments") body = [];
+    else if (url.pathname.startsWith("/ordering/orders/") && route.request().method() === "PUT") {
+      body = { ...route.request().postDataJSON().order, version: loadedOrder.version + 1 };
+    }
 
     await route.fulfill({
       status: 200,
@@ -190,6 +193,21 @@ for (const viewport of [
     expect(measurements.actions.right).toBeLessThanOrEqual(measurements.panel.right);
   });
 }
+
+test("deleting a line keeps page scroll stable and uses a Sonner toast", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await stubLoadedOrder(page);
+  await page.goto("/");
+  await page.locator(`[data-table-id="${table.id}"]`).click();
+  const panel = page.locator('section[aria-label="Resumen de orden para Mesa de prueba"]');
+  await expect(panel).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  const before = await page.evaluate(() => window.scrollY);
+  await panel.getByRole("button", { name: "Eliminar KUTANA Pilsener" }).click();
+  await expect(page.locator("[data-sonner-toast]")).toContainText("KUTANA Pilsener 500ml eliminado");
+  expect(await page.evaluate(() => window.scrollY)).toBe(before);
+  await expect(panel.locator('p[role="status"]')).not.toBeAttached();
+});
 
 test("keeps the mobile order-count badge readable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

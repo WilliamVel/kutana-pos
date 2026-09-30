@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../../../design-system/atoms/Button.js";
 import { Icon } from "../../../design-system/atoms/Icon.js";
@@ -35,6 +35,13 @@ export interface AddItemPanelProps {
 }
 
 const ALL_TAB = "Todos";
+const ADDITION_FEEDBACK_DURATION_MS = 2200;
+const RAPID_ADDITION_WINDOW_MS = 450;
+
+type AdditionFeedback = {
+  readonly productName: string;
+  readonly receipt: AdditionReceipt;
+};
 
 /**
  * Purely presentational: props in, markup out, no port access. The
@@ -55,6 +62,48 @@ export function AddItemPanel({
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>(ALL_TAB);
   const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(() => new Set());
+  const [additionFeedback, setAdditionFeedback] = useState<AdditionFeedback[]>([]);
+  const undoingLineIdsRef = useRef<Set<string>>(new Set());
+  const lastAdditionAtRef = useRef(0);
+
+  useEffect(() => {
+    if (additionFeedback.length === 0) return;
+    const clearTimer = window.setTimeout(
+      () => setAdditionFeedback([]),
+      ADDITION_FEEDBACK_DURATION_MS,
+    );
+    return () => window.clearTimeout(clearTimer);
+  }, [additionFeedback]);
+
+  const undoFeedback = (items: readonly AdditionFeedback[]) => {
+    const pendingItems = items.filter(
+      ({ receipt }) => !undoingLineIdsRef.current.has(receipt.lineItemId),
+    );
+    if (pendingItems.length === 0) return;
+    pendingItems.forEach(({ receipt }) => undoingLineIdsRef.current.add(receipt.lineItemId));
+    setAdditionFeedback((current) => [...current]);
+
+    void (async () => {
+      const results: PromiseSettledResult<void>[] = [];
+      for (const { receipt } of pendingItems) {
+        results.push(await Promise.allSettled([onUndo(receipt)]).then(([result]) => result!));
+      }
+      const failedLineIds = new Set(
+        results.flatMap((result, index) =>
+          result.status === "rejected" ? [pendingItems[index]!.receipt.lineItemId] : [],
+        ),
+      );
+      pendingItems.forEach(({ receipt }) => {
+        if (!failedLineIds.has(receipt.lineItemId)) undoingLineIdsRef.current.delete(receipt.lineItemId);
+      });
+      setAdditionFeedback((current) =>
+        current.filter(({ receipt }) => failedLineIds.has(receipt.lineItemId)),
+      );
+      if (failedLineIds.size > 0) {
+        toast.error("No se pudo deshacer esta adición. Revisá el pedido.");
+      }
+    })();
+  };
 
   const categoryNames = categories ?? [...new Set(products.map((product) => product.categoryName))];
   const tabs = [ALL_TAB, ...categoryNames];
@@ -124,6 +173,30 @@ export function AddItemPanel({
         </div>
       ) : null}
 
+      {additionFeedback.length > 0 ? (
+        <div className={styles.successSlot}>
+          <div className={styles.success} role="status" aria-live="polite">
+            <span>
+              {additionFeedback.length === 1
+                ? `Producto agregado: ${additionFeedback[0]?.productName ?? "Producto"}`
+                : `${additionFeedback.length} productos agregados`}
+            </span>
+            <button
+              type="button"
+              className={styles.undoAction}
+              aria-label={additionFeedback.length === 1 ? "Deshacer última adición" : "Deshacer lote"}
+              disabled={additionFeedback.some(({ receipt }) =>
+                undoingLineIdsRef.current.has(receipt.lineItemId),
+              )}
+              onClick={() => undoFeedback(additionFeedback)}
+            >
+              <Icon name="undo" size={20} />
+              <span>{additionFeedback.length === 1 ? "Deshacer" : "Deshacer lote"}</span>
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {visible.length === 0 ? (
         <p className={styles.noMatch}>No hay productos que coincidan.</p>
       ) : (
@@ -140,32 +213,14 @@ export function AddItemPanel({
                   setPendingProductIds((current) => new Set(current).add(product.id));
                   try {
                     const receipt = await onAdd(product.id, 1);
-                    let undoRequested = false;
-                    const toastId = `product-added-${receipt.lineItemId}`;
-                    toast.success(`${product.name} agregado`, {
-                      id: toastId,
-                      duration: 5000,
-                      closeButton: false,
-                      action: (
-                        <button
-                          type="button"
-                          className={styles.undoAction}
-                          aria-label="Deshacer última adición"
-                          onClick={(event) => {
-                            if (undoRequested) return;
-                            undoRequested = true;
-                            event.currentTarget.disabled = true;
-                            void onUndo(receipt).then(() => {
-                              toast.dismiss(toastId);
-                            }).catch(() => {
-                              toast.error("No se pudo deshacer esta adición. Revisá el pedido.");
-                            });
-                          }}
-                        >
-                          <Icon name="undo" size={22} />
-                        </button>
-                      ),
-                    });
+                    const added = { productName: product.name, receipt };
+                    const now = Date.now();
+                    const isRapidAddition =
+                      now - lastAdditionAtRef.current <= RAPID_ADDITION_WINDOW_MS;
+                    lastAdditionAtRef.current = now;
+                    setAdditionFeedback((current) =>
+                      isRapidAddition ? [...current, added] : [added],
+                    );
                   } catch {
                     // The container exposes the actionable conflict/error message.
                   } finally {

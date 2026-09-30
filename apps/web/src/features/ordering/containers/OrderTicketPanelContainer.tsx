@@ -85,11 +85,12 @@ export function aggregateLines(
     const pendingSettlementTotalCents = settlementUnits
       .filter((unit) => !unit.paid)
       .reduce((sum, unit) => sum + unit.unitCents, 0);
-    const canRemove = !members.some((member) =>
-      accountAllocations.some(
-        (allocation) => allocation.lineItemId === member.id && allocation.quantity > 0,
-      ),
-    );
+    const canRemove = members.some((member) => {
+      const allocatedQuantity = accountAllocations
+        .filter((allocation) => allocation.lineItemId === member.id && allocation.quantity > 0)
+        .reduce((sum, allocation) => sum + allocation.quantity, 0);
+      return member.quantity - allocatedQuantity > 0;
+    });
     const base = {
       id: line.id,
       productId: line.productId,
@@ -176,6 +177,8 @@ export function OrderTicketPanelContainer({
   const [removeBlockedMessage, setRemoveBlockedMessage] = useState<string | null>(null);
   const mountedRef = useRef(false);
   const requestIdRef = useRef(0);
+  const eventTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingEventOrderRef = useRef<Order | null>(null);
 
   const loadOrder = useCallback(
     async (orderOverride?: Order): Promise<void> => {
@@ -296,9 +299,24 @@ export function OrderTicketPanelContainer({
 
   useEffect(() => {
     if (loadState !== "ready" || !order) return;
-    return events.subscribe(order.id, (event) => {
-      void loadOrder(event.payload);
+    const unsubscribe = events.subscribe(order.id, (event) => {
+      pendingEventOrderRef.current = event.payload;
+      if (eventTimerRef.current !== null) return;
+      eventTimerRef.current = setTimeout(() => {
+        eventTimerRef.current = null;
+        const latestOrder = pendingEventOrderRef.current;
+        pendingEventOrderRef.current = null;
+        if (latestOrder) void loadOrder(latestOrder);
+      }, 400);
     });
+    return () => {
+      unsubscribe();
+      if (eventTimerRef.current !== null) {
+        clearTimeout(eventTimerRef.current);
+        eventTimerRef.current = null;
+      }
+      pendingEventOrderRef.current = null;
+    };
   }, [events, loadOrder, loadState, order?.id]);
 
   async function handleRemoveLine(lineId: string): Promise<void> {
@@ -313,24 +331,29 @@ export function OrderTicketPanelContainer({
     const targetKey = targetLine
       ? orderLineGroupingKey({ ...targetLine, name: targetLine.nameSnapshot })
       : null;
-    const hasPositiveAllocation =
-      targetKey !== null &&
-      current.lineItems.some(
-        (line) =>
-          orderLineGroupingKey({ ...line, name: line.nameSnapshot }) === targetKey &&
-          freshAllocations.some(
-            (allocation) => allocation.lineItemId === line.id && allocation.quantity > 0,
-          ),
-      );
-    if (hasPositiveAllocation) {
+    const removableSource =
+      targetKey === null
+        ? undefined
+        : current.lineItems.find((line) => {
+            if (orderLineGroupingKey({ ...line, name: line.nameSnapshot }) !== targetKey) {
+              return false;
+            }
+            const allocatedQuantity = freshAllocations
+              .filter(
+                (allocation) => allocation.lineItemId === line.id && allocation.quantity > 0,
+              )
+              .reduce((sum, allocation) => sum + allocation.quantity, 0);
+            return line.quantity - allocatedQuantity > 0;
+          });
+    if (!removableSource) {
       const message = "No se puede eliminar un producto asignado a una cuenta.";
       setRemoveBlockedMessage(message);
-      toast.error(message, { duration: 2600 });
       void loadOrder(current);
       return;
     }
 
-    const next = removeLineItemUnit(current, lineId);
+    const preservedScrollY = window.scrollY;
+    const next = removeLineItemUnit(current, removableSource.id);
     try {
       const shouldCloseEmptyOrder = next.lineItems.length === 0;
       const orderToSave: Order = shouldCloseEmptyOrder
@@ -354,8 +377,14 @@ export function OrderTicketPanelContainer({
         at: new Date().toISOString(),
         payload: saved,
       });
-      toast.success(`${targetLine?.nameSnapshot ?? "Producto"} eliminado`, { duration: 2600 });
-      void loadOrder();
+      toast.success(`${targetLine?.nameSnapshot ?? "Producto"} eliminado`, {
+        id: "order-ticket-removal-success",
+        duration: 1500,
+      });
+      await loadOrder();
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: preservedScrollY, left: window.scrollX, behavior: "auto" });
+      });
     } catch (error) {
       if (error instanceof ConflictError) {
         void loadOrder();
