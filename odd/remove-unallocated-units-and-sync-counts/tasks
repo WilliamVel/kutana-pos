@@ -1,0 +1,10 @@
+# Remove unallocated units and sync counts — reconciled task mirror
+
+1. [x] Derive removability from unallocated quantity, not the presence of any allocation.
+2. [x] Remove an unallocated source unit safely when aggregated lines share a product key.
+3. [x] Add regression coverage for partial allocations, count splitting, and protected fully assigned units.
+4. [x] Run focused checks and commit the work unit.
+
+Evidence: focused ordering tests 25 passed; typecheck and diff check passed; implementation is included in `e0acf8f`.
+
+Source of truth: `odd/tasks/remove-unallocated-units-and-sync-counts.md`.
