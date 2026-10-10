@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import type { AuthSession } from "@kutana/shared/auth/model/auth-session.js";
 import type { Product } from "@kutana/shared/catalog/model/product.js";
 import { AppShell } from "./app-shell/components/AppShell.js";
 import { TopBar } from "./app-shell/components/TopBar.js";
-import type { ScreenId } from "./app-shell/screens.js";
+import { screenFromPath, screenPath, type ScreenId } from "./app-shell/screens.js";
 import { useAuth } from "./composition/PortsProvider.js";
 import { Button } from "./design-system/atoms/Button.js";
 import { Icon } from "./design-system/atoms/Icon.js";
@@ -34,16 +35,19 @@ import { toast } from "sonner";
 type CenterView = "account" | "payment" | "assignment";
 
 /**
- * Root screen shell for the milestone-1 demo. Navigation state lives here;
- * layout chrome (top bar, optional bottom action bar) is provided by
- * <AppShell> and the app-shell components. Each screen below is a
- * container that wires its own ports.
+ * Root screen shell for the milestone-1 demo. Top-level navigation is backed by
+ * the browser URL; workspace state lives here. Layout chrome (top bar, optional
+ * bottom action bar) is provided by <AppShell> and the app-shell components.
  */
 export function App(): JSX.Element {
   const auth = useAuth();
   const [session, setSession] = useState<AuthSession | null>(() => auth.currentSession());
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
-  const [screen, setScreen] = useState<ScreenId>("register");
+  const location = useLocation();
+  const navigateRouter = useNavigate();
+  const requestedScreen = screenFromPath(location.pathname);
+  const screen =
+    session && !canAccessScreen(requestedScreen, session.role) ? "register" : requestedScreen;
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedOrderReady, setSelectedOrderReady] = useState(false);
@@ -127,10 +131,16 @@ export function App(): JSX.Element {
   }, [splitMenuOpen]);
 
   useEffect(() => {
+    if (session && !canAccessScreen(requestedScreen, session.role)) {
+      navigateRouter(screenPath("register"), { replace: true });
+    }
+  }, [navigateRouter, requestedScreen, session]);
+
+  useEffect(() => {
     const expireSession = (): void => {
       setSession(null);
       setLoginNotice("Tu sesión expiró. Iniciá sesión nuevamente.");
-      setScreen("inventory");
+      navigateRouter(screenPath("inventory"), { replace: true });
       setEditingProduct(null);
       resetCenter();
     };
@@ -156,7 +166,7 @@ export function App(): JSX.Element {
       setSelectedOrderListReady(false);
     }
     setEditingProduct(null);
-    setScreen(next);
+    navigateRouter(screenPath(next));
   };
 
   const selectTable = (tableId: string): void => {
@@ -367,7 +377,7 @@ export function App(): JSX.Element {
           onLogout={() => {
             auth.logout();
             setSession(null);
-            setScreen("inventory");
+            navigateRouter(screenPath("inventory"), { replace: true });
             setEditingProduct(null);
             resetCenter();
           }}
@@ -378,12 +388,12 @@ export function App(): JSX.Element {
         <InventoryListContainer
           onAddProduct={() => {
             setEditingProduct(null);
-            setScreen("new-product");
+            navigateRouter("/products/new");
           }}
-          onManageCategories={() => setScreen("categories")}
+          onManageCategories={() => navigateRouter("/categories")}
           onEditProduct={(product) => {
             setEditingProduct(product);
-            setScreen("new-product");
+            navigateRouter("/products/new");
           }}
         />
       ) : null}
@@ -394,11 +404,11 @@ export function App(): JSX.Element {
             existingProduct={editingProduct ?? undefined}
             onSaved={() => {
               setEditingProduct(null);
-              setScreen("inventory");
+              navigateRouter(screenPath("inventory"));
             }}
             onCancel={() => {
               setEditingProduct(null);
-              setScreen("inventory");
+              navigateRouter(screenPath("inventory"));
             }}
           />
         </Panel>
@@ -494,7 +504,9 @@ export function App(): JSX.Element {
           }
           onCloseOverlay={productSelectionMode ? closeProductSelection : resetCenter}
           listLocked={centerView === "assignment" || productSelectionMode}
-          railHidden={Boolean(selectedTableId) && (centerView !== "account" || productSelectionMode)}
+          railHidden={
+            Boolean(selectedTableId) && (centerView !== "account" || productSelectionMode)
+          }
           selectedTableId={selectedTableId}
           rail={
             selectedTableId && centerView === "account" ? (

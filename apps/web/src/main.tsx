@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 import "./design-system/tokens/palette.css";
 import "./design-system/tokens/elevation.css";
 import "./styles/global.css";
@@ -18,8 +19,10 @@ const ports = buildHttpPorts();
 
 createRoot(rootElement).render(
   <StrictMode>
-    <PortsProvider value={ports}>
-      <App />
-    </PortsProvider>
+    <BrowserRouter>
+      <PortsProvider value={ports}>
+        <App />
+      </PortsProvider>
+    </BrowserRouter>
   </StrictMode>,
 );
