@@ -1,0 +1,7 @@
+# Clarify order ticket totals — task mirror
+
+1. Update order ticket table headers and summary labels. Status: done. Route: inline fallback after delegated writer bootstrap was unavailable.
+2. Refine order ticket spacing and header/row hierarchy. Status: done. Route: inline fallback after delegated writer bootstrap was unavailable.
+3. Add focused regression coverage and run web checks. Status: done. Component tests 13/13 passed; container suite 12/13 passed with one pre-existing toast-duration expectation failure; typecheck, ESLint, Prettier, and diff check passed.
+
+Commit: `98a21df` (initial work-unit identity; amended with final metadata).

@@ -44,12 +44,13 @@ describe("OrderTicketPanel", () => {
     expect(LINES.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0)).toBe(1350);
     expect(screen.queryByText("$7.84")).not.toBeInTheDocument();
     expect(screen.getByText("$13.50")).toBeInTheDocument(); // subtotal
+    expect(screen.getByText("Subtotal de la orden")).toBeInTheDocument();
     expect(screen.getByText("$1.62")).toBeInTheDocument(); // tax — persisted at sale time, not recomputed
     expect(screen.getAllByText("$15.12").length).toBe(2); // total and balance
     expect(screen.queryByText("Pendiente")).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Resumen de orden para Table 1" })).not.toHaveAttribute(
-      "data-overlay-scroll-owner",
-    );
+    expect(
+      screen.getByRole("region", { name: "Resumen de orden para Table 1" }),
+    ).not.toHaveAttribute("data-overlay-scroll-owner");
   });
 
   it("defaults to pending rows, exposes paid rows conditionally, and keeps totals unchanged", () => {
@@ -73,6 +74,9 @@ describe("OrderTicketPanel", () => {
       "aria-selected",
       "true",
     );
+    expect(screen.getByRole("table", { name: "Productos pendientes" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Precio c/u" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Total pendiente" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Pagados · 2" })).toBeInTheDocument();
     expect(screen.getByText("Total de la orden")).toBeInTheDocument();
     expect(screen.getByText("Pagado")).toBeInTheDocument();
@@ -82,6 +86,8 @@ describe("OrderTicketPanel", () => {
     expect(screen.getByText("$13.50")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: /Pagados/ }));
+    expect(screen.getByRole("table", { name: "Productos pagados" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Total pagado" })).toBeInTheDocument();
     expect(screen.getAllByText("KUTANA Pilsener 500ml").length).toBe(2);
     expect(screen.queryAllByText("Loaded Nachos").length).toBe(0);
   });
@@ -93,8 +99,14 @@ describe("OrderTicketPanel", () => {
         status="active"
         lines={LINES}
         sections={[
-          { label: "Bebidas" as const, lines: [{ ...LINES[0]!, quantity: 3, paymentSegment: "paid" as const }] },
-          { label: "Bebidas" as const, lines: [{ ...LINES[0]!, quantity: 4, paymentSegment: "pending" as const }] },
+          {
+            label: "Bebidas" as const,
+            lines: [{ ...LINES[0]!, quantity: 3, paymentSegment: "paid" as const }],
+          },
+          {
+            label: "Bebidas" as const,
+            lines: [{ ...LINES[0]!, quantity: 4, paymentSegment: "pending" as const }],
+          },
         ]}
         subtotalCents={2450}
         taxCents={0}
