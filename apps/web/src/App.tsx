@@ -46,6 +46,13 @@ export function App(): JSX.Element {
   const location = useLocation();
   const navigateRouter = useNavigate();
   const requestedScreen = screenFromPath(location.pathname);
+  const loginDestination =
+    typeof location.state === "object" &&
+    location.state !== null &&
+    "from" in location.state &&
+    typeof location.state.from === "string"
+      ? location.state.from
+      : screenPath("register");
   const screen =
     session && !canAccessScreen(requestedScreen, session.role) ? "register" : requestedScreen;
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
@@ -137,6 +144,15 @@ export function App(): JSX.Element {
   }, [location.pathname, navigateRouter]);
 
   useEffect(() => {
+    if (!session && location.pathname !== "/login") {
+      navigateRouter("/login", {
+        replace: true,
+        state: { from: location.pathname },
+      });
+    }
+  }, [location.pathname, navigateRouter, session]);
+
+  useEffect(() => {
     if (session && !canAccessScreen(requestedScreen, session.role)) {
       navigateRouter(screenPath("register"), { replace: true });
     }
@@ -146,7 +162,7 @@ export function App(): JSX.Element {
     const expireSession = (): void => {
       setSession(null);
       setLoginNotice("Tu sesión expiró. Iniciá sesión nuevamente.");
-      navigateRouter(screenPath("inventory"), { replace: true });
+      navigateRouter("/login", { replace: true });
       setEditingProduct(null);
       resetCenter();
     };
@@ -367,6 +383,7 @@ export function App(): JSX.Element {
         onLogin={(nextSession) => {
           setLoginNotice(null);
           setSession(nextSession);
+          navigateRouter(loginDestination, { replace: true, state: null });
         }}
       />
     );
@@ -383,7 +400,7 @@ export function App(): JSX.Element {
           onLogout={() => {
             auth.logout();
             setSession(null);
-            navigateRouter(screenPath("inventory"), { replace: true });
+            navigateRouter("/login", { replace: true });
             setEditingProduct(null);
             resetCenter();
           }}
