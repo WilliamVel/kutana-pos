@@ -91,9 +91,9 @@
   width: 3rem;
 }
 .lineTable th {
-  padding: 0 0 8px;
-  color: var(--text-secondary);
-  font-size: 0.72rem;
+  padding: 0 0 4px;
+  color: var(--text-primary);
+  font-size: 0.75rem;
   font-weight: 700;
   text-align: left;
   text-transform: uppercase;
@@ -118,7 +118,7 @@
 }
 .sectionHeader {
   margin: 0;
-  padding: 0.65rem 0.5rem 0.4rem;
+  padding: 0.4rem 0.5rem 0.3rem;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-primary);
   font-size: 0.75rem;
@@ -129,7 +129,7 @@
   text-transform: uppercase;
 }
 .lineTable .sectionHeader th {
-  padding: var(--space-3) 24px var(--space-2);
+  padding: var(--space-2) 24px var(--space-1);
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-primary);
   font-size: 0.75rem;

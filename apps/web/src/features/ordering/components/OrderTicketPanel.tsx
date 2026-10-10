@@ -178,6 +178,8 @@ export function OrderTicketPanel({
     0,
   );
   const hasPaidRows = paidUnitCount > 0;
+  const filterLabel = filter === "pending" ? "pendientes" : "pagados";
+  const totalHeaderLabel = filter === "pending" ? "Total pendiente" : "Total pagado";
   useEffect(() => {
     if (!hasPaidRows && filter === "paid") setFilter("pending");
   }, [filter, hasPaidRows]);
@@ -398,6 +400,7 @@ export function OrderTicketPanel({
             >
               <table
                 className={`${styles.lineTable} ${hasRemovableLines ? styles.hasActions : styles.noActions}`}
+                aria-label={`Productos ${filterLabel}`}
               >
                 <colgroup>
                   <col className={styles.quantityColumn} />
@@ -411,10 +414,10 @@ export function OrderTicketPanel({
                     <th scope="col" />
                     <th scope="col">Producto</th>
                     <th scope="col" className={styles.priceHeader}>
-                      Precio
+                      Precio c/u
                     </th>
                     <th scope="col" className={styles.totalHeader}>
-                      Total
+                      {totalHeaderLabel}
                     </th>
                     <th scope="col" />
                   </tr>
@@ -452,7 +455,7 @@ export function OrderTicketPanel({
       {productContent}
       <div className={styles.totals} data-layout-summary>
         <div className={styles.totalRow}>
-          <span>Subtotal</span>
+          <span>Subtotal de la orden</span>
           <PriceTag cents={subtotalCents} />
         </div>
         {taxCents > 0 ? (
