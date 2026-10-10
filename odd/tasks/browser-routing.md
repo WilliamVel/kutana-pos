@@ -34,7 +34,7 @@ Replace the web app's root-level screen state navigation with URL-backed React R
 ## Evidence
 
 - Branch: `feat/browser-routing`
-- Commit: `915f205` (`feat(web): add browser-backed navigation`)
+- Commits: `2a1659f` (`feat(web): add browser-backed navigation`), follow-up pending for root redirect
 - Tests: `npx pnpm@10.11.0 --dir inventory-system exec vitest run apps/web/src/app-shell/screens.test.ts apps/web/src/App.test.tsx --no-file-parallelism` — 10 passed
 - Build: `npx pnpm@10.11.0 --dir inventory-system --filter @kutana/web build` — passed
 - Note: the repository declares pnpm 10.11.0; the host's default pnpm 11.25.0 failed the package-manager guard, so verification used the declared version via npx.

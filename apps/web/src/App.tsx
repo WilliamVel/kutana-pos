@@ -131,6 +131,12 @@ export function App(): JSX.Element {
   }, [splitMenuOpen]);
 
   useEffect(() => {
+    if (location.pathname === "/") {
+      navigateRouter(screenPath("register"), { replace: true });
+    }
+  }, [location.pathname, navigateRouter]);
+
+  useEffect(() => {
     if (session && !canAccessScreen(requestedScreen, session.role)) {
       navigateRouter(screenPath("register"), { replace: true });
     }
