@@ -46,13 +46,6 @@ export function App(): JSX.Element {
   const location = useLocation();
   const navigateRouter = useNavigate();
   const requestedScreen = screenFromPath(location.pathname);
-  const loginDestination =
-    typeof location.state === "object" &&
-    location.state !== null &&
-    "from" in location.state &&
-    typeof location.state.from === "string"
-      ? location.state.from
-      : screenPath("register");
   const screen =
     session && !canAccessScreen(requestedScreen, session.role) ? "register" : requestedScreen;
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
@@ -145,10 +138,7 @@ export function App(): JSX.Element {
 
   useEffect(() => {
     if (!session && location.pathname !== "/login") {
-      navigateRouter("/login", {
-        replace: true,
-        state: { from: location.pathname },
-      });
+      navigateRouter("/login", { replace: true });
     }
   }, [location.pathname, navigateRouter, session]);
 
@@ -383,7 +373,7 @@ export function App(): JSX.Element {
         onLogin={(nextSession) => {
           setLoginNotice(null);
           setSession(nextSession);
-          navigateRouter(loginDestination, { replace: true, state: null });
+          navigateRouter(screenPath("register"), { replace: true, state: null });
         }}
       />
     );
