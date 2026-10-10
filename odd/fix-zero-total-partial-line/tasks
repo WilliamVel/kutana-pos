@@ -1,0 +1,9 @@
+# Fix zero total on partially paid line items — reconciled task mirror
+
+1. [x] Add a regression test for a partial-payment segment whose derived display balance is zero.
+2. [x] Fall back to the pending line total when the presentation-only balance is zero, preserving real unpaid quantity and unit price.
+3. [x] Run focused ordering checks and record evidence.
+
+Evidence: focused ordering regression tests 4 passed; web typecheck passed; `git diff --check` passed. Full ordering file retains one unrelated toast-duration assertion failure. Commit pending explicit authorization.
+
+Source of truth: `odd/tasks/fix-zero-total-partial-line.md`.

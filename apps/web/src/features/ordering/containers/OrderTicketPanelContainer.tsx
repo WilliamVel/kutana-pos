@@ -50,6 +50,25 @@ const STATUS_MAP: Record<DomainOrderStatus, OrderStatus> = {
 
 type LineItem = Order["lineItems"][number];
 
+export function allocatePaidCentsToAllocations(
+  allocations: readonly AccountLineAllocation[],
+  valueByLineId: ReadonlyMap<string, number>,
+  paidCents: number,
+): Map<string, number> {
+  let remainingPaidCents = Math.max(0, paidCents);
+  const paidByLineId = new Map<string, number>();
+  for (const allocation of allocations) {
+    const valueCents = Math.max(0, valueByLineId.get(allocation.lineItemId) ?? 0);
+    const paid = Math.min(remainingPaidCents, valueCents);
+    paidByLineId.set(
+      allocation.lineItemId,
+      (paidByLineId.get(allocation.lineItemId) ?? 0) + paid,
+    );
+    remainingPaidCents -= paid;
+  }
+  return paidByLineId;
+}
+
 export function aggregateLines(
   lines: readonly LineItem[],
   paidCentsByLineId: ReadonlyMap<string, number>,
@@ -128,7 +147,9 @@ export function aggregateLines(
         quantity: pendingQuantity,
         pendingQuantity,
         totalCents: pendingTotalCents,
-        ...(partialAllocationCents > 0 ? { displayTotalCents: remainingCents } : {}),
+        ...(partialAllocationCents > 0 && remainingCents > 0
+          ? { displayTotalCents: remainingCents }
+          : {}),
         settlementTotalCents: pendingSettlementTotalCents,
         paymentSegment: "pending",
         ...(paidQuantity > 0 ? { paymentStatus: "partial" as const } : {}),
@@ -417,30 +438,33 @@ export function OrderTicketPanelContainer({
   const accountPaidCents = Object.values(accountPaidById).reduce((sum, amount) => sum + amount, 0);
   const paidCentsByLineId = new Map<string, number>();
   const lineById = new Map(order.lineItems.map((line) => [line.id, line]));
+  const linePositionById = new Map(order.lineItems.map((line, index) => [line.id, index]));
   for (const account of accounts) {
-    const allocations = accountAllocations.filter(
-      (allocation) => allocation.accountId === account.id,
-    );
-    const values = allocations.map((allocation) => {
-      const line = lineById.get(allocation.lineItemId);
-      return line ? Math.round((line.totalCents / line.quantity) * allocation.quantity) : 0;
-    });
-    const accountTotalCents = values.reduce((sum, value) => sum + value, 0);
-    let remainingPaidCents = Math.min(accountPaidById[account.id] ?? 0, accountTotalCents);
-    allocations.forEach((allocation, index) => {
-      const value = values[index] ?? 0;
-      const paid =
-        index === allocations.length - 1
-          ? remainingPaidCents
-          : accountTotalCents > 0
-            ? Math.floor((remainingPaidCents * value) / accountTotalCents)
-            : 0;
-      remainingPaidCents -= paid;
-      paidCentsByLineId.set(
-        allocation.lineItemId,
-        (paidCentsByLineId.get(allocation.lineItemId) ?? 0) + paid,
+    const allocations = accountAllocations
+      .filter((allocation) => allocation.accountId === account.id)
+      .sort(
+        (left, right) =>
+          (linePositionById.get(left.lineItemId) ?? Number.MAX_SAFE_INTEGER) -
+            (linePositionById.get(right.lineItemId) ?? Number.MAX_SAFE_INTEGER) ||
+          left.id.localeCompare(right.id),
       );
-    });
+    const valueByLineId = new Map(
+      allocations.map((allocation) => {
+        const line = lineById.get(allocation.lineItemId);
+        return [
+          allocation.lineItemId,
+          line ? Math.round((line.totalCents / line.quantity) * allocation.quantity) : 0,
+        ] as const;
+      }),
+    );
+    const paidByLineId = allocatePaidCentsToAllocations(
+      allocations,
+      valueByLineId,
+      accountPaidById[account.id] ?? 0,
+    );
+    for (const [lineItemId, paid] of paidByLineId) {
+      paidCentsByLineId.set(lineItemId, (paidCentsByLineId.get(lineItemId) ?? 0) + paid);
+    }
   }
   const lines = orderTicketLines(
     aggregateLines(order.lineItems, paidCentsByLineId, accountAllocations),

@@ -7,6 +7,7 @@ import { PortsProvider } from "../../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../../composition/mock.js";
 import {
   aggregateLines,
+  allocatePaidCentsToAllocations,
   OrderTicketPanelContainer,
 } from "./OrderTicketPanelContainer.js";
 
@@ -64,6 +65,37 @@ describe("OrderTicketPanelContainer", () => {
       settlementTotalCents: 150,
       paymentSegment: "pending",
     });
+  });
+
+  it("applies historical payment to earlier account allocations before newer lines", () => {
+    const allocations = [
+      createAccountLineAllocation({ id: "allocation-old", accountId: "account-1", lineItemId: "line-old", quantity: 1 }),
+      createAccountLineAllocation({ id: "allocation-new", accountId: "account-1", lineItemId: "line-new", quantity: 1 }),
+    ];
+    const paidByLine = allocatePaidCentsToAllocations(
+      allocations,
+      new Map([["line-old", 100], ["line-new", 100]]),
+      150,
+    );
+
+    expect(paidByLine).toEqual(new Map([["line-old", 100], ["line-new", 50]]));
+  });
+
+  it("does not show zero for a pending unit when the derived display balance is exhausted", async () => {
+    const ports = buildMockPorts();
+    const order = (await ports.orders.findByTable("table-1"))!;
+    const first = { ...order.lineItems[0]!, quantity: 1, totalCents: 300, unitPriceCents: 300 };
+    const second = { ...first, id: `${first.id}-second` };
+    const segments = aggregateLines([first, second], new Map([[first.id, 600]]), []);
+
+    const pending = segments.find((segment) => segment.paymentSegment === "pending");
+    expect(pending).toMatchObject({
+      quantity: 1,
+      totalCents: 300,
+      settlementTotalCents: 300,
+      paymentSegment: "pending",
+    });
+    expect(pending).not.toHaveProperty("displayTotalCents");
   });
 
   afterEach(() => {
