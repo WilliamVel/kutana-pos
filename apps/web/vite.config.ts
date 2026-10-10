@@ -3,6 +3,10 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  resolve: {
+    // Keep React and React DOM on one identity across pnpm workspace packages.
+    dedupe: ["react", "react-dom"],
+  },
   server: {
     host: "0.0.0.0",
     allowedHosts: [".trycloudflare.com"],
