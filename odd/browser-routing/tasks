@@ -1,0 +1,7 @@
+# Browser routing — reconciled task mirror
+
+1. Add router dependency and route definitions around the existing app shell. — done
+2. Migrate top-level screen navigation from `useState` to route location/navigation while preserving guards and reset behavior. — done
+3. Add focused tests for route rendering and browser navigation; run web checks. — done
+
+Evidence: 10 focused tests passed; @kutana/web production build passed.

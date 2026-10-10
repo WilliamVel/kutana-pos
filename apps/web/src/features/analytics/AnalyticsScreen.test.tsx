@@ -47,6 +47,18 @@ describe("AnalyticsScreen", () => {
     expect(salesBefore).toBeInTheDocument();
   });
 
+  it("applies the clicked daily bar as a custom date period", async () => {
+    const analytics = buildMockPorts().analytics;
+    if (!analytics) throw new Error("Mock analytics port is required");
+    renderScreen(analytics);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Todo el historial" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Filtrar por 2025-01-21 — 2025-01-21/ }));
+
+    expect(await screen.findByLabelText("Desde")).toHaveValue("2025-01-21");
+    expect(screen.getByLabelText("Hasta")).toHaveValue("2025-01-21");
+  });
+
   it("stops loading and shows an error when a report request is rejected", async () => {
     const analytics: AnalyticsReadPort = {
       summary: vi.fn().mockRejectedValue(new Error("network failure")),

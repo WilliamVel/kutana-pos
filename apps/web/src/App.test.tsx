@@ -1,13 +1,18 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { createProduct } from "@kutana/shared/catalog/model/product.js";
 import { App } from "./App.js";
 import { PortsProvider } from "./composition/PortsProvider.js";
 import { buildMockPorts } from "./composition/mock.js";
 
+const renderApp = (ui: JSX.Element): void => {
+  render(<MemoryRouter initialEntries={["/orders"]}>{ui}</MemoryRouter>);
+};
+
 describe("App", () => {
   it("renders the login gate first, then opens the KUTANA POS workspace", async () => {
-    render(
+    renderApp(
       <PortsProvider value={buildMockPorts()}>
         <App />
       </PortsProvider>,
@@ -30,7 +35,7 @@ describe("App", () => {
   });
 
   it("opens and dismisses the split-payment menu with keyboard focus restoration", async () => {
-    render(
+    renderApp(
       <PortsProvider value={buildMockPorts()}>
         <App />
       </PortsProvider>,
@@ -61,7 +66,7 @@ describe("App", () => {
   });
 
   it("renders product selection in the fullscreen overlay and exits back to the account view", async () => {
-    render(
+    renderApp(
       <PortsProvider value={buildMockPorts()}>
         <App />
       </PortsProvider>,
@@ -87,19 +92,22 @@ describe("App", () => {
     expect(selectionDialog).toContainElement(
       screen.getByLabelText("Seleccionar productos para cobrar"),
     );
-    expect(screen.getByRole("button", { name: /Table 1/ }).closest("[aria-disabled='true']"))
-      .not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: /Table 1/ }).closest("[aria-disabled='true']"),
+    ).not.toBeNull();
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByRole("dialog", { name: "Seleccionar productos para cobrar" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Seleccionar productos para cobrar" }),
+    ).not.toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Dividir cuenta" })).toBeInTheDocument(),
     );
   });
 
   it("resets the split view when navigating away from and back to register", async () => {
-    render(
+    renderApp(
       <PortsProvider value={buildMockPorts()}>
         <App />
       </PortsProvider>,
@@ -124,7 +132,7 @@ describe("App", () => {
   });
 
   it("opens category management from the inventory actions", async () => {
-    render(
+    renderApp(
       <PortsProvider value={buildMockPorts()}>
         <App />
       </PortsProvider>,
@@ -150,7 +158,7 @@ describe("App", () => {
   });
 
   it("opens customer management from the top bar", async () => {
-    render(
+    renderApp(
       <PortsProvider value={buildMockPorts()}>
         <App />
       </PortsProvider>,
@@ -184,7 +192,7 @@ describe("App", () => {
       0,
     );
 
-    render(
+    renderApp(
       <PortsProvider value={ports}>
         <App />
       </PortsProvider>,
@@ -214,7 +222,7 @@ describe("App", () => {
   });
 
   it("logs out from the account menu", async () => {
-    render(
+    renderApp(
       <PortsProvider value={buildMockPorts()}>
         <App />
       </PortsProvider>,

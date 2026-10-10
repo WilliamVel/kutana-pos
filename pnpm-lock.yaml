@@ -99,6 +99,9 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
+      react-router-dom:
+        specifier: ^6.28.2
+        version: 6.28.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       sonner:
         specifier: 2.0.8
         version: 2.0.8(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -1515,6 +1518,10 @@ packages:
     resolution: {integrity: sha512-DTcUc8qii+cpHvtOwggMtBRMjKZHXYWdw8syRYu2vtzuq4Wxphqq4NfCs5Zt44L6mA8rfDfj+PHnxFc/FeK6mQ==}
     engines: {node: '>=20'}
     hasBin: true
+
+  '@remix-run/router@1.21.1':
+    resolution: {integrity: sha512-KeBYSwohb8g4/wCcnksvKTYlg69O62sQeLynn2YE+5z7JWEj95if27kclW9QqbrlsQ2DINI8fjbV3zyuKfwjKg==}
+    engines: {node: '>=14.0.0'}
 
   '@rolldown/pluginutils@1.0.0-beta.27':
     resolution: {integrity: sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA==}
@@ -3329,6 +3336,19 @@ packages:
   react-refresh@0.17.0:
     resolution: {integrity: sha512-z6F7K9bV85EfseRCp2bzrpyQ0Gkw1uLoCel9XBVWPg/TjRj94SkJzUTGfOa4bs7iJvBWtQG0Wq7wnI0syw3EBQ==}
     engines: {node: '>=0.10.0'}
+
+  react-router-dom@6.28.2:
+    resolution: {integrity: sha512-O81EWqNJWqvlN/a7eTudAdQm0TbI7hw+WIi7OwwMcTn5JMyZ0ibTFNGz+t+Lju0df4LcqowCegcrK22lB1q9Kw==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      react: '>=16.8'
+      react-dom: '>=16.8'
+
+  react-router@6.28.2:
+    resolution: {integrity: sha512-BgFY7+wEGVjHCiqaj2XiUBQ1kkzfg6UoKYwEe0wv+FF+HNPCxtS/MVPvLAPH++EsuCMReZl9RYVGqcHLk5ms3A==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      react: '>=16.8'
 
   react@18.3.1:
     resolution: {integrity: sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==}
@@ -5320,6 +5340,8 @@ snapshots:
     dependencies:
       playwright: 1.62.1
 
+  '@remix-run/router@1.21.1': {}
+
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 
   '@rollup/plugin-babel@6.1.0(@babel/core@7.29.7)(@types/babel__core@7.20.5)(rollup@4.63.1)':
@@ -7303,6 +7325,18 @@ snapshots:
   react-is@17.0.2: {}
 
   react-refresh@0.17.0: {}
+
+  react-router-dom@6.28.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+    dependencies:
+      '@remix-run/router': 1.21.1
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+      react-router: 6.28.2(react@18.3.1)
+
+  react-router@6.28.2(react@18.3.1):
+    dependencies:
+      '@remix-run/router': 1.21.1
+      react: 18.3.1
 
   react@18.3.1:
     dependencies:
