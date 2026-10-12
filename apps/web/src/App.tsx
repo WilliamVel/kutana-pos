@@ -231,6 +231,14 @@ export function App(): JSX.Element {
                 id: `payment-registered-table-closed-${tableId}`,
               });
             }}
+            onPaymentRecorded={() => {
+              // A partial payment keeps the order active. Return to its main
+              // order view instead of leaving the operator in checkout.
+              setSelectedProductLines([]);
+              setProductSelectionMode(false);
+              resetCenter();
+              setOrdersReloadKey((key) => key + 1);
+            }}
             onPaymentComplete={() => {
               setSelectedProductLines([]);
               setProductSelectionMode(false);

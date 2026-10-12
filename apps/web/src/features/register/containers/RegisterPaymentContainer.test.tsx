@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createAccountLineAllocation,
   createPersonalAccount,
@@ -68,9 +68,17 @@ describe("RegisterPaymentContainer", () => {
     });
     await ports.personalAccounts.save(account, [allocation], account.version);
 
+    const onPaymentComplete = vi.fn();
+    const onPaymentRecorded = vi.fn();
+    const closeOrder = vi.spyOn(ports.paymentClosure, "closeOrder");
     render(
       <PortsProvider value={ports}>
-        <RegisterPaymentContainer tableId="table-1" personalAccountId={account.id} />
+        <RegisterPaymentContainer
+          tableId="table-1"
+          personalAccountId={account.id}
+          onPaymentComplete={onPaymentComplete}
+          onPaymentRecorded={onPaymentRecorded}
+        />
       </PortsProvider>,
     );
 
@@ -97,6 +105,51 @@ describe("RegisterPaymentContainer", () => {
       expect(payments[0]!.amountCents).toBe(392);
       expect((await ports.personalAccounts.findById(account.id))?.status).toBe("paid");
     });
+    await waitFor(() => expect(onPaymentRecorded).toHaveBeenCalledOnce());
+    expect(onPaymentComplete).not.toHaveBeenCalled();
+    expect(closeOrder).not.toHaveBeenCalled();
+    expect((await ports.orders.findByTable("table-1"))?.status).toBe("active");
+  });
+
+  it("returns to the active order after paying one account while another remains pending", async () => {
+    const ports = buildMockPorts();
+    const order = (await ports.orders.findByTable("table-1"))!;
+    const firstAccount = createPersonalAccount({ id: "account-first", orderId: order.id, freeName: "First" });
+    const secondAccount = createPersonalAccount({ id: "account-second", orderId: order.id, freeName: "Second" });
+    await ports.personalAccounts.save(
+      firstAccount,
+      [createAccountLineAllocation({ accountId: firstAccount.id, lineItemId: order.lineItems[0]!.id, quantity: 1 })],
+      firstAccount.version,
+    );
+    await ports.personalAccounts.save(
+      secondAccount,
+      [
+        createAccountLineAllocation({ accountId: secondAccount.id, lineItemId: order.lineItems[0]!.id, quantity: 1 }),
+        createAccountLineAllocation({ accountId: secondAccount.id, lineItemId: order.lineItems[1]!.id, quantity: 1 }),
+      ],
+      secondAccount.version,
+    );
+    const onPaymentRecorded = vi.fn();
+    const closeOrder = vi.spyOn(ports.paymentClosure, "closeOrder");
+
+    render(
+      <PortsProvider value={ports}>
+        <RegisterPaymentContainer
+          tableId="table-1"
+          personalAccountId={firstAccount.id}
+          onPaymentRecorded={onPaymentRecorded}
+        />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Cobrar orden" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("radio", { name: /Pago QR/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Confirmo que el pago QR fue recibido." }));
+    fireEvent.click(screen.getByRole("button", { name: /Registrar pago ·/ }));
+
+    await waitFor(() => expect(onPaymentRecorded).toHaveBeenCalledOnce());
+    expect(closeOrder).not.toHaveBeenCalled();
+    expect((await ports.orders.findByTable("table-1"))?.status).toBe("active");
   });
 
   it("settles only the selected whole units after payment confirmation", async () => {

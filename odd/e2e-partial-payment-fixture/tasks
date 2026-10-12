@@ -1,0 +1,10 @@
+# Stateful E2E fixture for partial payment return — reconciled task mirror
+
+1. [x] Build a stateful HTTP fixture for split accounts, allocations, and payments.
+2. [x] Add a browser regression for partial account payment returning to the main order view.
+3. [x] Run focused Playwright checks and record evidence.
+4. [ ] Commit the work unit after explicit user authorization.
+
+Evidence: focused Playwright regression passed after covering the Partes iguales → Cobrar productos flow and verifying the order card updates to the new pending amount. The full run reported 18 passing tests and 5 unrelated layout/scroll failures. Vitest/App (15), typecheck, formatting, and diff checks passed.
+
+Source of truth: `odd/tasks/e2e-partial-payment-fixture.md`.

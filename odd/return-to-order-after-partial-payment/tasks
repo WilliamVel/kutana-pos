@@ -1,0 +1,12 @@
+# Return to order after partial split payment — reconciled task mirror
+
+1. [x] Separate personal-account payment continuation from final order closure.
+2. [x] Return non-final split payments to the assignment view while preserving full closure.
+3. [x] Return non-final whole-table and legacy ticket payments through the same continuation callback.
+4. [x] Load all split accounts before deciding whether a selected account payment can close the order.
+5. [x] Add regression coverage for an account paid while another remains pending.
+6. [ ] Commit the work unit after explicit user authorization.
+
+Evidence: focused App/register tests 15 passed; `pnpm typecheck` and `git diff --check` passed. Non-final payment navigation now targets the main open-order view. Commit remains pending because repository safety policy requires explicit authorization.
+
+Source of truth: `odd/tasks/return-to-order-after-partial-payment.md`.

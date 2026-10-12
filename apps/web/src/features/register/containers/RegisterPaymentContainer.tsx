@@ -49,6 +49,8 @@ export interface RegisterPaymentContainerProps {
   readonly tableId: string;
   readonly personalAccountId?: string;
   readonly onPaymentComplete?: () => void;
+  /** Called after a personal-account payment that leaves the order open. */
+  readonly onPaymentRecorded?: () => void;
   readonly onWholeTableClosed?: (tableId: string) => void;
   readonly onReviewPayment?: () => void;
   readonly onBack?: () => void;
@@ -212,6 +214,7 @@ export function RegisterPaymentContainer({
   tableId,
   personalAccountId,
   onPaymentComplete,
+  onPaymentRecorded,
   onWholeTableClosed,
   onReviewPayment,
   onBack,
@@ -276,16 +279,33 @@ export function RegisterPaymentContainer({
         setCustomers(await customersPort.listAll());
 
         if (personalAccountId) {
-          const [account, orderAccountAllocations, accountPayments] = await Promise.all([
-            accountsPort.findById(personalAccountId),
-            accountsPort.listAllocationsByOrder(foundOrder.id),
-            paymentsPort.listByTarget({ kind: "personal_account", accountId: personalAccountId }),
-          ]);
+          const [account, orderAccountAllocations, accountPayments, foundAccounts] =
+            await Promise.all([
+              accountsPort.findById(personalAccountId),
+              accountsPort.listAllocationsByOrder(foundOrder.id),
+              paymentsPort.listByTarget({
+                kind: "personal_account",
+                accountId: personalAccountId,
+              }),
+              accountsPort.listByOrder(foundOrder.id),
+            ]);
           if (cancelled || !account) return;
+          const accountPaymentEntries = await Promise.all(
+            foundAccounts.map(async (orderAccount) => ({
+              accountId: orderAccount.id,
+              payments: await paymentsPort.listByTarget({
+                kind: "personal_account",
+                accountId: orderAccount.id,
+              }),
+            })),
+          );
+          if (cancelled) return;
           setPersonalAccount(account);
           setAccountAllocations(orderAccountAllocations);
           setPayments(accountPayments);
-          setAccountPayments([]);
+          setOrderAccounts(foundAccounts);
+          setOrderAccountAllocations(orderAccountAllocations);
+          setAccountPayments(accountPaymentEntries);
           setTicket(null);
           setLoadState("ready");
           return;
@@ -545,12 +565,45 @@ export function RegisterPaymentContainer({
         personalAccount.version,
       );
       setPersonalAccount(saved);
-      if (status === "paid") {
-        // Let the persisted closure rules decide whether the whole table can
-        // close. If they reject it, the payment remains recorded and the
-        // review popup receives the concrete blocking reasons.
+
+      const updatedAccountPayments = accountPayments.map((entry) =>
+        entry.accountId === saved.id
+          ? { ...entry, payments: updatedPayments }
+          : entry,
+      );
+      const accountById = new Map(
+        orderAccounts.map((account) => [account.id, account.id === saved.id ? saved : account]),
+      );
+      const everyAccountPaid = orderAccounts.every((account) => {
+        const current = accountById.get(account.id);
+        if (!current) return false;
+        const accountPaymentsForBalance = updatedAccountPayments.find(
+          (entry) => entry.accountId === account.id,
+        )?.payments ?? [];
+        const balance = accountBalance({
+          accountId: account.id,
+          lineItems: order!.lineItems,
+          allocations: orderAccountAllocations,
+          payments: toAccountPayments(account.id, accountPaymentsForBalance),
+        });
+        return current.status === "paid" || balance.remainingCents === 0;
+      });
+      const everyLineAssigned = order!.lineItems.every((line) => {
+        const assigned = orderAccountAllocations
+          .filter((allocation) => allocation.lineItemId === line.id)
+          .reduce((sum, allocation) => sum + allocation.quantity, 0);
+        return assigned >= line.quantity;
+      });
+
+      if (everyAccountPaid && everyLineAssigned) {
+        // Close only after the complete split order is settled. A paid
+        // account is not enough when other accounts or products remain.
         await paymentClosure.closeOrder(order!.id);
         onPaymentComplete?.();
+      } else {
+        // Keep the order open so the operator can continue collecting from
+        // the split assignment screen without reopening it manually.
+        onPaymentRecorded?.();
       }
       return;
     }
@@ -615,14 +668,33 @@ export function RegisterPaymentContainer({
           recordedAt: new Date().toISOString(),
         };
         await paymentsPort.record(payment);
-        await accountsPort.save(
+        savedAccount = await accountsPort.save(
           { ...savedAccount, status: "paid", closedAt: new Date().toISOString() },
           accountAllocations,
           savedAccount.version,
         );
         setTenderedCents(null);
         setAmountToPayCents(null);
-        onPaymentComplete?.();
+
+        const paidAccountIds = new Set([
+          ...orderAccounts.filter((candidate) => candidate.status === "paid").map((candidate) => candidate.id),
+          savedAccount.id,
+        ]);
+        const allProductsPaid = order.lineItems.every((line) => {
+          const paidQuantity = [...currentAllocations, ...accountAllocations]
+            .filter(
+              (allocation) =>
+                allocation.lineItemId === line.id && paidAccountIds.has(allocation.accountId),
+            )
+            .reduce((sum, allocation) => sum + allocation.quantity, 0);
+          return paidQuantity >= line.quantity;
+        });
+        if (allProductsPaid) {
+          await paymentClosure.closeOrder(order.id);
+          onPaymentComplete?.();
+        } else {
+          onPaymentRecorded?.();
+        }
       } catch (error) {
         if (savedAccount) {
           try {
@@ -708,6 +780,10 @@ export function RegisterPaymentContainer({
         await paymentClosure.closeOrder(order.id);
         onWholeTableClosed?.(tableId);
         onPaymentComplete?.();
+      } else {
+        // A partial collection must return to the active order so the
+        // operator can continue collecting instead of staying in checkout.
+        onPaymentRecorded?.();
       }
       return;
     }
@@ -746,6 +822,9 @@ export function RegisterPaymentContainer({
         onWholeTableClosed?.(tableId);
       }
       onPaymentComplete?.();
+    } else {
+      // Keep non-final payments on the active order flow.
+      onPaymentRecorded?.();
     }
   }
 
