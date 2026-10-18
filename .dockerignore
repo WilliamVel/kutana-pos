@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/.vite
+.git
+.env
+.codegraph
+.atl
+openspec
+docs
+apps/web/artifacts
+**/*.log

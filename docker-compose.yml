@@ -15,5 +15,48 @@ services:
       timeout: 5s
       retries: 10
 
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: kutana-api
+    command: ["pnpm", "--filter", "@kutana/api", "migration:apply"]
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: kutana
+      POSTGRES_USER: kutana
+      POSTGRES_PASSWORD: kutana_dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    image: kutana-api
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: kutana
+      POSTGRES_USER: kutana
+      POSTGRES_PASSWORD: kutana_dev
+      PORT: "3000"
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-dev-only-auth-session-secret-change-me}
+    ports:
+      - "3000:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   kutana-postgres:
