@@ -41,6 +41,9 @@ services:
       PORT: "3000"
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-dev-only-auth-session-secret-change-me}
+      # Creates the first admin only while auth_users is empty.
+      AUTH_BOOTSTRAP_ADMIN_OPERATOR: ${AUTH_BOOTSTRAP_ADMIN_OPERATOR:-}
+      AUTH_BOOTSTRAP_ADMIN_PIN_HASH: ${AUTH_BOOTSTRAP_ADMIN_PIN_HASH:-}
     ports:
       - "3000:3000"
     depends_on:
