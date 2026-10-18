@@ -9,3 +9,4 @@ openspec
 docs
 apps/web/artifacts
 **/*.log
+**/*.tsbuildinfo

@@ -10,7 +10,7 @@ RUN pnpm install --frozen-lockfile
 # Leave empty to let the app call the API on the same host, port 3000.
 ARG VITE_API_BASE_URL=""
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-RUN pnpm --filter @kutana/web build
+RUN pnpm --filter @kutana/shared build && pnpm --filter @kutana/web build
 
 FROM nginx:1.27-alpine
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
