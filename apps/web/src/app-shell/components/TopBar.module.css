@@ -28,6 +28,18 @@
   display: block;
   line-height: 0;
 }
+.logoButton {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.logoButton:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
 .logo {
   display: block;
   width: auto;

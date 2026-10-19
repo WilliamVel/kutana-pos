@@ -454,7 +454,7 @@ export function RegisterPaymentContainer({
     : isSelectedProductPayment
       ? ticketLines.reduce((sum, line) => sum + line.totalCents, 0)
       : isWholeTablePayment
-        ? ticketLines.reduce((sum, line) => sum + line.totalCents, 0)
+        ? order.lineItems.reduce((sum, line) => sum + line.totalCents, 0)
         : ticketTotals(ticket!.id, order.lineItems, allocations).cents;
   const accountPaidCents = accountPayments.reduce(
     (sum, entry) => sum + paymentsTotal(entry.payments),

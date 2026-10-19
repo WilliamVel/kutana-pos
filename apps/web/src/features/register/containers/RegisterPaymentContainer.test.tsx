@@ -4,6 +4,7 @@ import {
   createAccountLineAllocation,
   createPersonalAccount,
 } from "@kutana/shared/billing/model/personal-account.js";
+import type { PaymentMethodCode } from "@kutana/shared/payments/model/payment-method-registry.js";
 import { PortsProvider } from "../../../composition/PortsProvider.js";
 import { buildMockPorts } from "../../../composition/mock.js";
 import { RegisterPaymentContainer } from "./RegisterPaymentContainer.js";
@@ -50,6 +51,62 @@ describe("RegisterPaymentContainer", () => {
     );
     expect(finalPayments).toHaveLength(1);
     expect(finalPayments[0]!.amountCents).toBe(1512);
+  });
+
+  it("keeps already-paid product accounts out of the remaining whole-order balance", async () => {
+    const ports = buildMockPorts();
+    const order = (await ports.orders.findByTable("table-1"))!;
+    const account = createPersonalAccount({
+      id: "account-paid-product",
+      orderId: order.id,
+      freeName: "Producto pagado",
+    });
+    const allocation = createAccountLineAllocation({
+      id: "account-paid-product-allocation",
+      accountId: account.id,
+      lineItemId: order.lineItems[0]!.id,
+      quantity: 1,
+    });
+    await ports.personalAccounts.save(
+      { ...account, status: "paid", closedAt: "2025-01-01T00:10:00.000Z" },
+      [allocation],
+      account.version,
+    );
+    await ports.payments.record({
+      id: "payment-paid-product",
+      target: { kind: "personal_account", accountId: account.id },
+      methodCode: "QR_PAYMENT" as PaymentMethodCode,
+      amountCents: 392,
+      tenderedCents: null,
+      changeCents: null,
+      recordedAt: "2025-01-01T00:10:00.000Z",
+    });
+
+    const onPaymentComplete = vi.fn();
+    render(
+      <PortsProvider value={ports}>
+        <RegisterPaymentContainer tableId="table-1" onPaymentComplete={onPaymentComplete} />
+      </PortsProvider>,
+    );
+
+    await waitFor(() => expect(screen.getAllByText("$11.20").length).toBeGreaterThan(0));
+    expect(screen.getByRole("button", { name: "Cobrar · $11.20" })).toBeInTheDocument();
+    expect(screen.getByText("Saldo pendiente")).toBeInTheDocument();
+    expect(screen.queryByText("$7.28")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Pago QR" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Confirmo que el pago QR fue recibido." }));
+    fireEvent.click(screen.getByRole("button", { name: /pago · \$11\.20/i }));
+
+    await waitFor(() => expect(onPaymentComplete).toHaveBeenCalledOnce());
+    await waitFor(async () => {
+      const payments = await ports.payments.listByTarget({
+        kind: "personal_account",
+        accountId: account.id,
+      });
+      expect(payments).toHaveLength(1);
+      expect(payments[0]!.amountCents).toBe(392);
+    });
   });
 
   it("uses the same checkout screen to pay a selected personal account with method choice", async () => {

@@ -38,6 +38,22 @@ describe("TopBar", () => {
     expect(document.querySelector('[data-icon="orders"]')).not.toBeNull();
   });
 
+  it("navigates to orders when the logo is clicked", () => {
+    const onNavigate = vi.fn();
+    render(
+      <TopBar
+        currentScreen="inventory"
+        session={ADMIN_SESSION}
+        onNavigate={onNavigate}
+        onLogout={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "KUTANA" }));
+
+    expect(onNavigate).toHaveBeenCalledWith("register");
+  });
+
   it("marks the current screen's tab as the active page", () => {
     render(
       <TopBar

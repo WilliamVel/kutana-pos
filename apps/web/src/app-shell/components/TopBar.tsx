@@ -122,10 +122,16 @@ export function TopBar({
     <header className={styles.bar}>
       <div className={styles.brandRow}>
         <h1 className={styles.wordmark}>
-          <picture>
-            <source media="(max-width: 48rem)" srcSet="/Kutana_navbar_transparente.svg" />
-            <img className={styles.logo} src="/Kutana_navbar_transparente.svg" alt="KUTANA" />
-          </picture>
+          <button
+            type="button"
+            className={styles.logoButton}
+            onClick={() => navigate("register")}
+          >
+            <picture>
+              <source media="(max-width: 48rem)" srcSet="/Kutana_navbar_transparente.svg" />
+              <img className={styles.logo} src="/Kutana_navbar_transparente.svg" alt="KUTANA" />
+            </picture>
+          </button>
         </h1>
         <button
           ref={menuButtonRef}

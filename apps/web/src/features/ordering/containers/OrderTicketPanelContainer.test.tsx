@@ -161,7 +161,7 @@ describe("OrderTicketPanelContainer", () => {
     expect(removalToast.closest("[data-sonner-toast]")).toBeInTheDocument();
     expect(successToast).toHaveBeenCalledWith("KUTANA Pilsener 500ml eliminado", {
       id: "order-ticket-removal-success",
-      duration: 2600,
+      duration: 1500,
     });
     expect(document.querySelector('section[aria-label^="Resumen de orden"] p[role="status"]')).not.toBeInTheDocument();
     await waitFor(async () => {
